@@ -673,7 +673,7 @@ sap.ui.define(
                                                 }
 
                                             } else {
-                                                vals[key.foreignKey[0]] = values.id;
+                                                vals[key.foreignKey] = values.id;
                                             }
 
                                             keys.push(vals);
