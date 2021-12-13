@@ -328,7 +328,7 @@ sap.ui.define([], function () {
                         let desc = (item.SCRTEXT_M) ? item.SCRTEXT_M : (item.SCRTEXT_S) ? item.SCRTEXT_S : item.SCRTEXT_L;
                         item.index = i;
                         item.visible = (item.VISIBLE == "X") ? true : false;
-                        item.DESCRiption = (desc) ? item.FIELDNAME.split(that.models.IDAPP).pop() + " - " + desc : item.FIELDNAME.split(that.models.IDAPP).pop();
+                        item.description = (desc) ? item.FIELDNAME.split(that.models.IDAPP).pop() + " - " + desc : item.FIELDNAME.split(that.models.IDAPP).pop();
                         return item;
                     })
 
@@ -346,7 +346,7 @@ sap.ui.define([], function () {
                         path: "" + that.models.IDAPP + "tablestruct>/",
                         template: new sap.m.P13nItem({
                             columnKey: "{" + that.models.IDAPP + "tablestruct>FIELDNAME}",
-                            text: "{" + that.models.IDAPP + "tablestruct>DESCRiption}",
+                            text: "{" + that.models.IDAPP + "tablestruct>description}",
                         })
                     })
 
@@ -382,7 +382,7 @@ sap.ui.define([], function () {
                             var strucSMapped = strucSorted.map((item, i) => {
                                 item.VISIBLE = (item.visible) ? "X" : "";
                                 item.COL_POS = (i + 1)
-                                delete item.DESCRiption
+                                delete item.description
                                 delete item.index
                                 delete item.visible
 

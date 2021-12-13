@@ -187,20 +187,6 @@ sap.ui.define(
                     if (rows instanceof Array) {
                         data = {
                             results: rows.map((lines) => {
-
-                                /*                              for (const key in lines) {
-                             
-                                                                 if (lines[key] instanceof Object && lines[key].id) {
-                             
-                                                                     for (const field of This.listFields) {
-                             
-                                                                         if (field.field.split('.')[0] !== key) continue;
-                             
-                                                                         lines[field.field] = lines[field.field.split(".")[0]][field.field.split(".").pop()];
-                                                                     }
-                                                                     lines[key] = lines[key].id;
-                                                                 }
-                                                             } */
                                 return This.normalize(lines);
                             })
                         };
@@ -443,7 +429,7 @@ sap.ui.define(
                 } else {
                     This.CrudView.setId(crud.id);
                     This.CrudView.Page.getHeaderTitle().setObjectTitle(crud[This.titleField]);
-                    This.CrudView.Page.getHeaderTitle().setObjectImageURI(crud.LOGO);
+                    This.CrudView.Page.getHeaderTitle().setObjectImageURI(crud.LOGO || crud.ICON);
                     if (crud[This.subtitle])
                         This.CrudView.Page.getHeaderTitle().setObjectSubtitle(crud[This.subtitle]);
                     This.CrudView.activeButton.setSelectedKey(crud.ACTIVE)
@@ -604,19 +590,14 @@ sap.ui.define(
 
                             var values = { ...oModel.mainModel.getObject() };
 
-                            /*                 for (const key in values) {
-                                                if (values[key] instanceof Object && values[key].id) {
-                                                    values[key + ".NAME"] = values[key].NAME;
-                                                    values[key] = values[key].id;
-                
-                                                }
-                                            } */
-
                             if (This.sectionsItems) {
                                 //-> previsto views relacionais para a collection
 
                                 if (This.sectionsItems.foreignKeys) {
                                     //-> campo com os dados básicos preenchidos                                 
+
+                                    let keys = [];
+                                    let vals = {};
 
                                     for (const key of This.sectionsItems.foreignKeys) {
                                         //-> obtem model para conferência. 
@@ -652,18 +633,19 @@ sap.ui.define(
                                                 if (key.foreignKey instanceof Array) {
 
                                                     for (const item of key.foreignKey) {
-                                                        selectedLine[item] = values[item] || values.id;
+                                                        selectedLine[key.index][item] = values[item] || values.id;
                                                     }
 
                                                 } else {
-                                                    selectedLine[key.foreignKey[0]] = values.id;
+                                                    selectedLine[key.index][key.foreignKey] = values.id;
                                                 }
+
+                                                keys = keys.concat(selectedLine);
 
                                             }
                                         } else {
 
-                                            let keys = [];
-                                            let vals = {};
+
                                             vals.idapp = key.idapp;
 
                                             if (key.foreignKey instanceof Array) {
@@ -678,10 +660,12 @@ sap.ui.define(
 
                                             keys.push(vals);
                                             //--> model ainda não existe, então, criar
-                                            sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel(
-                                                keys
-                                            ), "foreignKey");
+
                                         }
+
+                                        sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel(
+                                            keys
+                                        ), "foreignKey");
 
                                         //-verifica se a tela ui5 do componente já foi inserida com aba
                                         //-> não existindo, iniciar array
