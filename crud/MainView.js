@@ -96,16 +96,16 @@ sap.ui.define(
                 that.message = this.message;
                 that.onSearchList = this.onSearchList;
                 that.getDetail = this.getDetail;
-                that.callService.IDAPP = that.IDAPP;
                 that.normalize = this.normalize;
+                that.callService.IDAPP = that.IDAPP;
 
-                This.getView().byId("idAppControl").setBusyIndicatorDelay(50);
+                This.getView().byId(This.IDAPP).setBusyIndicatorDelay(50);
 
                 let foreignKeys = sap.ui.getCore().getModel("foreignKey");
 
                 if (foreignKeys) {
 
-                    let keys = foreignKeys.getData().filter(l => l.idapp == that.IDAPP);
+                    let keys = foreignKeys.getData().filter(l => l.idapp == This.IDAPP);
 
                     if (keys) {
                         if (keys instanceof Array) {
@@ -126,7 +126,7 @@ sap.ui.define(
                     initialPage: firstPage
                 })
 
-                that.getView().byId(that.appID || "idAppControl").addPage(
+                that.getView().byId(This.IDAPP).addPage(
 
                     that.mainContent
                 );
@@ -139,7 +139,7 @@ sap.ui.define(
 
             list: function () {
 
-                This.getView().byId("idAppControl").setBusy(true);
+                This.getView().byId(This.IDAPP).setBusy(true);
 
                 let rows = [];
                 var data = {};
@@ -180,7 +180,7 @@ sap.ui.define(
 
                 This.callService.postSync("add", params).then((resp) => {
 
-                    This.getView().byId("idAppControl").setBusy(false);
+                    This.getView().byId(This.IDAPP).setBusy(false);
 
                     rows = JSON.parse(resp).rows;
 
@@ -207,7 +207,7 @@ sap.ui.define(
 
                     table.setBusy(false);
 
-                    This.getView().byId("idAppControl").setBusy(false);
+                    This.getView().byId(This.IDAPP).setBusy(false);
                 })
             },
 
@@ -233,7 +233,7 @@ sap.ui.define(
             },
             create: async function (data) {
 
-                This.getView().byId("idAppControl").setBusy(true);
+                This.getView().byId(This.IDAPP).setBusy(true);
 
                 let vals = {};
 
@@ -251,7 +251,7 @@ sap.ui.define(
 
                 }).then((resp) => {
 
-                    This.getView().byId("idAppControl").setBusy(false);
+                    This.getView().byId(This.IDAPP).setBusy(false);
 
                     if (!resp) throw "errorCreate";
 
@@ -268,7 +268,7 @@ sap.ui.define(
 
             delete: async function (companyId) {
 
-                This.getView().byId("idAppControl").setBusy(true);
+                This.getView().byId(This.IDAPP).setBusy(true);
 
                 let values = This.getView().getModel(This.IDAPP + "PARAM").getData();
                 let inpConf = new sap.m.Input();
@@ -302,13 +302,13 @@ sap.ui.define(
                                 "actionName": This.collection + ".remove"
                             }).then((resp) => {
 
-                                This.getView().byId("idAppControl").setBusy(false);
+                                This.getView().byId(This.IDAPP).setBusy(false);
                                 This.list();
                                 This.message("successDelete");
                                 This.mainContent.back();
 
                             }).catch((err) => {
-                                This.getView().byId("idAppControl").setBusy(false);
+                                This.getView().byId(This.IDAPP).setBusy(false);
                                 This.message("errorDelete");
                             })
 
@@ -317,7 +317,7 @@ sap.ui.define(
                     endButton: new sap.m.Button({
                         text: "{i18n>cancel}",
                         press: function (e) {
-                            This.getView().byId("idAppControl").setBusy(false);
+                            This.getView().byId(This.IDAPP).setBusy(false);
                             dialog.close();
                         }
                     })
@@ -332,7 +332,7 @@ sap.ui.define(
 
             save: async function () {
 
-                This.getView().byId("idAppControl").setBusy(true);
+                This.getView().byId(This.IDAPP).setBusy(true);
 
                 let values = This.getView().getModel(This.IDAPP + "PARAM").getData();
                 let vlas = {};
@@ -373,7 +373,7 @@ sap.ui.define(
                     try {
                         vlas = This.beforeSave(vlas);
                     } catch {
-                        This.getView().byId("idAppControl").setBusy(false);
+                        This.getView().byId(This.IDAPP).setBusy(false);
                         return;
                     }
 
@@ -383,7 +383,7 @@ sap.ui.define(
                     "params": vlas
                 }).then((resp) => {
 
-                    This.getView().byId("idAppControl").setBusy(false);
+                    This.getView().byId(This.IDAPP).setBusy(false);
 
                     if (!resp) return;
 
@@ -715,7 +715,7 @@ sap.ui.define(
 
             new: async function (oEvent) {
 
-                This.getView().byId("idAppControl").setBusy(true);
+                This.getView().byId(This.IDAPP).setBusy(true);
 
                 var inputs = [];
 
@@ -831,7 +831,7 @@ sap.ui.define(
 
                 This.getView().addContent(dialog);
 
-                This.getView().byId("idAppControl").setBusy(false);
+                This.getView().byId(This.IDAPP).setBusy(false);
 
                 dialog.open();
             },

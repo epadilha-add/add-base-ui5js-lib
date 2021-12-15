@@ -10,7 +10,7 @@ sap.ui.define([
 
 
         constructor: function (params, backFn) {
-            params.that.getView().byId("idAppControl").setBusy(true);
+            params.that.getView().byId(params.that.IDAPP).setBusy(true);
             this.mainContent = new sap.ui.layout.form.SimpleForm({
                 editable: true,
                 layout: "ColumnLayout",
@@ -91,7 +91,7 @@ sap.ui.define([
                             text: "{i18n>cancel}",
                             press: function (e) {
 
-                                params.that.getView().byId("idAppControl").setBusy(false);
+                                params.that.getView().byId(params.that.IDAPP).setBusy(false);
 
                                 //   setTimeout(
                                 //     function () {
@@ -266,7 +266,7 @@ sap.ui.define([
 
             new ScreenElements(this.that).set(flds, this);
 
-            params.that.getView().byId("idAppControl").setBusy(false);
+            params.that.getView().byId(params.that.IDAPP).setBusy(false);
 
             return this;
         },

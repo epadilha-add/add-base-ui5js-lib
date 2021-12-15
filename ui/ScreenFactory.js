@@ -36,12 +36,21 @@ sap.ui.define([
 
                         if (component) {
 
+
+                            //jQuery.sap.registerModulePath(component.name, component.path);
+                            // jQuery.sap.registerModulePath(component.name, component.path);
+                            /* 
+                                                        lSc = new sap.ui.core.ComponentContainer(
+                                                            {
+                                                                name: component.name,
+                                                                manifest: component.path + '/manifest.json'
+                                                            }) */
                             lSc = new sap.ui.core.ComponentContainer(
                                 {
                                     id: component.name,
                                     name: component.name,
                                     //manifestFirst: true,
-                                    //manifest: component.path + '/manifest.json',
+                                    manifest: true,//component.path + '/manifest.json',
                                     autoPrefixId: true,
                                     async: true,
                                     url: component.path
