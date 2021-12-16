@@ -4,7 +4,7 @@ sap.ui.define([
     "sap/base/Log",
     "sap/ui/model/json/JSONModel",
     "../commons/AddModels",
-    "../commons/callService"],
+    "../callService"],
     function (Object, Log, JSONModel, AddModels, callService) {
         'use strict';
 

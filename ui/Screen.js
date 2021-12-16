@@ -1,5 +1,5 @@
 sap.ui.define([
-    "./i/SelectScreen", "./List", "../commons/AddModels", "../commons/callService",
+    "./i/SelectScreen", "./List", "../commons/AddModels", "../callService",
     "sap/ui/model/json/JSONModel", "sap/m/OverflowToolbar", "sap/m/MessageToast"
 ], function (SelectScreen, List, AddModels, callService, JSONModel, OverflowToolbar, MessageToast) {
     "use strict";
