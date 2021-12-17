@@ -1,3 +1,4 @@
+
 sap.ui.define(
     [
         "../BaseController",
@@ -27,8 +28,8 @@ sap.ui.define(
                  *       - copiar template:
                  * 
                  *              exemplo
-                 *                  - DE:   appm.home/webapp/component/ add.appm.crud.catalog 
-                 *                  - PARA  appm.home/webapp/component/ add.appm.crud.catalog.plans                  
+                 *                  - DE:   usrm.home/webapp/component/ add.usrm.crud.catalog 
+                 *                  - PARA  usrm.home/webapp/component/ add.usrm.crud.catalog.plans                  
                  * 
                  *       - renomear:
                  *              -  DE   catalog para plans
@@ -44,7 +45,7 @@ sap.ui.define(
                  * //---------------------------------------------------> 
                  * //-> nome da tabela
                  * //---------------------------------------------------> 
-                 *   that.collection = "appm0000";                 
+                 *   that.collection = "usrm0000";                 
                  * 
                  *                 
                  * //---------------------------------------------------> 
@@ -92,6 +93,13 @@ sap.ui.define(
                 if (!that.refresh) that.refresh = this.refresh;
                 if (!that.save) that.save = this.save;
                 if (!that.list) that.list = this.list;
+                if (!that.getFakeList) that.getFakeList = this.getFakeList;
+                if (!that.pressToNav) that.pressToNav = this.pressToNav;
+                if (!that.setMainModel) that.setMainModel = this.setMainModel;
+                if (!that.getMainModel) that.getMainModel = this.getMainModel;
+                if (!that.tileParameters) that.tileParameters = this.tileParameters;
+
+
 
                 that.message = this.message;
                 that.onSearchList = this.onSearchList;
@@ -118,7 +126,6 @@ sap.ui.define(
                     }
                 }
 
-
                 let firstPage = that.getMainLayout();
 
                 that.mainContent = new sap.m.NavContainer({
@@ -133,11 +140,25 @@ sap.ui.define(
 
                 This.objectNode = [];
 
-                that.list();
+            },
+            getFakeList: function () {
+
+                if (!This.fakeList) return false;
+
+                let data = {
+                    results: This.fakeList.map((lines) => {
+                        return This.normalize(lines);
+                    })
+                };
+
+                This.setMainModel(data);
+
+                return true;
 
             },
-
             list: function () {
+
+                if (this.getFakeList()) return;
 
                 This.getView().byId(This.IDAPP).setBusy(true);
 
@@ -196,12 +217,7 @@ sap.ui.define(
                         };
                     }
 
-                    var model = new sap.ui.model.json.JSONModel(data);
-
-                    table.setModel(model, "mainModel");
-
-                    table.setBusy(false);
-
+                    This.setMainModel(data);
 
                 }).catch((e) => {
 
@@ -210,7 +226,17 @@ sap.ui.define(
                     This.getView().byId(This.IDAPP).setBusy(false);
                 })
             },
+            setMainModel: function (data) {
 
+                var model = new sap.ui.model.json.JSONModel(data);
+
+                if (!This.listMode || This.listMode.mode !== 'tile') {
+                    table.setModel(model, "mainModel");
+                    table.setBusy(false);
+                } else {
+                    This.getView().setModel(model, "mainModel" + This.IDAPP);
+                }
+            },
             normalize: function (lines) {
 
                 for (const key in lines) {
@@ -409,6 +435,9 @@ sap.ui.define(
 
                 This.list();
 
+                if (This.listMode && This.listMode.mode === 'tile')
+                    This.getDetail();
+
                 This.message("successRefresh");
             },
 
@@ -424,7 +453,7 @@ sap.ui.define(
                 if (!This.CrudView) {
                     crud.delete = This.delete;
                     crud.save = This.save;
-                    This.CrudView = new add.appm.crud.Crud(crud, () => This.mainContent.back());
+                    This.CrudView = new add.usrm.crud.Crud(crud, () => This.mainContent.back());
                     This.mainContent.addPage(This.CrudView.Page);
                 } else {
                     This.CrudView.setId(crud.id);
@@ -476,241 +505,182 @@ sap.ui.define(
 
             getDetail: function (panel) {
 
-                let cells = [];
-                let columns = [];
+                if (!This.listMode || This.listMode.mode === 'table') {
 
-                if (!This.listFields) This.listFields = [{ field: This.titleField }];
+                    let cells = [];
+                    let columns = [];
 
-                for (const field of This.listFields) {
+                    if (!This.listFields) This.listFields = [{ field: This.titleField }];
 
-                    cells.push(new sap.m.Text({
-                        //width: "35%",
-                        text: "{mainModel>" + field.field + '}'
-                    }).addStyleClass("labelColumnsTableBold"))
+                    for (const field of This.listFields) {
+
+                        if (field.visible === false) continue;
+
+                        cells.push(new sap.m.Text({
+                            //width: "35%",
+                            text: "{mainModel>" + field.field + '}'
+                        }).addStyleClass("labelColumnsTableBold"))
+
+                        columns.push(new sap.m.Column({
+
+                            header: [
+                                new sap.m.Text({ text: field.text || "{i18n>description}" }).addStyleClass("labelColumnsTable")
+                            ]
+                        }));
+                    }
 
                     columns.push(new sap.m.Column({
-
+                        demandPopin: true,
+                        minScreenWidth: "1050px",
+                        popinDisplay: "Inline",
                         header: [
-                            new sap.m.Text({ text: field.text || "{i18n>description}" }).addStyleClass("labelColumnsTable")
+                            //width: "8em",
+                            new sap.m.Text({ text: "{i18n>status}" }).addStyleClass("labelColumnsTable")
                         ]
                     }));
+
+                    cells.push(new sap.m.ObjectStatus({
+                        tooltip: {
+                            parts: ["mainModel>ACTIVE", "mainModel>CHANAM", "mainModel>ERNAM"],
+                            formatter: (data, CHANAM, ERNAM) => {
+
+                                return (data) ? (CHANAM) ? "Modificado por: " + CHANAM || '' : "Modificado por: " + CHANAM || '' : "Criado por: " + ERNAM;
+                            }
+                        },
+                        text: {
+                            path: 'mainModel>CHADAT',
+                            type: 'sap.ui.model.type.Date',
+                            formatOptions: {
+                                source: {
+                                    pattern: 'yyyyMMddTHHmmss'
+                                },
+                                pattern: 'dd/MM/yyyy HH:mm:ss'
+
+                            },
+                            formatter: (data) => {
+
+                                return (data) ? 'em: ' + data : "";
+                            }
+                        },
+                        icon: {
+                            parts: ["mainModel>ACTIVE"],
+                            type: "Success",
+                            formatter: (data) => {
+
+                                return (data) ? "sap-icon://overlay" : "sap-icon://circle-task";
+                            }
+                        }
+                    }).addStyleClass("labelColumnsTable"))
+
+                    cells.push(new sap.m.Text({
+                        // width: "8em",
+                        wrapping: false, text: "{mainModel>id}"
+                    }).addStyleClass("labelColumnsTable"));
+
+                    columns.push(new sap.m.Column({
+                        demandPopin: true,
+                        minScreenWidth: "1050px",
+                        popinDisplay: sap.m.PopinDisplay.WithoutHeader,
+                        header: [
+                            new sap.m.Text({ text: "{i18n>cod}" }).addStyleClass("labelColumnsTable")
+                        ]
+                    }));
+
+                    table = new sap.m.Table({
+                        contextualWidth: "Auto",
+                        popinLayout: "GridSmall",
+                        growing: true,
+                        growingThreshold: 8,
+                        busy: true,
+                        busyIndicatorDelay: 20,
+                        busyIndicatorSize: sap.ui.core.BusyIndicatorSize.Medium,
+                        growingStarted: (e) => {
+                            // alert("nothing here")
+                        },
+                        headerToolbar: (panel) ? new sap.m.Toolbar({
+                            content: panel
+                        }) : null,
+                        //mode: "SingleSelect",
+                        // selectionMode: "MultiToggle",
+                        selectionChange: function (oEvent) {
+                            //  var oSelectedItem = oEvent.getParameter("items");
+                            //  var oModel = oSelectedItem.getBindingContext().getObject();
+
+                        },
+                        columns: columns
+                    });
+
+                    table.bindAggregation("items", {
+                        path: "mainModel>/results",
+
+                        template: new sap.m.ColumnListItem({
+
+                            type: "Navigation",
+
+                            press: (oEvent) => {
+
+                                var oModel = oEvent.getSource().oBindingContexts;
+
+                                var values = { ...oModel.mainModel.getObject() };
+
+                                This.pressToNav(values);
+
+                                This.navToCrud(values);
+                            },
+
+                            cells: cells
+                        })
+
+                    });
+
+                    This.list();
+
+                    return table//, button
+
+                } else {
+                    let list = [];
+
+                    if (!This.tilePanel) {
+                        This.list();
+                        This.tilePanel = new sap.m.Panel({});
+                    } else {
+                        This.tilePanel.destroyContent();
+                    }
+
+                    list = This.getView().getModel("mainModel" + This.IDAPP).getData();
+
+                    for (const line of list.results) {
+
+                        if (This.listMode.normalize)
+                            line = This.listMode.normalize(line);
+
+                        var tile = new sap.m.GenericTile(line.id, This.tileParameters(line));
+
+                        tile.addStyleClass("sapUiTinyMarginBegin sapUiTinyMarginTop tileLayout");
+
+                        tile.attachPress(This.attachPress ||
+
+                            function (oEvent) {
+
+                                var values = This.getView().getModel("mainModel" + This.IDAPP).getData().results.find(l => l.id === oEvent.getSource().getId());
+
+                                This.pressToNav(values);
+
+                                This.navToCrud(values);
+                            });
+
+                        This.tilePanel.addContent(tile)
+
+                    }
+
+                    return This.tilePanel;
+
                 }
 
-                columns.push(new sap.m.Column({
-                    demandPopin: true,
-                    minScreenWidth: "1050px",
-                    popinDisplay: "Inline",
-                    header: [
-                        //width: "8em",
-                        new sap.m.Text({ text: "{i18n>status}" }).addStyleClass("labelColumnsTable")
-                    ]
-                }));
+            },
 
-                cells.push(new sap.m.ObjectStatus({
-                    tooltip: {
-                        parts: ["mainModel>ACTIVE", "mainModel>CHANAM", "mainModel>ERNAM"],
-                        formatter: (data, CHANAM, ERNAM) => {
-
-                            return (data) ? (CHANAM) ? "Modificado por: " + CHANAM || '' : "Modificado por: " + CHANAM || '' : "Criado por: " + ERNAM;
-                        }
-                    },
-                    text: {
-                        path: 'mainModel>CHADAT',
-                        type: 'sap.ui.model.type.Date',
-                        formatOptions: {
-                            source: {
-                                pattern: 'yyyyMMddTHHmmss'
-                            },
-                            pattern: 'dd/MM/yyyy HH:mm:ss'
-
-                        },
-                        formatter: (data) => {
-
-                            return (data) ? 'em: ' + data : "";
-                        }
-                    },
-                    icon: {
-                        parts: ["mainModel>ACTIVE"],
-                        type: "Success",
-                        formatter: (data) => {
-
-                            return (data) ? "sap-icon://overlay" : "sap-icon://circle-task";
-                        }
-                    }
-                }).addStyleClass("labelColumnsTable"))
-
-                cells.push(new sap.m.Text({
-                    // width: "8em",
-                    wrapping: false, text: "{mainModel>id}"
-                }).addStyleClass("labelColumnsTable"));
-
-                columns.push(new sap.m.Column({
-                    demandPopin: true,
-                    minScreenWidth: "1050px",
-                    popinDisplay: sap.m.PopinDisplay.WithoutHeader,
-                    header: [
-                        new sap.m.Text({ text: "{i18n>cod}" }).addStyleClass("labelColumnsTable")
-                    ]
-                }));
-
-                table = new sap.m.Table({
-                    contextualWidth: "Auto",
-                    popinLayout: "GridSmall",
-                    growing: true,
-                    growingThreshold: 8,
-                    busy: true,
-                    busyIndicatorDelay: 20,
-                    busyIndicatorSize: sap.ui.core.BusyIndicatorSize.Medium,
-                    growingStarted: (e) => {
-                        // alert("nothing here")
-                    },
-                    headerToolbar: (panel) ? new sap.m.Toolbar({
-                        content: panel
-                    }) : null,
-                    //mode: "SingleSelect",
-                    // selectionMode: "MultiToggle",
-                    selectionChange: function (oEvent) {
-                        //  var oSelectedItem = oEvent.getParameter("items");
-                        //  var oModel = oSelectedItem.getBindingContext().getObject();
-
-                    },
-                    columns: columns
-                });
-
-                table.bindAggregation("items", {
-                    path: "mainModel>/results",
-
-                    template: new sap.m.ColumnListItem({
-
-                        type: "Navigation",
-
-                        press: (oEvent) => {
-
-                            var oModel = oEvent.getSource().oBindingContexts;
-
-                            var values = { ...oModel.mainModel.getObject() };
-
-                            if (This.sectionsItems) {
-                                //-> previsto views relacionais para a collection
-
-                                if (This.sectionsItems.foreignKeys) {
-                                    //-> campo com os dados básicos preenchidos                                 
-
-                                    let keys = [];
-                                    let vals = {};
-
-                                    for (const key of This.sectionsItems.foreignKeys) {
-                                        //-> obtem model para conferência. 
-                                        var components = sap.ui.getCore().getModel("foreignKey");
-
-                                        if (components) {
-                                            //-> caso exista, verificar se o app já está sendo utilizado
-
-                                            let selectedLine = components.getData().filter(l => l.idapp === key.idapp);
-
-                                            if (!selectedLine || selectedLine.length === 0) {
-                                                //==> se não estiver, incluílo.
-                                                if (key.foreignKey instanceof Array) {
-
-                                                    for (const item of key.foreignKey) {
-
-                                                        components.oData = components.oData.concat(
-                                                            [{
-                                                                [item]: values[item] || values.id,
-                                                                idapp: key.idapp
-                                                            }])
-                                                    }
-
-                                                } else {
-                                                    components.oData = components.oData.concat(
-                                                        [{
-                                                            [key.foreignKey]: values.id,
-                                                            idapp: key.idapp
-                                                        }])
-                                                }
-                                            } else {
-
-                                                if (key.foreignKey instanceof Array) {
-
-                                                    for (const item of key.foreignKey) {
-                                                        selectedLine[key.index][item] = values[item] || values.id;
-                                                    }
-
-                                                } else {
-                                                    selectedLine[key.index][key.foreignKey] = values.id;
-                                                }
-
-                                                keys = keys.concat(selectedLine);
-
-                                            }
-                                        } else {
-
-
-                                            vals.idapp = key.idapp;
-
-                                            if (key.foreignKey instanceof Array) {
-
-                                                for (const item of key.foreignKey) {
-                                                    vals[item] = values[item] || values.id;
-                                                }
-
-                                            } else {
-                                                vals[key.foreignKey] = values.id;
-                                            }
-
-                                            keys.push(vals);
-                                            //--> model ainda não existe, então, criar
-
-                                        }
-
-                                        sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel(
-                                            keys
-                                        ), "foreignKey");
-
-                                        //-verifica se a tela ui5 do componente já foi inserida com aba
-                                        //-> não existindo, iniciar array
-                                        if (!This.sectionsItems.items) This.sectionsItems.items = [];
-
-                                        //->caso não exista o íncice, incluir tela no índice indicado
-                                        if (!This.sectionsItems.items[key.index || 0]) {
-
-                                            //->incluir tela no índice indicado
-                                            This.sectionsItems.items[key.index || 0] =
-                                                new sap.uxap.ObjectPageSection({
-                                                    showTitle: false,
-                                                    title: key.title,
-                                                    subSections: new sap.uxap.ObjectPageSubSection({
-                                                        blocks: key.content || null
-                                                    })
-                                                })
-
-                                        } else {
-                                            //-> já existe a tela, então eliminá-la para posterior criação de uma nova.
-                                            //- necessáio para disparar o onInit do controller do componente.
-                                            This.sectionsItems.items[key.index || 0].getSubSections()[0].destroyBlocks();
-                                        }
-
-                                        //-> criar componente com base no idd
-                                        This.sectionsItems.items[key.index || 0].getSubSections()[0].addBlock(new ScreenFactory(This).create({
-                                            name: key.idapp,
-                                            key: key.idapp
-                                        }))
-                                    }
-                                }
-                            }
-
-
-                            This.navToCrud(values);
-
-                        },
-
-                        cells: cells
-                    })
-
-                });
-
-                return table//, button
-
+            getMainModel: function () {
+                return This.getView().getModel("mainModel" + This.IDAPP);
             },
 
             new: async function (oEvent) {
@@ -856,12 +826,12 @@ sap.ui.define(
                             press: This.refresh
                         }).addStyleClass("sapUiSmallMarginEnd"),
 
-                        new sap.m.Button({
+                        (This.createContext) ? new sap.m.Button({
                             icon: "sap-icon://add-document",
                             text: "{i18n>new}",
                             type: sap.m.ButtonType.Transparent,
                             press: This.new,
-                        }).addStyleClass("sapUiSmallMarginEnd")
+                        }).addStyleClass("sapUiSmallMarginEnd") : null
                     ]
 
                     return This.getDetail(panelContent);
@@ -872,14 +842,15 @@ sap.ui.define(
                     new sap.m.Button({
                         icon: "sap-icon://synchronize",
                         tooltip: "{i18n>refresh}",
-                        press: This.refresh
+                        type: sap.m.ButtonType.Transparent,
+                        press: This.refresh,
                     }).addStyleClass("sapUiSmallMarginEnd"),
 
-                    new sap.m.Button({
+                    (This.createContext) ? new sap.m.Button({
                         icon: "sap-icon://add-document",
                         text: "{i18n>new}",
                         press: This.new,
-                    }).addStyleClass("sapUiSmallMarginEnd"),
+                    }).addStyleClass("sapUiSmallMarginEnd") : null,
                     new sap.m.SearchField({
                         width: "65%",
                         liveChange: (evt) => {
@@ -899,7 +870,7 @@ sap.ui.define(
                         showTitle: false,
                         title: "{i18n>title}",
                         subSections: new sap.uxap.ObjectPageSubSection({
-                            blocks: new sap.m.Panel("mainContent" + This.IDAPP, {
+                            blocks: (!This.listMode || This.listMode.mode === 'tile') ? This.getDetail() : new sap.m.Panel({
                                 content: This.getDetail()
                             })
                             // moreBlocks: new sap.m.Label({ text: "Anbother block" })
@@ -925,7 +896,7 @@ sap.ui.define(
                             showPlaceholder: true,
                             isObjectIconAlwaysVisible: true,
                             objectTitle: This.title || "{i18n>crudTitle}",
-                            //   objectSubtitle: "Nothing here",
+                            objectSubtitle: This.subtitle || "{i18n>subTitle}",
                             actions: panel
 
                         }),//.addStyleClass("ObjectPageLayoutTitle"),
@@ -966,6 +937,159 @@ sap.ui.define(
 
                 oModel.refresh(true);
             },
+
+            pressToNav: function (values) {
+
+                if (This.sectionsItems) {
+                    //-> previsto views relacionais para a collection
+
+                    if (This.sectionsItems.foreignKeys) {
+                        //-> campo com os dados básicos preenchidos                                 
+
+                        let keys = [];
+                        let vals = {};
+
+                        for (const key of This.sectionsItems.foreignKeys) {
+                            //-> obtem model para conferência. 
+                            var components = sap.ui.getCore().getModel("foreignKey");
+
+                            if (components) {
+                                //-> caso exista, verificar se o app já está sendo utilizado
+
+                                let selectedLine = components.getData().filter(l => l.idapp === key.idapp);
+
+                                if (!selectedLine || selectedLine.length === 0) {
+                                    //==> se não estiver, incluílo.
+                                    if (key.foreignKey instanceof Array) {
+
+                                        for (const item of key.foreignKey) {
+
+                                            components.oData = components.oData.concat(
+                                                [{
+                                                    [item]: values[item] || values.id,
+                                                    idapp: key.idapp
+                                                }])
+                                        }
+
+                                    } else {
+                                        components.oData = components.oData.concat(
+                                            [{
+                                                [key.foreignKey]: values.id,
+                                                idapp: key.idapp
+                                            }])
+                                    }
+                                } else {
+
+                                    if (key.foreignKey instanceof Array) {
+
+                                        for (const item of key.foreignKey) {
+                                            selectedLine[key.index][item] = values[item] || values.id;
+                                        }
+
+                                    } else {
+                                        selectedLine[key.index][key.foreignKey] = values.id;
+                                    }
+
+                                    keys = keys.concat(selectedLine);
+
+                                }
+                            } else {
+
+
+                                vals.idapp = key.idapp;
+
+                                if (key.foreignKey instanceof Array) {
+
+                                    for (const item of key.foreignKey) {
+                                        vals[item] = values[item] || values.id;
+                                    }
+
+                                } else {
+                                    vals[key.foreignKey] = values.id;
+                                }
+
+                                keys.push(vals);
+                                //--> model ainda não existe, então, criar
+
+                            }
+
+                            sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel(
+                                keys
+                            ), "foreignKey");
+
+                            //-verifica se a tela ui5 do componente já foi inserida com aba
+                            //-> não existindo, iniciar array
+                            if (!This.sectionsItems.items) This.sectionsItems.items = [];
+
+                            //->caso não exista o íncice, incluir tela no índice indicado
+                            if (!This.sectionsItems.items[key.index || 0]) {
+
+                                //->incluir tela no índice indicado
+                                This.sectionsItems.items[key.index || 0] =
+                                    new sap.uxap.ObjectPageSection({
+                                        showTitle: false,
+                                        title: key.title,
+                                        subSections: new sap.uxap.ObjectPageSubSection({
+                                            blocks: key.content || null
+                                        })
+                                    })
+
+                            } else {
+                                //-> já existe a tela, então eliminá-la para posterior criação de uma nova.
+                                //- necessáio para disparar o onInit do controller do componente.
+                                This.sectionsItems.items[key.index || 0].getSubSections()[0].destroyBlocks();
+                            }
+
+                            //-> criar componente com base no idd
+                            This.sectionsItems.items[key.index || 0].getSubSections()[0].addBlock(new ScreenFactory(This).create({
+                                name: key.idapp,
+                                key: key.idapp
+                            }))
+                        }
+                    }
+                }
+            },
+            tileParameters: function (line) {
+                //modelo para entendimento
+                if (This.listMode && This.listMode.mappingTile)
+                    return {
+                        header: line[This.listMode.mappingTile.header] || This.listMode.mappingTile.header,
+                        headerImage: line[This.listMode.mappingTile.headerImage] || This.listMode.mappingTile.headerImage,
+                        subheader: line[This.listMode.mappingTile.subheader] || This.listMode.mappingTile.subheader,
+                        url: line[This.listMode.mappingTile.url] || This.listMode.mappingTile.url,
+                        frameType: line[This.listMode.mappingTile.frameType] || This.listMode.mappingTile.frameType,
+                        state: line[This.listMode.mappingTile.state] || This.listMode.mappingTile.state,
+                        scope: line[This.listMode.mappingTile.scope] || This.listMode.mappingTile.scope,
+                        mode: line[This.listMode.mappingTile.mode] || This.listMode.mappingTile.mode,
+                        tileContent: {
+                            unit: line[This.listMode.mappingTile.tileContent.unit] || This.listMode.mappingTile.tileContent.unit || null,
+                            footer: line[This.listMode.mappingTile.tileContent.footer] || This.listMode.mappingTile.tileContent.footer,
+                            content: [new This.listMode.mappingTile.tileContent.content.type(This.listMode.mappingTile.tileContent.content.params(line))]
+                        }
+                    }
+
+                return {
+
+                    header: "id",
+                    headerImage: "sap-icon://information",
+                    subheader: "ERNAM",
+                    frameType: "TwoByOne",
+                    url: "ACTIVE",
+                    tileContent: {
+                        unit: null,
+                        footer: "footer",
+                        content: {
+                            type: sap.m.NumericContent,
+                            params: (line) => {
+                                return {
+                                    value: 10000,
+                                    withMargin: false
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
         });
     });

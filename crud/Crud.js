@@ -6,11 +6,17 @@ sap.ui.define([
 ], function (Object, ScreenElements) {
     "use strict";
 
-    return Object.extend("add.appm.crud.Crud", {
+    return Object.extend("add.usrm.crud.Crud", {
 
 
         constructor: function (params, backFn) {
+
+            this.isNavigation = null;
+            if (params.that.sectionsItems)
+                this.isNavigation = params.that.sectionsItems.foreignKeys.find(e => e.parent === params.that.IDAPP && e.type && e.type === 'Navigation')
+
             params.that.getView().byId(params.that.IDAPP).setBusy(true);
+
             this.mainContent = new sap.ui.layout.form.SimpleForm({
                 editable: true,
                 layout: "ColumnLayout",
@@ -114,35 +120,38 @@ sap.ui.define([
                 }
             });
 
-            let buttons = [
-                new sap.m.Button({
-                    icon: "sap-icon://delete",
-                    text: "{i18n>delete}",
-                    type: sap.m.ButtonType.Transparent,//type: "Reject",
-                    press: () => {
-                        this.delete(this.getId());
-                    }
-                }), this.activeButton
-                , new sap.m.Button({
-                    icon: "sap-icon://save",
-                    type: sap.m.ButtonType.Transparent,
-                    text: "{i18n>save}",
-                    press: async (oEvent) => {
+            let buttons = [];
 
-                        await this.save(params);
+            if (!this.isNavigation && params.that.edit) {
+                buttons = [
+                    new sap.m.Button({
+                        icon: "sap-icon://delete",
+                        text: "{i18n>delete}",
+                        type: sap.m.ButtonType.Transparent,//type: "Reject",
+                        press: () => {
+                            this.delete(this.getId());
+                        }
+                    }), this.activeButton
+                    , new sap.m.Button({
+                        icon: "sap-icon://save",
+                        type: sap.m.ButtonType.Transparent,
+                        text: "{i18n>save}",
+                        press: async (oEvent) => {
 
-                    }
-                }),
-                this.btBack
-            ];
+                            await this.save(params);
 
-            /*        if (params.that.foreignKeys) {
-       
-                       return This.getDetail(panelContent);
-                   } */
+                        }
+                    }),
+                    this.btBack
+                ];
+            } else {
+                buttons[0] = this.btBack;
+            }
 
-            let sections = [
-                new sap.uxap.ObjectPageSection({
+            let sections = [];
+
+            if (!this.isNavigation || this.isNavigation.type !== 'Navigation')
+                sections[0] = new sap.uxap.ObjectPageSection({
                     title: "{i18n>basicData}",
                     subSections: new sap.uxap.ObjectPageSubSection({
                         validateFieldGroup: () => { },
@@ -152,7 +161,7 @@ sap.ui.define([
                         // moreBlocks: new sap.m.Label({ text: "Anbother block" })
                     })
                 })
-            ]
+
 
             if (params.that.sectionsItems) {
                 /*
@@ -181,12 +190,12 @@ sap.ui.define([
                                    }), */
 
                     new sap.uxap.ObjectPageHeader({
-                        objectImageURI: params.LOGO || params.that.icon || params.imageURI,
+                        objectImageURI: params.LOGO || params.ICON || params.that.icon || params.imageURI,
                         isObjectTitleAlwaysVisible: true,
                         showPlaceholder: true,
                         isObjectIconAlwaysVisible: true,
                         objectTitle: params[params.that.titleField] || "Nothing",//'{' + params.that.IDAPP + 'PARAM>' + params.that.titleField.split('/')[0] + '}',
-                        objectSubtitle: params[params.that.subtitle] || params.that.subtitle.toUpperCase() || null,
+                        objectSubtitle: params[params.that.subtitle] || params.that.subtitle || null,
                         actions: buttons
                     }),///.addStyleClass("labelColumnsTableBold"),
 

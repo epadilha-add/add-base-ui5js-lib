@@ -103,6 +103,7 @@ sap.ui.define([
 
                                     element.P600A.OBLIGTORY = field.prop.obligatory || false;
                                     element.P600A.FIELDNAME = element.CAMPO;
+                                    element.P600A.edit = Scree.that.edit;
 
                                     STRUC.push(element.P600A);
 
@@ -179,6 +180,7 @@ sap.ui.define([
 
                                     element.P600A.OBLIGTORY = field.prop.obligatory || false;
                                     element.P600A.FIELDNAME = element.CAMPO;
+                                    element.P600A.EDIT = Screen.that.edit;
 
                                     STRUC.push(element.P600A);
 
@@ -233,234 +235,268 @@ sap.ui.define([
                 tooltip = (struc.SCRTEXT_S) ? struc.SCRTEXT_S + ':' + struc.FIELDNAME : struc.SCRTEXT_M + ':' + struc.FIELDNAME;
                 placeholder = (struc.SCRTEXT_S) ? struc.SCRTEXT_S : struc.SCRTEXT_M;
 
-                switch (struc.REFTYPE) {
+                var decimals = 0;
+                var maxInt = 0;
+                var vType = null;
 
-                    case 'LB':
-                        struc.LBID = struc.LBID || 'id';
-                        struc.LBDESCR = struc.LBDESCR || 'DESCR';
-                        var oItemTemplate = new sap.ui.core.ListItem({
-                            key: '{' + modelName + 'PARAM>' + struc.LBID + '}',
-                            text: '{' + modelName + 'PARAM>' + struc.LBDESCR + '}',
-                        });
+                switch (struc.DATATYPE) {
 
-                        res.push(new sap.m.ComboBox({
-                            selectedKey: '{' + that.IDAPP + 'PARAM>/' + struc.FIELDNAME + '}',
-                            items: {
-                                path: modelName + 'PARAM>/',
-                                template: oItemTemplate
-                            }
-                        }));
-
+                    case "CURR":
+                    case "DEC":
+                        if (struc.FIELDNAME.split(that.IDAPP).pop().substring(0, 2) == 'AL') {
+                            decimals = 6;
+                            maxInt = 9;
+                        } else {
+                            decimals = 2;
+                            maxInt = 15;
+                        }
                         break;
 
-                    case 'TA':
+                    default:
+                        vType = 'sap.ui.model.type.String';
+                        decimals = 0;
+                        maxInt = 10;
+                        break;
+                }
 
-                        res.push(new sap.m.TextArea({ rows: 10 }).bindProperty("value", modelName + '>/' + struc.FIELDNAME));
+                switch (struc.EDIT) {
+                    case false:
+
+                        res.push(new sap.m.Text({
+                            //id: Id,
+                            text: '{' + modelName + '>/' + struc.FIELDNAME + '}',
+                            width: '100%',
+                            tooltip: (struc.tooltip) ? struc.tooltip : "",
+                            wrapping: false,
+                        }))
+                        /*            
+                                   res.push(new sap.m.Label({
+                                       tooltip: (struc.tooltip) ? struc.tooltip : "",
+                                       wrapping: false,
+                                       text: {
+                                           path: modelName + '>/' + struc.FIELDNAME,
+                                           //type: vType,
+                                           formatOptions: {
+                                               maxIntegerDigits: maxInt,
+                                               maxFractionDigits: decimals
+                                           }
+                                       }
+                                   })) */
 
                         break;
+                    default:
 
-                    case '':
 
-                        switch (struc.DATATYPE) {
-                            case "CURR":
-                            case "DEC":
-                            //  case "NUMC":
-                            case "QUAN":
+                        switch (struc.REFTYPE) {
 
-                                var decimals = 0;
-                                var maxInt = 0;
-                                var vType = 'sap.ui.model.type.Float';
+                            case 'LB':
+                                struc.LBID = struc.LBID || 'id';
+                                struc.LBDESCR = struc.LBDESCR || 'DESCR';
+                                var oItemTemplate = new sap.ui.core.ListItem({
+                                    key: '{' + modelName + 'PARAM>' + struc.LBID + '}',
+                                    text: '{' + modelName + 'PARAM>' + struc.LBDESCR + '}',
+                                });
 
-                                switch (struc.DATATYPE) {
-
-                                    case "CURR":
-                                    case "DEC":
-                                        if (struc.FIELDNAME.split(that.IDAPP).pop().substring(0, 2) == 'AL') {
-                                            decimals = 6;
-                                            maxInt = 9;
-                                        } else {
-                                            decimals = 2;
-                                            maxInt = 15;
-                                        }
-                                        break;
-
-                                    default:
-                                        vType = 'sap.ui.model.type.Integer';
-                                        decimals = 0;
-                                        maxInt = 10;
-                                        break;
-                                }
-
-                                res.push(new sap.m.Input({
-                                    id: Id,
-                                    tooltip: (struc.tooltip) ? struc.tooltip : "",
-                                    // wrapping: false, -> incompatível
-                                    value: {
-                                        path: modelName + '>/' + struc.FIELDNAME,
-                                        type: vType,
-                                        formatOptions: {
-                                            maxIntegerDigits: maxInt,
-                                            maxFractionDigits: decimals
-                                        }
+                                res.push(new sap.m.ComboBox({
+                                    selectedKey: '{' + that.IDAPP + 'PARAM>/' + struc.FIELDNAME + '}',
+                                    items: {
+                                        path: modelName + 'PARAM>/',
+                                        template: oItemTemplate
                                     }
                                 }));
 
                                 break;
 
-                            case "DATS":
+                            case 'TA':
 
-                                res.push(new sap.m.DatePicker({
-                                    //id: Id,
-                                    tooltip: (struc.tooltip) ? struc.tooltip : "",
-                                    displayFormat: "dd-MM-yyyy",
-                                    valueFormat: "yyyyMMdd",
-                                    change: (struc.submit) ? struc.submit : function () { },
-                                    enabled: true, //(struc.EDIT) ? true : false,
-                                    //   submit: vSubmit,
+                                res.push(new sap.m.TextArea({ rows: 10 }).bindProperty("value", modelName + '>/' + struc.FIELDNAME));
+
+                                break;
+
+                            case '':
+
+                                switch (struc.DATATYPE) {
+                                    case "CURR":
+                                    case "DEC":
+                                    //  case "NUMC":
+                                    case "QUAN":
+
+
+
+                                        res.push(new sap.m.Input({
+                                            id: Id,
+                                            tooltip: (struc.tooltip) ? struc.tooltip : "",
+                                            // wrapping: false, -> incompatível
+                                            value: {
+                                                path: modelName + '>/' + struc.FIELDNAME,
+                                                type: vType,
+                                                formatOptions: {
+                                                    maxIntegerDigits: maxInt,
+                                                    maxFractionDigits: decimals
+                                                }
+                                            }
+                                        }));
+
+                                        break;
+
+                                    case "DATS":
+
+                                        res.push(new sap.m.DatePicker({
+                                            //id: Id,
+                                            tooltip: (struc.tooltip) ? struc.tooltip : "",
+                                            displayFormat: "dd-MM-yyyy",
+                                            valueFormat: "yyyyMMdd",
+                                            change: (struc.submit) ? struc.submit : function () { },
+                                            enabled: true, //(struc.EDIT) ? true : false,
+                                            //   submit: vSubmit,
+                                            value: {
+                                                path: modelName + '>/' + struc.FIELDNAME
+                                            }
+                                        }));
+
+                                        break;
+
+                                    default:
+                                        res.push(new sap.m.Input().bindProperty("value", modelName + '>/' + struc.FIELDNAME));
+                                        break;
+
+                                }
+
+                                break;
+
+                            case 'MI':
+
+                                try {
+                                    chnd = eval('that.onValueHelpRequested' + struc.FIELDNAME);
+                                } catch { }
+
+                                var oTokenTemplate = new sap.m.Token({
+                                    key: '{' + that.IDAPP + 'FILTERS>key}',
+                                    text: '{' + that.IDAPP + 'FILTERS>text}',
+                                });
+
+                                let sh = function () { };
+                                let showVH = false;
+                                let fld = struc.FIELDNAME;
+
+                                if (struc.RFTAB && struc.RFTAB.length > 0 && struc.RFFLD.length > 0) {
+                                    showVH = true;
+                                    that._idBusy = cIdBuzy;
+                                    sh = (struc.sh) ? struc.sh : function (oEvent) {
+                                        that.ProcessMonitor.sh(oEvent, fld, that, null, value);
+                                    }
+                                    try {
+                                        if (!that.getModel(that.IDAPP + 'FILTERS').getModel().oData[struc.FIELDNAME])
+                                            that.getModel(that.IDAPP + 'FILTERS').getModel().oData[struc.FIELDNAME] = [];
+                                    } catch {
+
+                                    }
+
+                                }
+
+                                res.push(new sap.m.MultiInput({
+                                    //id: struc.FIELDNAME,
+                                    submit: function (oEvent) { that.screen.elements.__proto__.onSubmit(oEvent, that) },
+                                    required: struc.OBLIGTORY,
+                                    placeholder: placeholder,
+                                    tooltip: tooltip,
+                                    valueHelpRequest: sh,
+                                    showValueHelp: showVH,
+                                    tokenUpdate: function (oEvent) { that.screen.elements.__proto__.onTokenUpdate(oEvent, that) },
+                                    placeholder: placeholder
+                                }).bindAggregation('tokens', that.IDAPP + 'FILTERS>/' + struc.FIELDNAME, oTokenTemplate));
+
+                                break;
+
+                            case 'MC':
+
+                                var oItemTemplate = new sap.ui.core.Item({
+                                    key: '{' + modelName + 'PARAM>' + struc.RFFLD + '}',
+                                    text: '{' + modelName + 'PARAM>' + struc.RFFLD + '}:{' + modelName + 'PARAM>DESCR}',
+                                });
+
+                                try {
+                                    chnd = eval('that.handleSelectionChange' + struc.FIELDNAME);
+                                } catch { }
+
+                                res.push(new sap.m.MultiComboBox({
+                                    //id: struc.FIELDNAME,
+
+                                    required: struc.OBLIGTORY,
+                                    placeholder: placeholder,
+                                    tooltip: tooltip,
+                                    selectionChange: function (oEvent) { that.screen.elements.__proto__.onSubmitMC(oEvent, that, (chnd) ? chnd : function (oEvent) { }) },
+                                    items: {
+                                        path: modelName + 'PARAM>/',// + struc.FIELDNAME,//  struc.SECTION.substring(5, 10),
+                                        sorter: '{' + struc.FIELDNAME + '}',
+                                        template: oItemTemplate
+                                    },
+                                    selectedKeys: {
+                                        path: that.IDAPP + 'FILTERS>/' + struc.FIELDNAME
+                                    }
+                                }));
+
+                                break;
+
+                            case 'DR':
+                                try {
+                                    chnd = eval('that.handleChange' + struc.FIELDNAME);
+                                } catch { }
+
+                                //let fldDate = 'ADDDATE' + struc.FIELDNAME;
+                                let fldDate = struc.FIELDNAME;
+
+                                try {
+                                    if (!that.getModel('FILTERS').oData[fldDate])
+                                        that.getModel('FILTERS').oData[fldDate] = {};
+                                } catch {
+
+                                }
+                                res.push(new sap.m.DateRangeSelection({
+                                    // id: struc.FIELDNAME,
+                                    change: (chnd) ? chnd : function () { },
+                                    required: struc.OBLIGTORY,
+                                    dateValue: '{' + that.IDAPP + 'FILTERS>/' + struc.FIELDNAME + '/LOW}',
+                                    secondDateValue: '{' + that.IDAPP + 'FILTERS>/' + struc.FIELDNAME + '/HIGH}'
+                                }));
+
+                                break;
+
+                            case 'CB':
+
+                                res.push(new sap.m.CheckBox({
+                                    //id: struc.FIELDNAME, 
+                                    selected: '{' + that.IDAPP + 'FILTERS>/' + struc.FIELDNAME + '}'
+                                }));
+
+                                break;
+
+                            case 'TP':
+
+                                res.push(new sap.m.TimePicker({
+                                    //id: struc.FIELDNAME,
+                                    tooltip: tooltip,
+                                    displayFormat: 'hh:mm:ss',
+                                    valueFormat: 'hhmmss',
+                                    enabled: true,
+                                    required: struc.OBLIGTORY,
                                     value: {
-                                        path: modelName + '>/' + struc.FIELDNAME
+                                        path: 'FILTERS>/' + struc.FIELDNAME
                                     }
                                 }));
 
                                 break;
 
                             default:
-                                res.push(new sap.m.Input().bindProperty("value", modelName + '>/' + struc.FIELDNAME));
-                                break;
+
+                                Log.info(struc.FIELDNAME, "type (MI,MC,TP,..) no defined");
+                                return;
 
                         }
 
                         break;
-
-                    case 'MI':
-
-                        try {
-                            chnd = eval('that.onValueHelpRequested' + struc.FIELDNAME);
-                        } catch { }
-
-                        var oTokenTemplate = new sap.m.Token({
-                            key: '{' + that.IDAPP + 'FILTERS>key}',
-                            text: '{' + that.IDAPP + 'FILTERS>text}',
-                        });
-
-                        let sh = function () { };
-                        let showVH = false;
-                        let fld = struc.FIELDNAME;
-
-                        if (struc.RFTAB && struc.RFTAB.length > 0 && struc.RFFLD.length > 0) {
-                            showVH = true;
-                            that._idBusy = cIdBuzy;
-                            sh = (struc.sh) ? struc.sh : function (oEvent) {
-                                that.ProcessMonitor.sh(oEvent, fld, that, null, value);
-                            }
-                            try {
-                                if (!that.getModel(that.IDAPP + 'FILTERS').getModel().oData[struc.FIELDNAME])
-                                    that.getModel(that.IDAPP + 'FILTERS').getModel().oData[struc.FIELDNAME] = [];
-                            } catch {
-
-                            }
-
-                        }
-
-                        res.push(new sap.m.MultiInput({
-                            //id: struc.FIELDNAME,
-                            submit: function (oEvent) { that.screen.elements.__proto__.onSubmit(oEvent, that) },
-                            required: struc.OBLIGTORY,
-                            placeholder: placeholder,
-                            tooltip: tooltip,
-                            valueHelpRequest: sh,
-                            showValueHelp: showVH,
-                            tokenUpdate: function (oEvent) { that.screen.elements.__proto__.onTokenUpdate(oEvent, that) },
-                            placeholder: placeholder
-                        }).bindAggregation('tokens', that.IDAPP + 'FILTERS>/' + struc.FIELDNAME, oTokenTemplate));
-
-                        break;
-
-                    case 'MC':
-
-                        var oItemTemplate = new sap.ui.core.Item({
-                            key: '{' + modelName + 'PARAM>' + struc.RFFLD + '}',
-                            text: '{' + modelName + 'PARAM>' + struc.RFFLD + '}:{' + modelName + 'PARAM>DESCR}',
-                        });
-
-                        try {
-                            chnd = eval('that.handleSelectionChange' + struc.FIELDNAME);
-                        } catch { }
-
-                        res.push(new sap.m.MultiComboBox({
-                            //id: struc.FIELDNAME,
-
-                            required: struc.OBLIGTORY,
-                            placeholder: placeholder,
-                            tooltip: tooltip,
-                            selectionChange: function (oEvent) { that.screen.elements.__proto__.onSubmitMC(oEvent, that, (chnd) ? chnd : function (oEvent) { }) },
-                            items: {
-                                path: modelName + 'PARAM>/',// + struc.FIELDNAME,//  struc.SECTION.substring(5, 10),
-                                sorter: '{' + struc.FIELDNAME + '}',
-                                template: oItemTemplate
-                            },
-                            selectedKeys: {
-                                path: that.IDAPP + 'FILTERS>/' + struc.FIELDNAME
-                            }
-                        }));
-
-                        break;
-
-                    case 'DR':
-                        try {
-                            chnd = eval('that.handleChange' + struc.FIELDNAME);
-                        } catch { }
-
-                        //let fldDate = 'ADDDATE' + struc.FIELDNAME;
-                        let fldDate = struc.FIELDNAME;
-
-                        try {
-                            if (!that.getModel('FILTERS').oData[fldDate])
-                                that.getModel('FILTERS').oData[fldDate] = {};
-                        } catch {
-
-                        }
-                        res.push(new sap.m.DateRangeSelection({
-                            // id: struc.FIELDNAME,
-                            change: (chnd) ? chnd : function () { },
-                            required: struc.OBLIGTORY,
-                            dateValue: '{' + that.IDAPP + 'FILTERS>/' + struc.FIELDNAME + '/LOW}',
-                            secondDateValue: '{' + that.IDAPP + 'FILTERS>/' + struc.FIELDNAME + '/HIGH}'
-                        }));
-
-                        break;
-
-                    case 'CB':
-
-                        res.push(new sap.m.CheckBox({
-                            //id: struc.FIELDNAME, 
-                            selected: '{' + that.IDAPP + 'FILTERS>/' + struc.FIELDNAME + '}'
-                        }));
-
-                        break;
-
-                    case 'TP':
-
-                        res.push(new sap.m.TimePicker({
-                            //id: struc.FIELDNAME,
-                            tooltip: tooltip,
-                            displayFormat: 'hh:mm:ss',
-                            valueFormat: 'hhmmss',
-                            enabled: true,
-                            required: struc.OBLIGTORY,
-                            value: {
-                                path: 'FILTERS>/' + struc.FIELDNAME
-                            }
-                        }));
-
-                        break;
-
-                    default:
-
-                        Log.info(struc.FIELDNAME, "type (MI,MC,TP,..) no defined");
-                        return;
-
                 }
+
 
                 res[0].setLabelFor(res[1].getId().toString());
 

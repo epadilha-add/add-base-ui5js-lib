@@ -45,14 +45,13 @@ sap.ui.define([], function () {
 
             }).catch((err) => {
 
-                if (err.status) 
-                    sap.m.MessageBox.show(err.status,
-                   {
-                        icon: sap.m.MessageBox.Icon.ERROR,
-                        title: err.statusText || "Não disponível",
-                        actions: [sap.m.MessageBox.Action.OK],
-                        //initialFocus: "Custom Button"
-                    });
+                if (err.status)
+                    sap.m.MessageBox.show(err.url,
+                        {
+                            icon: sap.m.MessageBox.Icon.ERROR,
+                            title: err.statusText + " (" + err.status + ")",
+                            actions: [sap.m.MessageBox.Action.OK],
+                        });
 
                 if (err.uuid) {
                     window.open(window.location.origin + "/add/notification/" + err.uuid, '_blank');

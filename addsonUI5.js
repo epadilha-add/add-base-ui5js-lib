@@ -23,7 +23,7 @@ sap.ui.define(["./commons/callService"], function (callService) {
           "accept": "*/*",
           "content-type": "application/json"
         },
-        body: { "actionName": "appm0200.list" }
+        body: { "actionName": "usrm0200.list" }
       }).then((response) => {
         return response.text();
       }).then((data) => {

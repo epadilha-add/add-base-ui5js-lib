@@ -7,7 +7,7 @@ sap.ui.define([
 
     return Controller.extend("add.home.app.component.BaseController", {
         callService: callService,
-        loadingConnfig: function (idapp) {
+        loadingConnfig: function (idapp, that) {
             // Log.info("//TODO Definição temporária para obtenção do host");
             /**
              * definição temporária pois a escolha do host deverá ser feita no AS da plataforma,
@@ -23,6 +23,8 @@ sap.ui.define([
             let oMe = new JSONModel();
             oMe.loadData("me", null, false);
             sap.ui.getCore().setModel(oMe, "userInfo");
+
+            //that.callService = new Function(null, null, oModel.getData().callService)();
 
         },
 
