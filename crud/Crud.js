@@ -8,11 +8,10 @@ sap.ui.define([
 
     return Object.extend("add.usrm.crud.Crud", {
 
-
         constructor: function (params, backFn) {
 
             this.isNavigation = null;
-            if (params.that.sectionsItems)
+            if (params.that.sectionsItems && params.that.sectionsItems.foreignKeys)
                 this.isNavigation = params.that.sectionsItems.foreignKeys.find(e => e.parent === params.that.IDAPP && e.type && e.type === 'Navigation')
 
             params.that.getView().byId(params.that.IDAPP).setBusy(true);
@@ -34,16 +33,7 @@ sap.ui.define([
             if (!this.save)
                 this.save = params.save;
 
-            this.btBack = new sap.m.Button(
-                {
-                    icon: "sap-icon://decline",
-                    type: "Transparent",
-                    tooltip: "Fechar",
-                    press: () => {
-                        //let v = this.textArea.getValue();
-                        backFn();
-                    }
-                });
+
             /*************************************
              * 
              * Preparação tela UI5
@@ -114,7 +104,6 @@ sap.ui.define([
 
                     params.that.getView().addContent(params.that.dialogActive);
 
-
                     params.that.dialogActive.open();
 
                 }
@@ -122,7 +111,7 @@ sap.ui.define([
 
             let buttons = [];
 
-            if (!this.isNavigation && params.that.edit) {
+            if (params.that.edit === true || params.that.edit === undefined) {
                 buttons = [
                     new sap.m.Button({
                         icon: "sap-icon://delete",
@@ -131,21 +120,22 @@ sap.ui.define([
                         press: () => {
                             this.delete(this.getId());
                         }
-                    }), this.activeButton
-                    , new sap.m.Button({
+                    }),
+                    this.activeButton,
+                    new sap.m.Button({
                         icon: "sap-icon://save",
                         type: sap.m.ButtonType.Transparent,
                         text: "{i18n>save}",
                         press: async (oEvent) => {
-
                             await this.save(params);
-
                         }
                     }),
-                    this.btBack
+                    params.that.btBack
                 ];
             } else {
-                buttons[0] = this.btBack;
+                buttons = [
+                    params.that.btBack
+                ];
             }
 
             let sections = [];
@@ -194,7 +184,7 @@ sap.ui.define([
                         isObjectTitleAlwaysVisible: true,
                         showPlaceholder: true,
                         isObjectIconAlwaysVisible: true,
-                        objectTitle: params[params.that.titleField] || "Nothing",//'{' + params.that.IDAPP + 'PARAM>' + params.that.titleField.split('/')[0] + '}',
+                        objectTitle: params[params.that.titleField] || params.that.titleField || null,//'{' + params.that.IDAPP + 'PARAM>' + params.that.titleField.split('/')[0] + '}',
                         objectSubtitle: params[params.that.subtitle] || params.that.subtitle || null,
                         actions: buttons
                     }),///.addStyleClass("labelColumnsTableBold"),

@@ -103,7 +103,7 @@ sap.ui.define([
 
                                     element.P600A.OBLIGTORY = field.prop.obligatory || false;
                                     element.P600A.FIELDNAME = element.CAMPO;
-                                    element.P600A.edit = Scree.that.edit;
+                                    //element.P600A.edit = (Screen.that.edit);
 
                                     STRUC.push(element.P600A);
 
