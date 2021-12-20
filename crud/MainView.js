@@ -81,8 +81,8 @@ sap.ui.define(
 
                 This.IDAPP = This.getView().getController().getOwnerComponent().getManifest()["sap.app"].id;
 
-                if (!that.subtitle)
-                    that.subtitle = that.getView().getModel("i18n").getResourceBundle().getText("title");
+                if (!that.title)
+                    that.title = that.getView().getModel("i18n").getResourceBundle().getText("title");
 
                 that.getMainLayout = this.getMainLayout;
                 that.setModel = this.setModel;
@@ -95,6 +95,7 @@ sap.ui.define(
                 if (!that.refresh) that.refresh = this.refresh;
                 if (!that.save) that.save = this.save;
                 if (!that.list) that.list = this.list;
+                if (!that.normalize) that.normalize = this.normalize;
                 if (!that.getMokList) that.getMokList = this.getMokList;
                 if (!that.pressToNav) that.pressToNav = this.pressToNav;
                 if (!that.setMainModel) that.setMainModel = this.setMainModel;
@@ -105,7 +106,7 @@ sap.ui.define(
                 that.message = this.message;
                 that.onSearchList = this.onSearchList;
                 that.getDetail = this.getDetail;
-                that.normalize = this.normalize;
+                //that.normalize = this.normalize;
                 that.callService.IDAPP = that.IDAPP;
 
                 This.getView().byId(This.IDAPP).setBusyIndicatorDelay(50);
@@ -130,10 +131,15 @@ sap.ui.define(
                         /**
                          * para títulos com base no contexto do parent
                          */
-                        This.title = foreignKeys.getData().context[This.title] || This.title
-                        This.subtitle = foreignKeys.getData().context[This.subtitle] || This.subtitle
+                        This.title = foreignKeys.getData().context[This.title] || This.title || null;
+                        This.subtitle = foreignKeys.getData().context[This.subtitle] || This.subtitle || null;
+
+                        (foreignKeys.getData().context.that.edit === true) ? that.edit = true : null;
                     }
+
                 }
+
+                if (!This.edit) This.createContext = null;
 
                 let firstPage = that.getMainLayout();
 
@@ -147,12 +153,12 @@ sap.ui.define(
                     that.mainContent
                 );
 
-                if (!This.listMode || This.listMode.mode === 'table') This.list();
+                //if (!This.listMode || This.listMode.mode === 'table') This.list();
             },
 
             list: function () {
 
-                if (this.getMokList()) return;
+                if (this.mockList) return new Promise((r) => r(this.getMokList()));
 
                 This.getView().byId(This.IDAPP).setBusy(true);
 
@@ -161,7 +167,7 @@ sap.ui.define(
                 //let model = sap.ui.getCore().getModel("foreignKey");
                 let params = {
                     "method": "POST",
-                    "actionName": This.collection + ".list"
+                    "actionName": (This.service) ? This.collection + "." + This.service : This.collection + ".list"
                 }
 
                 if (This.foreignKeys && This.foreignKeys instanceof Array) {
@@ -177,6 +183,7 @@ sap.ui.define(
                     delete query.index;
                     delete query.title;
                     delete query.content;
+                    delete query.context;
 
                     params.params = {};
                     params.params.query = {};
@@ -189,15 +196,18 @@ sap.ui.define(
                     delete pars.index;
                     delete pars.title;
                     delete pars.content;
+                    delete pars.context;
                     params.params = {};
                     params.params = { query: pars }
                 }
 
-                This.callService.postSync("add", params).then((resp) => {
+                return This.callService.postSync("add", params).then((resp) => {
 
                     This.getView().byId(This.IDAPP).setBusy(false);
 
-                    rows = JSON.parse(resp).rows;
+                    rows = JSON.parse(resp);
+
+                    if (rows.rows) rows = rows.rows;
 
                     if (rows instanceof Array) {
                         data = {
@@ -245,7 +255,7 @@ sap.ui.define(
                             if (field.field.split('.')[0] !== key) continue;
 
                             lines[field.field] =
-                                lines[field.field.split(".")[0]][field.field.split(".").pop()];
+                                lines[field.field.split(".")[0]][field.field.split(".").pop()] || lines[field.field];
                         }
 
                         lines[key] = lines[key].id;
@@ -656,7 +666,7 @@ sap.ui.define(
                         })
 
                     });
-
+                    This.list();
                     return table//, button
 
                 } else {
@@ -664,48 +674,50 @@ sap.ui.define(
                     let list = [];
 
                     if (!This.tilePanel) {
-                        This.list();
+
                         This.tilePanel = new sap.m.Panel({});
                     } else {
                         This.tilePanel.removeAllContent();
                     }
-
-                    list = This.getView().getModel("mainModel" + This.IDAPP).getData();
-
                     (This.panelContent) ? This.tilePanel.addContent(new sap.m.Toolbar({
                         content: This.panelContent
                     })) : null;
 
-                    for (var line of list.results) {
+                    This.list().then(() => {
 
-                        if (This.listMode.normalize)
-                            line = This.listMode.normalize(line);
+                        list = This.getView().getModel("mainModel" + This.IDAPP).getData();
 
-                        var tile = new sap.m.GenericTile(This.tileParameters(line));
+                        for (var line of list.results) {
 
-                        tile.addStyleClass("sapUiTinyMarginBegin sapUiTinyMarginTop tileLayout");
+                            if (This.listMode.normalize)
+                                line = This.listMode.normalize(line);
 
-                        tile.attachPress((This.attachPress) ?
+                            var tile = new sap.m.GenericTile(This.tileParameters(line));
 
-                            (oEvent) => { This.attachPress(oEvent) } :
+                            tile.addStyleClass("sapUiTinyMarginBegin sapUiTinyMarginTop tileLayout");
 
-                            (oEvent) => {
+                            tile.attachPress((This.attachPress) ?
 
-                                var values =
+                                (oEvent) => { This.attachPress(oEvent) } :
 
-                                    This.getView().getModel("mainModel" + This.IDAPP).
-                                        getData().results.find(l => l.byId === oEvent.getSource().getId());
+                                (oEvent) => {
 
-                                This.pressToNav(values);
+                                    var values =
 
-                                This.navToCrud(values);
-                            });
+                                        This.getView().getModel("mainModel" + This.IDAPP).
+                                            getData().results.find(l => l.byId === oEvent.getSource().getId());
 
-                        line.byId = tile.getId();
+                                    This.pressToNav(values);
 
-                        This.tilePanel.addContent(tile)
+                                    This.navToCrud(values);
+                                });
 
-                    }
+                            line.byId = tile.getId();
+
+                            This.tilePanel.addContent(tile)
+
+                        }
+                    })
 
                     return This.tilePanel;
 
@@ -1002,23 +1014,22 @@ sap.ui.define(
                                     components.oData.context = values;
 
                                 } else {
+                                    selectedLine[key.index];
 
                                     if (key.foreignKey instanceof Array) {
-
                                         for (let item of key.foreignKey) {
+                                            selectedLine[key.index] = { idapp: key.idapp };
                                             selectedLine[key.index][item] = values[item] || values.id;
                                         }
-
                                     } else {
-                                        selectedLine[key.index][key.foreignKey] = values.id;
+                                        selectedLine[key.index] = { idapp: key.idapp }
+                                        selectedLine[key.index][key.foreignKey] = values[key.foreignKey] || values.id;
                                     }
 
-                                    keys = keys.concat(selectedLine);
-
-                                    keys.context = values;
+                                    selectedLine.context = values;
 
                                     sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel(
-                                        keys
+                                        selectedLine
                                     ), "foreignKey");
                                 }
 

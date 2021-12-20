@@ -24,11 +24,11 @@ sap.ui.define([
                 if (param.length > 0) {
 
                     param.forEach(element => {
-                        listFields.push({ "CAMPO": element.field || element });
+                        listFields.push({ "CAMPO": element.field.split('.')[0] || element });
                     });
 
                 } else {
-                    listFields.push({ "CAMPO": param.field || param });
+                    listFields.push({ "CAMPO": param.field.split('.')[0] || param });
                 }
 
                 let req = {
@@ -79,7 +79,7 @@ sap.ui.define([
                                             element.P600A[key] = field.prop[key]
                                     }
 
-                                    if (field.prop.VALUES) {
+                                    if (field.prop && field.prop.VALUES) {
                                         element.VALUES = field.prop.VALUES;
                                     }
 
@@ -93,15 +93,18 @@ sap.ui.define([
 
                                     if (field.modelPath) {
                                         modelName = field.modelPath;
+                                    } else {
+                                        modelName = '/';
                                     }
 
-                                    if (!field.prop.obligatory) {
+                                    if (field.prop && !field.prop.obligatory) {
                                         if (!field.prop)
                                             field.prop = {};
                                         field.prop.obligatory = false;
                                     }
 
-                                    element.P600A.OBLIGTORY = field.prop.obligatory || false;
+                                    element.P600A.OBLIGTORY = (field.prop && field.prop.obligatory) ? field.prop.obligatory : false;
+
                                     element.P600A.FIELDNAME = element.CAMPO;
                                     //element.P600A.edit = (Screen.that.edit);
 
@@ -178,9 +181,10 @@ sap.ui.define([
                                         field.prop.obligatory = false;
                                     }
 
-                                    element.P600A.OBLIGTORY = field.prop.obligatory || false;
+                                    element.P600A.OBLIGTORY = (field.prop && field.prop.obligatory) ? field.prop.obligatory : false;
                                     element.P600A.FIELDNAME = element.CAMPO;
                                     element.P600A.EDIT = Screen.that.edit;
+                                    element.P600A.EDIT = (field.prop && field.prop.key) ? false : true;
 
                                     STRUC.push(element.P600A);
 
