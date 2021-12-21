@@ -138,8 +138,18 @@ sap.ui.define(
                     }
 
                 }
-
-                if (!This.edit) This.createContext = null;
+                /**
+                 * verifica e habilita edição ou não
+                 */
+                This.context = This.context.map((e) => {
+                    var res = {};
+                    if (!e.field) {
+                        e = { field: e };
+                    }
+                    res = e;
+                    if (This.edit === false) res.create = false;
+                    return res;
+                });
 
                 let firstPage = that.getMainLayout();
 
@@ -250,7 +260,7 @@ sap.ui.define(
 
                     if (lines[key] instanceof Object && lines[key].id) {
 
-                        for (const field of This.listFields) {
+                        for (const field of This.context) {
 
                             if (field.field.split('.')[0] !== key) continue;
 
@@ -271,8 +281,9 @@ sap.ui.define(
 
                 let vals = {};
 
-                for (const key of This.createContext) {
-                    vals[key.field] = data[key.field];
+                for (const key of This.context) {
+                    if (key.create)
+                        vals[key.field.split(".")[0]] = data[key.field.split(".")[0]];
                 }
 
                 if (This.beforeEvent instanceof Function)
@@ -315,7 +326,7 @@ sap.ui.define(
                     content: [new sap.m.Panel({
                         content: [
                             new sap.m.Label({
-                                text: "{i18n>write} '" + values[This.IDAPP + This.titleField] + "' {i18n>toConfirm}"
+                                text: "{i18n>write} '" + values[This.titleField] + "' {i18n>toConfirm}"
                             }),
                             inpConf]
                     })],
@@ -326,7 +337,7 @@ sap.ui.define(
 
                         press: async function () {
 
-                            if (inpConf.getValue() != values[This.IDAPP + This.titleField]) return;
+                            if (inpConf.getValue() != values[This.titleField]) return;
 
                             dialog.close();
 
@@ -375,24 +386,24 @@ sap.ui.define(
 
                 for (const key in values) {
 
-                    if (!This.context.find(l => This.IDAPP + l == key || This.IDAPP + l.field) && key != This.IDAPP + "ID") {
+                    if (!This.context.find(l => l == key || l.field) && key != "ID") {
 
                         continue;
 
-                    } else if (key === This.IDAPP + "ID") {
+                    } else if (key === "ID") {
 
                         vlas.id = values[key]; continue;
                     }
 
                     try {
-                        vlas[key.split(This.IDAPP).pop()] = values[key];
+                        vlas[key] = values[key];
                     } catch {
                     }
                 }
 
-                if (values[This.IDAPP + "ACTIVE"] === true || values[This.IDAPP + "ACTIVE"] === false) {
+                if (values["ACTIVE"] === true || values["ACTIVE"] === false) {
                     //caso exista campo de ativação, considerar do model
-                    vlas.ACTIVE = values[This.IDAPP + "ACTIVE"];
+                    vlas.ACTIVE = values["ACTIVE"];
                 }
 
                 if (This.beforeSave instanceof Function)
@@ -467,7 +478,8 @@ sap.ui.define(
                 let values = {};
                 for (const key in crud) {
                     if (!(crud[key] instanceof Object))
-                        values[This.IDAPP + key.toUpperCase()] = crud[key];
+                        // values[This.IDAPP + key.toUpperCase()] = crud[key];
+                        values[key.toUpperCase()] = crud[key];
                 }
 
                 var oModel = new sap.ui.model.json.JSONModel(values);
@@ -489,7 +501,7 @@ sap.ui.define(
 
                     let listFilter = [new sap.ui.model.Filter("id", FilterOperator.Contains, sValue)];
 
-                    for (const field of this.listFields) {
+                    for (const field of this.context) {
                         listFilter.push(new sap.ui.model.Filter(field.field, FilterOperator.Contains, sValue));
                     }
 
@@ -538,9 +550,9 @@ sap.ui.define(
                     let cells = [];
                     let columns = [];
 
-                    if (!This.listFields) This.listFields = [{ field: This.titleField }];
+                    if (!This.context) This.context = [{ field: This.titleField }];
 
-                    for (const field of This.listFields) {
+                    for (const field of This.context) {
 
                         if (field.visible === false) continue;
 
@@ -605,7 +617,7 @@ sap.ui.define(
                         wrapping: false, text: "{mainModel>id}"
                     }).addStyleClass("labelColumnsTable"));
 
-                    if (This.listFields.find(e => e.field === "id" && e.visible === true))
+                    if (This.context.find(e => e.field === "id" && e.visible === true))
                         columns.push(new sap.m.Column({
                             demandPopin: true,
                             minScreenWidth: "1050px",
@@ -735,14 +747,13 @@ sap.ui.define(
 
                 var inputs = [];
 
-                for (const key of This.createContext) {
+                for (const key of This.context) {
 
-                    if (This.foreignKeys && This.foreignKeys.find(f => f[key.field])) continue;
+                    if (!key.create) continue;
 
-                    let screenField = await new ScreenElements(This).getElementScreenByName(
-                        [
-                            key
-                        ], This);
+                    if (This.foreignKeys && This.foreignKeys.find(f => f[key.field.split('.')[0]])) continue;
+
+                    let screenField = await new ScreenElements(This).getElementScreenByName([key], This);
 
                     if (screenField.length === 0) continue;
 
@@ -796,8 +807,8 @@ sap.ui.define(
                             }
 
                             // valida se todos os campos de contexto de criação estão preenchidos
-                            for (const field of This.createContext) {
-                                if (vals && !vals[field.field]) {
+                            for (const field of This.context) {
+                                if (vals && field.create && !vals[field.field.split('.')[0]]) {
                                     vals = null;
                                 }
                             }
@@ -867,7 +878,7 @@ sap.ui.define(
                     press: This.refresh,
                 }).addStyleClass("sapUiSmallMarginEnd");
 
-                This.btNew = (This.createContext) ? new sap.m.Button({
+                This.btNew = (This.context.find(c => c.create)) ? new sap.m.Button({
                     icon: "sap-icon://add-document",
                     text: "{i18n>new}",
                     press: This.new,
