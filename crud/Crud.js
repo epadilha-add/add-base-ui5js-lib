@@ -209,59 +209,26 @@ sap.ui.define([
             // obter relação de campos com base no regitro selecionado
             for (const field in params) {
 
-                /*         if (params.that.titleField.split('.')[0] ===
-                            field && params.that.context.length > 1) continue; */
-
                 if (exclude.find(e => e === field || e === field.field)) continue;
 
-                if (params.that.foreignKeys && params.that.foreignKeys.find(e => e[field])) continue;
+                if (params.that.foreignKeys && params.that.foreignKeys.find(e => e[field.split('.')[0]])) continue;
 
-                let vals = params.that.context.find(e => e === field || e.field === field)
+                let vals = params.that.context.find(e => e.field.split('.')[0] === field.split('.')[0] || e === field)
 
-                if (vals && !vals.field || !vals) {
-                    flds.push({
-                        field: field, prop: {
-                            obligatory: true
-                        }
-                    });
-                } else {
-                    flds.push(vals);
+                if (!vals || (vals && !vals.field)) {
+                    vals = { field: field }
                 }
+
+                if (flds.find(f => f.field.split('.')[0] === vals.field.split('.')[0])) continue;
+
+                flds.push(vals);
 
                 if (!vals)
                     params.that.context.push(field);
 
             }
 
-            //-> inserir campos impostos do construtor caso o registro não os possua
-            for (const field of params.that.context) {
-
-                if (params.that.foreignKeys && params.that.foreignKeys.find(e => e[field])) continue;
-
-                if (!field.field) {
-
-                    /*     if (params.that.titleField.split('.')[0] ===
-                            field && params.that.context.length > 1) continue; */
-
-                    if (flds.find(f => f.field === field)) continue;
-
-                    flds.push({
-                        field: field, prop: {
-                            obligatory: true
-                        }
-                    });
-
-                } else {
-
-                    /*            if (params.that.titleField.split('.')[0] ===
-                                   field.field && params.that.context.length > 1) continue; */
-
-                    if (flds.find(f => f.field === field.field)) continue;
-
-                    flds.push(field);
-                }
-
-            }
+            flds.concat(params.that.context.filter(a => !flds.find(b => b.field === a.field)));
 
             new ScreenElements(this.that).set(flds, this);
 

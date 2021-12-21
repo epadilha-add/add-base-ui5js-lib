@@ -71,7 +71,7 @@ sap.ui.define([
 
                             return response.find((element) => {
 
-                                if (field.field == element.CAMPO) {
+                                if (field.field.split('.')[0] == element.CAMPO) {
 
                                     //sobrepor configurações 
                                     for (const key in field.prop) {
@@ -93,9 +93,11 @@ sap.ui.define([
 
                                     if (field.modelPath) {
                                         modelName = field.modelPath;
-                                    } else {
-                                        modelName = '/';
                                     }
+
+                                    /* else {
+                                        modelName = '/';
+                                    } */
 
                                     if (field.prop && !field.prop.obligatory) {
                                         if (!field.prop)
@@ -151,7 +153,7 @@ sap.ui.define([
 
                             response.find((element) => {
 
-                                if (field.field == element.CAMPO) {
+                                if (field.field.split('.')[0] == element.CAMPO) {
 
                                     //sobrepor configurações 
                                     for (const key in field.prop) {
@@ -159,7 +161,7 @@ sap.ui.define([
                                             element.P600A[key] = field.prop[key]
                                     }
 
-                                    if (field.prop.VALUES) {
+                                    if (field.prop && field.prop.VALUES) {
                                         element.VALUES = field.prop.VALUES;
                                     }
 
@@ -175,7 +177,7 @@ sap.ui.define([
                                     if (field.modelPath) {
                                         modelName = field.modelPath;
                                     }
-                                    if (!field.prop.obligatory) {
+                                    if (field.prop && !field.prop.obligatory) {
                                         if (!field.prop)
                                             field.prop = {};
                                         field.prop.obligatory = false;
@@ -197,7 +199,7 @@ sap.ui.define([
 
                                     Log.info(element.CAMPO, 'ScreenElements');
 
-                                    field.field = this.that.IDAPP + field.field;
+                                    //field.field = this.that.IDAPP + field.field;
                                 }
 
                             })
@@ -230,9 +232,16 @@ sap.ui.define([
                 var placeholder;
                 var res = [];
 
-                struc.FIELDNAME = that.IDAPP + struc.FIELDNAME;
+                //struc.FIELDNAME = that.IDAPP + struc.FIELDNAME;
 
-                let oLabel = new sap.m.Label({ text: (struc.FIELDNAME == "FNSH" || struc.FIELDNAME == "STOP") ? '{i18n>' + struc.FIELDNAME + '_text}' : (struc.SCRTEXT_M) ? struc.SCRTEXT_M : (struc.SCRTEXT_L) ? struc.SCRTEXT_L : struc.SCRTEXT_S, labelFor: struc.FIELDNAME, visible: ((struc.VISIBLE === 'X') ? true : true) });
+                let oLabel = new sap.m.Label({
+                    text: (struc.FIELDNAME == "FNSH" || struc.FIELDNAME == "STOP") ?
+                        '{i18n>' + struc.FIELDNAME + '_text}' : (struc.SCRTEXT_M) ?
+                            struc.SCRTEXT_M : (struc.SCRTEXT_L) ? struc.SCRTEXT_L : struc.SCRTEXT_S,
+                    labelFor: struc.FIELDNAME,
+                    visible: ((struc.VISIBLE === 'X') ? true : true),
+                    tooltip: struc.FIELDNAME
+                });
 
                 res.push(oLabel);
 
