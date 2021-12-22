@@ -37,7 +37,7 @@ sap.ui.define([
                         if (component) {
                             lSc = new sap.ui.core.ComponentContainer(
                                 {
-                                    id: component.name,
+                                    id: component.name + new Date().getTime(),
                                     name: component.name,
                                     //manifestFirst: true,
                                     manifest: true,//component.path + '/manifest.json',

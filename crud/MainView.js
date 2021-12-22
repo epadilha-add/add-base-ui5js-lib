@@ -14,9 +14,8 @@ sap.ui.define(
         let dialog = {};
         let table = {};
         let This = {};
-        var detail;
+        let componentHistory = "add.crud.modification.history";
         return Controller.extend("add.ui.crud.MainView", {
-
 
             constructor: function (that) {
 
@@ -84,11 +83,11 @@ sap.ui.define(
                 if (!that.title)
                     that.title = that.getView().getModel("i18n").getResourceBundle().getText("title");
 
-                that.getMainLayout = this.getMainLayout;
+                that._getMainLayout = this._getMainLayout;
                 that.setModel = this.setModel;
                 that.changeMainModel = this.changeMainModel;
                 that.navToCrud = this.navToCrud;
-                that.new = this.new;
+                that._new = this._new;
 
                 if (!that.create) that.create = this.create;
                 if (!that.delete) that.delete = this.delete;
@@ -99,13 +98,13 @@ sap.ui.define(
                 if (!that.getMokList) that.getMokList = this.getMokList;
                 if (!that.pressToNav) that.pressToNav = this.pressToNav;
                 if (!that.setMainModel) that.setMainModel = this.setMainModel;
-                if (!that.getMainModel) that.getMainModel = this.getMainModel;
+                if (!that._getMainModel) that._getMainModel = this._getMainModel;
                 if (!that.tileParameters) that.tileParameters = this.tileParameters;
-                //if (!that.attachPress) that.attachPress = this.attachPress;
+                if (!that.afterList) that.afterList = this.afterList;
 
                 that.message = this.message;
-                that.onSearchList = this.onSearchList;
-                that.getDetail = this.getDetail;
+                that._onSearchList = this._onSearchList;
+                that._getDetail = this._getDetail;
                 //that.normalize = this.normalize;
                 that.callService.IDAPP = that.IDAPP;
 
@@ -134,7 +133,7 @@ sap.ui.define(
                         This.title = foreignKeys.getData().context[This.title] || This.title || null;
                         This.subtitle = foreignKeys.getData().context[This.subtitle] || This.subtitle || null;
 
-                        (foreignKeys.getData().context.that.edit === true) ? that.edit = true : null;
+                        (foreignKeys.getData().context.that.sectionsItems.foreignKeys.find(l => l.edit === true && l.idapp === This.IDAPP)) ? This.edit = true : null;
                     }
 
                 }
@@ -151,7 +150,7 @@ sap.ui.define(
                     return res;
                 });
 
-                let firstPage = that.getMainLayout();
+                let firstPage = that._getMainLayout();
 
                 that.mainContent = new sap.m.NavContainer({
                     pages: [firstPage],
@@ -163,7 +162,19 @@ sap.ui.define(
                     that.mainContent
                 );
 
-                //if (!This.listMode || This.listMode.mode === 'table') This.list();
+                if (that.history === true || that.history === undefined) {
+                    this.appendComponent([
+                        {
+                            foreignKey: "KEY",
+                            idapp: "add.crud.modification.history",
+                            title: "{i18n>history}",
+                            index: 0,
+                            edit: false,
+                            parent: that.IDAPP,
+                            embedded: true
+                        }]);
+                }
+
             },
 
             list: function () {
@@ -217,6 +228,9 @@ sap.ui.define(
 
                     rows = JSON.parse(resp);
 
+                    if (This.afterList)
+                        rows = This.afterList(rows);
+
                     if (rows.rows) rows = rows.rows;
 
                     if (rows instanceof Array) {
@@ -240,6 +254,7 @@ sap.ui.define(
                     This.getView().byId(This.IDAPP).setBusy(false);
                 })
             },
+
             setMainModel: function (data) {
 
                 This.listResult = data.results;
@@ -447,7 +462,7 @@ sap.ui.define(
                 This.list();
 
                 if (This.listMode && This.listMode.mode === 'tile')
-                    This.getDetail();
+                    This._getDetail();
 
                 This.message("successRefresh");
             },
@@ -464,7 +479,7 @@ sap.ui.define(
                 if (!This.CrudView) {
                     crud.delete = This.delete;
                     crud.save = This.save;
-                    This.CrudView = new add.usrm.crud.Crud(crud, () => This.mainContent.back());
+                    This.CrudView = new add.ui5js.ui.Crud(crud, () => This.mainContent.back());
                     This.mainContent.addPage(This.CrudView.Page);
                 } else {
                     This.CrudView.setId(crud.id);
@@ -494,7 +509,7 @@ sap.ui.define(
                 MessageToast.show(This.getView().getModel("i18n").getResourceBundle().getText(msg || "Nothing here"));
             },
 
-            onSearchList: function (oEvent, list, objectList) {
+            _onSearchList: function (oEvent, list, objectList) {
 
                 if (!This.listMode || This.listMode.mode === 'table') {
                     var sValue = oEvent.getParameter("newValue");
@@ -543,7 +558,7 @@ sap.ui.define(
 
             },
 
-            getDetail: function (buttons) {
+            _getDetail: function (buttons) {
 
                 if (!This.listMode || This.listMode.mode === 'table') {
 
@@ -579,38 +594,39 @@ sap.ui.define(
                         ]
                     }));
 
-                    cells.push(new sap.m.ObjectStatus({
-                        tooltip: {
-                            parts: ["mainModel>ACTIVE", "mainModel>CHANAM", "mainModel>ERNAM"],
-                            formatter: (data, CHANAM, ERNAM) => {
+                    if (!This.context.find(l => l.field === 'ACTIVE' && l.visible === false))
+                        cells.push(new sap.m.ObjectStatus({
+                            tooltip: {
+                                parts: ["mainModel>ACTIVE", "mainModel>CHANAM", "mainModel>ERNAM"],
+                                formatter: (data, CHANAM, ERNAM) => {
 
-                                return (data) ? (CHANAM) ? "Modificado por: " + CHANAM || '' : "Modificado por: " + CHANAM || '' : "Criado por: " + ERNAM;
-                            }
-                        },
-                        text: {
-                            path: 'mainModel>CHADAT',
-                            type: 'sap.ui.model.type.Date',
-                            formatOptions: {
-                                source: {
-                                    pattern: 'yyyyMMddTHHmmss'
-                                },
-                                pattern: 'dd/MM/yyyy HH:mm:ss'
-
+                                    return (data) ? (CHANAM) ? "Modificado por: " + CHANAM || '' : "Modificado por: " + CHANAM || '' : "Criado por: " + ERNAM;
+                                }
                             },
-                            formatter: (data) => {
+                            text: {
+                                path: 'mainModel>CHADAT',
+                                type: 'sap.ui.model.type.Date',
+                                formatOptions: {
+                                    source: {
+                                        pattern: 'yyyyMMddTHHmmss'
+                                    },
+                                    pattern: 'dd/MM/yyyy HH:mm:ss'
 
-                                return (data) ? 'em: ' + data : "";
-                            }
-                        },
-                        icon: {
-                            parts: ["mainModel>ACTIVE"],
-                            type: "Success",
-                            formatter: (data) => {
+                                },
+                                formatter: (data) => {
 
-                                return (data) ? "sap-icon://overlay" : "sap-icon://circle-task";
+                                    return (data) ? 'em: ' + data : "";
+                                }
+                            },
+                            icon: {
+                                parts: ["mainModel>ACTIVE"],
+                                type: "Success",
+                                formatter: (data) => {
+
+                                    return (data) ? "sap-icon://overlay" : "sap-icon://circle-task";
+                                }
                             }
-                        }
-                    }).addStyleClass("labelColumnsTable"))
+                        }).addStyleClass("labelColumnsTable"))
 
                     cells.push(new sap.m.Text({
                         // width: "8em",
@@ -627,9 +643,12 @@ sap.ui.define(
                             ]
                         }));
 
+
                     table = new sap.m.Table({
                         contextualWidth: "Auto",
+                        //sticky: new sap.m.Sticky.ColumnHeaders,
                         popinLayout: "GridSmall",
+                        inset: false,
                         growing: true,
                         growingThreshold: 8,
                         busy: true,
@@ -657,7 +676,7 @@ sap.ui.define(
 
                         template: new sap.m.ColumnListItem({
 
-                            type: "Navigation",
+                            type: ((This.edit === undefined || This.edit === true) && (This.IDAPP !== componentHistory)) ? "Navigation" : null,
 
                             press: (This.attachPress) ?
 
@@ -679,7 +698,9 @@ sap.ui.define(
 
                     });
                     This.list();
-                    return table//, button
+
+                    return table; //, button
+                    //return new sap.m.ScrollContainer({ content: table, vertical: true }) //, button
 
                 } else {
 
@@ -737,11 +758,11 @@ sap.ui.define(
 
             },
 
-            getMainModel: function () {
+            _getMainModel: function () {
                 return This.getView().getModel("mainModel" + This.IDAPP);
             },
 
-            new: async function (oEvent) {
+            _new: async function (oEvent) {
 
                 This.getView().byId(This.IDAPP).setBusy(true);
 
@@ -860,14 +881,14 @@ sap.ui.define(
                 dialog.open();
             },
 
-            getMainLayout: function () {
+            _getMainLayout: function () {
 
                 This.panelContent = [];
 
                 This.sF = new sap.m.SearchField({
                     width: "18.8rem",
                     liveChange: (evt) => {
-                        This.onSearchList(evt, This.listResult, {});
+                        This._onSearchList(evt, This.listResult, {});
                     }
                 }).addStyleClass("sapUiSmallMarginEnd");
 
@@ -881,7 +902,7 @@ sap.ui.define(
                 This.btNew = (This.context.find(c => c.create)) ? new sap.m.Button({
                     icon: "sap-icon://add-document",
                     text: "{i18n>new}",
-                    press: This.new,
+                    press: This._new,
                 }).addStyleClass("sapUiSmallMarginEnd") : null;
 
                 This.btBack = new sap.m.Button(
@@ -902,7 +923,7 @@ sap.ui.define(
                 ];
 
                 if (This.foreignKeys && This.foreignKeys.length > 0) {
-                    return This.getDetail(This.panelContent);
+                    return This._getDetail(This.panelContent);
                 }
 
                 let sections = [
@@ -911,8 +932,8 @@ sap.ui.define(
                         title: "{i18n>title}",
                         subSections: new sap.uxap.ObjectPageSubSection({
                             blocks: (!This.listMode || This.listMode.mode === 'tile') ?
-                                This.getDetail() : new sap.m.Panel({
-                                    content: This.getDetail()
+                                This._getDetail() : new sap.m.Panel({
+                                    content: This._getDetail()
                                 })
                             // moreBlocks: new sap.m.Label({ text: "Anbother block" })
                         })
@@ -957,8 +978,25 @@ sap.ui.define(
 
             appendComponent(items) {
 
-                This.sectionsItems = {
-                    foreignKeys: items
+                if (!This.sectionsItems || This.sectionsItems.length === 0) {
+                    This.sectionsItems = {
+                        foreignKeys: items
+                    }
+                } else {
+                    items.index = This.sectionsItems.foreignKeys.length + 1;
+                    This.sectionsItems.foreignKeys =
+                        This.sectionsItems.foreignKeys.concat(items);
+                }
+
+                if (This.sectionsItems.foreignKeys.length > 0) {
+                    let i = 0;
+                    for (let iterator of This.sectionsItems.foreignKeys) {
+                        iterator.index = i;
+                        i++;
+                    }
+                    /*       sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel(
+                              This.sectionsItems.foreignKeys
+                          ), " foreignKey");*/
                 }
             },
 
@@ -990,14 +1028,16 @@ sap.ui.define(
                         let keys = [];
                         let vals = {};
 
+                        //-> obtem model para conferência. 
+                        var components = sap.ui.getCore().getModel("foreignKey");
+
                         for (const key of This.sectionsItems.foreignKeys) {
-                            //-> obtem model para conferência. 
-                            var components = sap.ui.getCore().getModel("foreignKey");
+
 
                             if (components) {
                                 //-> caso exista, verificar se o app já está sendo utilizado
 
-                                let selectedLine = components.getData().filter(l => l.idapp === key.idapp);
+                                let selectedLine = components.getData().filter(l => l.idapp === key.idapp && (parent === This.IDAPP || !parent));
 
                                 if (!selectedLine || selectedLine.length === 0) {
                                     //==> se não estiver, incluílo.
@@ -1099,6 +1139,7 @@ sap.ui.define(
                     }
                 }
             },
+
             tileParameters: function (line) {
                 //modelo para entendimento
                 if (This.listMode && This.listMode.mappingTile)

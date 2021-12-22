@@ -479,7 +479,7 @@ sap.ui.define([
 
                                 res.push(new sap.m.CheckBox({
                                     //id: struc.FIELDNAME, 
-                                    selected: '{' + that.IDAPP + 'FILTERS>/' + struc.FIELDNAME + '}'
+                                    selected: '{' + modelName + '>/' + struc.FIELDNAME + '}'
                                 }));
 
                                 break;

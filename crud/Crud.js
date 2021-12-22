@@ -6,13 +6,14 @@ sap.ui.define([
 ], function (Object, ScreenElements) {
     "use strict";
 
-    return Object.extend("add.usrm.crud.Crud", {
+    return Object.extend("add.ui5js.ui.Crud", {
 
         constructor: function (params, backFn) {
 
-            this.isNavigation = null;
+            this.component = {};
+
             if (params.that.sectionsItems && params.that.sectionsItems.foreignKeys)
-                this.isNavigation = params.that.sectionsItems.foreignKeys.find(e => e.parent === params.that.IDAPP && e.type && e.type === 'Navigation')
+                this.component = params.that.sectionsItems.foreignKeys.find(e => e.parent === params.that.IDAPP && (e.embedded || e.embedded === undefined))
 
             params.that.getView().byId(params.that.IDAPP).setBusy(true);
 
@@ -41,7 +42,8 @@ sap.ui.define([
              *************************************/
             this.activeButton = new sap.m.SegmentedButton({
                 selectedKey: params.ACTIVE,
-                //width: "10%",
+                //type: sap.m.ButtonType.Transparent,
+                //width: "100px",
                 items: [
                     new sap.m.SegmentedButtonItem({ text: "{i18n>active}" || "Ativo", key: true }),
                     new sap.m.SegmentedButtonItem({ text: "{i18n>deactivate}" || "Desativado", key: false })
@@ -63,7 +65,7 @@ sap.ui.define([
                         content: [new sap.m.Panel({
                             content: [
                                 new sap.m.Label({
-                                    text: "{i18n>write} '" + values[params.that.IDAPP + params.that.titleField] + "' {i18n>toConfirm}"
+                                    text: "{i18n>write} '" + values[params.that.titleField] + "' {i18n>toConfirm}"
                                 }),
                                 inpConf]
                         })],
@@ -74,9 +76,9 @@ sap.ui.define([
 
                             press: async function () {
 
-                                if (inpConf.getValue() != values[params.that.IDAPP + params.that.titleField]) return;
+                                if (inpConf.getValue() != values[params.that.titleField]) return;
 
-                                values[params.that.IDAPP + "ACTIVE"] = selectValue;
+                                values["ACTIVE"] = selectValue;
 
                                 params.that.dialogActive.close();
                                 params.that.dialogActive.destroy();
@@ -92,12 +94,12 @@ sap.ui.define([
                                 //   setTimeout(
                                 //     function () {
                                 var items = params.that.CrudView.activeButton.getItems().map(function (itm) { return itm.getId() });
-                                params.that.CrudView.activeButton.setSelectedItem(items[(values[params.that.IDAPP + "ACTIVE"]) ? 0 : 1]);
-                                params.that.CrudView.activeButton.setSelectedKey(values[params.that.IDAPP + "ACTIVE"])
+                                params.that.CrudView.activeButton.setSelectedItem(items[(values["ACTIVE"]) ? 0 : 1]);
+                                params.that.CrudView.activeButton.setSelectedKey(values["ACTIVE"])
                                 //  }, 1000);
 
-                                params.that.dialogActive.destroy();
                                 params.that.dialogActive.close();
+                                params.that.dialogActive.destroy();
                             }
                         })
                     })
@@ -130,17 +132,17 @@ sap.ui.define([
                             await this.save(params);
                         }
                     }),
-                    params.that.btBack
+                    //params.that.btBack
                 ];
             } else {
-                buttons = [
-                    params.that.btBack
-                ];
+                //buttons = [
+                //   params.that.btBack
+                // ];
             }
 
             let sections = [];
 
-            if (!this.isNavigation || this.isNavigation.type !== 'Navigation')
+            if (this.component && (this.component.embedded === undefined || this.component.embedded === true))
                 sections[0] = new sap.uxap.ObjectPageSection({
                     title: "{i18n>basicData}",
                     subSections: new sap.uxap.ObjectPageSubSection({
@@ -184,10 +186,11 @@ sap.ui.define([
                         isObjectTitleAlwaysVisible: true,
                         showPlaceholder: true,
                         isObjectIconAlwaysVisible: true,
-                        objectTitle: params[params.that.titleField] || params.that.titleField || null,//'{' + params.that.IDAPP + 'PARAM>' + params.that.titleField.split('/')[0] + '}',
+                        objectTitle: params[params.that.titleField] || params.that.titleField || null,
                         objectSubtitle: params[params.that.subtitle] || params.that.subtitle || null,
-                        actions: buttons
-                    }),///.addStyleClass("labelColumnsTableBold"),
+                        actions: buttons,
+                        sideContentButton: params.that.btBack
+                    }),
 
                 headerContent: [
                     //new sap.m.Avatar({ src: params.LOGO || params.that.icon || params.imageURI })
