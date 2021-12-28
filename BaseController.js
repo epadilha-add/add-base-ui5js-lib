@@ -114,6 +114,22 @@ sap.ui.define([
                 content: extenalParts || parts
             });
 
+        },
+        dataFormat(dataFromAdson) {
+            return dataFromAdson.substring(6, 8) + "/" +
+                dataFromAdson.substring(4, 6) + "/" +
+                dataFromAdson.substring(0, 4) + " " +
+                dataFromAdson.substring(8, 10) + ":" +
+                dataFromAdson.substring(10, 12) + ":" +
+                dataFromAdson.substring(12, 14);
+        },
+
+        navTo(screen) {
+
+            sap.ui.getCore().byId(this.getOwnerComponent()._sOwnerId.split('-').pop())
+                .getParent()
+                .getController()
+                .Ui.addMainContent(screen);
         }
     })
 });

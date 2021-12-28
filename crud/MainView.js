@@ -88,6 +88,7 @@ sap.ui.define(
                 that.changeMainModel = this.changeMainModel;
                 that.navToCrud = this.navToCrud;
                 that._new = this._new;
+                This._sortTable = this._sortTable;
 
                 if (!that.create) that.create = this.create;
                 if (!that.delete) that.delete = this.delete;
@@ -198,7 +199,6 @@ sap.ui.define(
                         for (const key in item) {
                             query[key] = item[key];
                         }
-
                     }
                     delete query.idapp;
                     delete query.index;
@@ -212,14 +212,14 @@ sap.ui.define(
 
                 } else if (This.foreignKeys) {
 
+                    params.params = {};
                     let pars = { ...This.foreignKeys };
                     delete pars.idapp;
                     delete pars.index;
                     delete pars.title;
                     delete pars.content;
                     delete pars.context;
-                    params.params = {};
-                    params.params = { query: pars }
+                    params.params = { query: pars };
                 }
 
                 return This.callService.postSync("add", params).then((resp) => {
@@ -296,8 +296,18 @@ sap.ui.define(
 
                 let vals = {};
 
+                // possíveis campos chaves
+                if (This.foreignKeys && This.foreignKeys instanceof Array) {
+                    for (const item of This.foreignKeys) {
+                        for (const key in item) {
+                            if (key === 'idapp') continue;
+                            vals[key] = item[key];
+                        }
+                    }
+                }
+
                 for (const key of This.context) {
-                    if (key.create)
+                    if (key.create || key.foreignKey === true)
                         vals[key.field.split(".")[0]] = data[key.field.split(".")[0]];
                 }
 
@@ -567,34 +577,39 @@ sap.ui.define(
 
                     if (!This.context) This.context = [{ field: This.titleField }];
 
-                    for (const field of This.context) {
+                    for (var field of This.context) {
 
-                        if (field.visible === false) continue;
+                        if (field.visible === false || field.field === "id" || field.field === "ACTIVE") continue;
 
                         cells.push(new sap.m.Text({
                             //width: "35%",
                             text: "{mainModel>" + field.field + '}'
-                        }).addStyleClass("labelColumnsTableBold"))
+                        }).addStyleClass("labelColumnsTableBold"));
+
+                        let col = new sap.m.Text({ text: field.text || "{i18n>description}" }).addStyleClass("labelColumnsTable");
+
+                        //armazena id para mudar o texto posterior
+                        field.byIdText = col.getId();
 
                         columns.push(new sap.m.Column({
-
-                            header: [
-                                new sap.m.Text({ text: field.text || "{i18n>description}" }).addStyleClass("labelColumnsTable")
-                            ]
+                            header: [col]
                         }));
                     }
 
-                    columns.push(new sap.m.Column({
-                        demandPopin: true,
-                        minScreenWidth: "800px",
-                        popinDisplay: "Inline",
-                        header: [
-                            //width: "8em",
-                            new sap.m.Text({ text: "{i18n>status}" }).addStyleClass("labelColumnsTable")
-                        ]
-                    }));
+                    const actCol = This.context.find(e => e.field === "ACTIVE");
 
-                    if (!This.context.find(l => l.field === 'ACTIVE' && l.visible === false))
+                    if ((actCol && actCol.visible === true) || !actCol) {
+
+                        columns.push(new sap.m.Column({
+                            demandPopin: true,
+                            minScreenWidth: "800px",
+                            popinDisplay: "Inline",
+                            header: [
+                                //width: "8em",
+                                new sap.m.Text({ text: "{i18n>status}" }).addStyleClass("labelColumnsTable")
+                            ]
+                        }));
+
                         cells.push(new sap.m.ObjectStatus({
                             tooltip: {
                                 parts: ["mainModel>ACTIVE", "mainModel>CHANAM", "mainModel>ERNAM"],
@@ -627,13 +642,18 @@ sap.ui.define(
                                 }
                             }
                         }).addStyleClass("labelColumnsTable"))
+                    }
 
-                    cells.push(new sap.m.Text({
-                        // width: "8em",
-                        wrapping: false, text: "{mainModel>id}"
-                    }).addStyleClass("labelColumnsTable"));
+                    const idCol = This.context.find(e => e.field === "id");
 
-                    if (This.context.find(e => e.field === "id" && e.visible === true))
+                    if (idCol && idCol.visible === true) {
+
+                        cells.push(new sap.m.Text({
+                            // width: "8em",
+                            wrapping: false, text: "{mainModel>id}"
+                        }).addStyleClass("labelColumnsTable"));
+
+
                         columns.push(new sap.m.Column({
                             demandPopin: true,
                             minScreenWidth: "1050px",
@@ -643,21 +663,27 @@ sap.ui.define(
                             ]
                         }));
 
+                    }
 
                     table = new sap.m.Table({
-                        contextualWidth: "Auto",
+                        //contextualWidth: "Auto",
                         //sticky: new sap.m.Sticky.ColumnHeaders,
                         popinLayout: "GridSmall",
                         inset: false,
+                        autoPopinMode: true,
+                        contextualWidth: "Auto",
                         growing: true,
                         growingThreshold: 8,
                         busy: true,
-                        fixedLayout: false,
+                        fixedLayout: "Strict",
                         busyIndicatorDelay: 20,
                         busyIndicatorSize: sap.ui.core.BusyIndicatorSize.Medium,
                         growingStarted: (e) => {
                             // alert("nothing here")
                         },
+
+                        dependents: new sap.m.plugins.ColumnResizer(),
+
                         headerToolbar: (This.panelContent) ? new sap.m.Toolbar({
                             content: This.panelContent
                         }) : null,
@@ -697,6 +723,7 @@ sap.ui.define(
                         })
 
                     });
+
                     This.list();
 
                     return table; //, button
@@ -787,7 +814,7 @@ sap.ui.define(
                     stretch: sap.ui.Device.system.phone,
                     title: "{i18n>new}",
                     type: "Message",
-                    contentWidth: "35%",
+                    contentWidth: "50%",
                     content: [
                         new sap.ui.layout.HorizontalLayout({
                             content: [
@@ -812,9 +839,9 @@ sap.ui.define(
                             for (const input of inputs) {
                                 if (!input.field) continue;
                                 if (input.REFTYPE === 'LB') {
-                                    vals[input.field] = input.getSelectedKey();
+                                    vals[input.field.split('.')[0]] = input.getSelectedKey();
                                 } else {
-                                    vals[input.field] = input.getValue();
+                                    vals[input.field.split('.')[0]] = input.getValue();
                                 }
                             }
 
@@ -822,7 +849,7 @@ sap.ui.define(
                             if (This.foreignKeys) {
                                 for (const item of This.foreignKeys) {
                                     for (const key in item) {
-                                        vals[key] = item[key];
+                                        vals[key] = item[key.split('.')[0]];
                                     }
                                 }
                             }
@@ -916,13 +943,26 @@ sap.ui.define(
                         }
                     }).addStyleClass("sapUiSmallMarginEnd");
 
+                This.btSort = new sap.m.Button(
+                    {
+                        icon: "sap-icon://sort",
+                        type: "Transparent",
+                        tooltip: "ordenar",
+                        press: (oEvent) => {
+                            //let v = this.textArea.getValue();
+                            This._sortTable(oEvent);
+                        }
+                    }).addStyleClass("sapUiSmallMarginEnd");
+
+
                 This.panelContent = [
                     This.sF,
                     This.btRefresh,
+                    // This.btSort,
                     This.btNew
                 ];
 
-                if (This.foreignKeys && This.foreignKeys.length > 0) {
+                if (This.foreignKeys && This.foreignKeys.length > 0 || This.showHeader === false) {
                     return This._getDetail(This.panelContent);
                 }
 
@@ -930,6 +970,7 @@ sap.ui.define(
                     new sap.uxap.ObjectPageSection({
                         showTitle: false,
                         title: "{i18n>title}",
+                        tooltip: This.IDAPP,
                         subSections: new sap.uxap.ObjectPageSubSection({
                             blocks: (!This.listMode || This.listMode.mode === 'tile') ?
                                 This._getDetail() : new sap.m.Panel({
@@ -1007,10 +1048,11 @@ sap.ui.define(
                 if (!res.id) throw "errorCreate";
                 oModel.getData().results.find((line) => {
                     if (line.id === res.id) {
-                        for (const key in res) {
-                            if (!(res[key] instanceof Function))
-                                line[key] = res[key];
-                        }
+                        line = This.normalize(line);
+                        /*     for (const key in res) {
+                                if (!(res[key] instanceof Function))
+                                    line[key] = res[key];
+                            } */
                     }
                 });
 
@@ -1028,11 +1070,14 @@ sap.ui.define(
                         let keys = [];
                         let vals = {};
 
-                        //-> obtem model para conferência. 
-                        var components = sap.ui.getCore().getModel("foreignKey");
-
                         for (const key of This.sectionsItems.foreignKeys) {
 
+                            //-> obtem model para conferência. 
+                            var components = sap.ui.getCore().getModel("foreignKey");
+                            /**
+                             * somente parametros do app
+                             */
+                            if (key.parent && key.parent !== This.IDAPP) continue;
 
                             if (components) {
                                 //-> caso exista, verificar se o app já está sendo utilizado
@@ -1202,6 +1247,104 @@ sap.ui.define(
 
                 return true;
 
+            },
+            _sortTable() {
+
+                var vsd1 = new sap.m.ViewSettingsDialog("vsd1", {
+                    confirm: function (oEvent) {
+                        var p = oEvent.getParameters(),
+                            oSorter,
+                            oGrouper,
+                            aFilters,
+                            oCallback,
+                            aTableSorters = [],
+                            aTableFilters = [],
+                            i = 0;
+
+                        // 1) fetch and adjust grouper (set group order)
+                        if (p.groupItem) {
+                            oGrouper = p.groupItem.getCustomData()[0].getValue();
+                            if (oGrouper) {
+                                oGrouper.bDescending = p.groupDescending;
+                                aTableSorters.push(oGrouper);
+                            }
+                        }
+
+                        // 2) fetch and adjust sorter (set sort order)
+                        if (p.sortItem) {
+                            oSorter = p.sortItem.getCustomData()[0].getValue();
+                            if (oSorter) {
+                                oSorter.bDescending = p.sortDescending;
+                                aTableSorters.push(oSorter);
+                            }
+                        }
+
+                        // 3) filtering (either preset filters or standard/custom filters)
+                        if (p.presetFilterItem) {
+                            aFilters = p.presetFilterItem.getCustomData()[0].getValue();
+                            if (aFilters) {
+                                // the filter could be an array of filters or a single filter so we transform it to an array
+                                if (!Array.isArray(aFilters)) {
+                                    aFilters = [aFilters];
+                                }
+                                aTableFilters = aTableFilters.concat(aFilters);
+                            }
+                        } else { // standard/custom filters
+                            for (; i < p.filterItems.length; i++) {
+                                if (p.filterItems[i] instanceof sap.m.ViewSettingsCustomItem) { // custom control filter
+                                    oCallback = p.filterItems[i].getCustomData()[0].getValue();
+                                    aFilters = oCallback.apply(this, [p.filterItems[i].getCustomControl()]);
+                                    if (aFilters) {
+                                        // the filter could be an array of filters or a single filter so we transform it to an array
+                                        if (!Array.isArray(aFilters)) {
+                                            aFilters = [aFilters];
+                                        }
+                                        aTableFilters = aTableFilters.concat(aFilters);
+                                    }
+                                } else if (p.filterItems[i] instanceof sap.m.ViewSettingsItem) { // standard filter
+                                    aFilters = p.filterItems[i].getCustomData()[0].getValue();
+                                    if (aFilters) {
+                                        // the filter could be an array of filters or a single filter so we transform it to an array
+                                        if (!Array.isArray(aFilters)) {
+                                            aFilters = [aFilters];
+                                        }
+                                        aTableFilters = aTableFilters.concat(aFilters);
+                                    }
+                                }
+                            }
+                        }
+
+                        vsd2.addFilterItem(new sap.m.ViewSettingsFilterItem({
+                            key: "myValueFilter",
+                            text: "Value",
+                            items: [
+                                new sap.m.ViewSettingsItem({
+                                    key: "value1",
+                                    text: "< 10 EUR"
+                                }),
+                                new sap.m.ViewSettingsItem({
+                                    key: "value2",
+                                    text: "10 - 30 EUR"
+                                }),
+                                new sap.m.ViewSettingsItem({
+                                    key: "value3",
+                                    text: "30 - 50 EUR"
+                                }),
+                                new sap.m.ViewSettingsItem({
+                                    key: "value4",
+                                    text: "50 - 70 EUR"
+                                }),
+                                new sap.m.ViewSettingsItem({
+                                    key: "value5",
+                                    text: "> 70 EUR"
+                                })
+                            ]
+                        }));
+
+                        // apply sorters & filters to the table binding
+                        table.getBinding("items").sort(aTableSorters);
+                    }
+                })
             }
 
         });

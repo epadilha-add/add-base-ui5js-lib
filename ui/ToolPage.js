@@ -21,7 +21,7 @@ sap.ui.define([
     var TabContainer;
     var Tabs = [];
     var Contents = [];
-    var screenParts = {};
+    var screenParts = undefined;
 
     return Object.extend("add.ui.ToolPage", {
 
@@ -83,8 +83,15 @@ sap.ui.define([
 
             Screen = new ScreenFactory(this);
 
-            this.component =
-                sap.ui.getCore().getModel("AppConfig").getData().navigation[0].key;
+            this.config = sap.ui.getCore().getModel("AppConfig");
+
+            try {
+                this.component =
+                    this.config.getData().navigation[0].key;
+            } catch {
+            }
+
+            if (!this.component) this.component = this.IDAPP;
 
             Contents[this.component] = new ScreenFactory(That).create({
                 name: this.component
@@ -97,12 +104,15 @@ sap.ui.define([
                 initialPage: Contents[this.component]
             });
 
-            this._setLoadConfig(idapp);
-            this._setTabContainer();
-            this._setToolHeader();
-            this._setScreenParts();
+            if (this.component !== this.IDAPP) {
 
-            sap.ui.core.BusyIndicator.hide();
+                this._setLoadConfig(idapp);
+                this._setTabContainer();
+                this._setToolHeader();
+                this._setScreenParts();
+
+                sap.ui.core.BusyIndicator.hide();
+            }
 
             //return this.mainsContent;
 
@@ -124,7 +134,15 @@ sap.ui.define([
          *************************************************************************/
         _getScreenParts(that) {
 
-            return screenParts;
+            return screenParts || new sap.m.MessagePage(
+                {
+                    title: '{i18n>error}',
+                    text: '{i18n>serverNotFound}',
+                    enableFormattedText: false,
+                    showHeader: true,
+                    description: '{I18N>connectionError}',
+                    icon: "sap-icon://message-error"
+                });
         },
         /*************************************************************************
          *_getScreenParts.
@@ -186,7 +204,7 @@ sap.ui.define([
                             path: 'AppConfig>/navigation'
                         }
                     }),
-                    fixedItem: new sap.tnt.NavigationList({
+                    fixedItem: (this.config.getData().fixedNavigation) ? new sap.tnt.NavigationList({
                         items: {
                             template: new sap.tnt.NavigationListItem({
                                 text: '{AppConfig>title}',
@@ -197,7 +215,7 @@ sap.ui.define([
                             }),
                             path: 'AppConfig>/fixedNavigation'
                         }
-                    })
+                    }) : null
                 }).setModel(sap.ui.getCore().getModel("AppConfig"), "AppConfig");
 
             //model.refresh();
@@ -225,7 +243,7 @@ sap.ui.define([
             screenParts.removeAllMainContents();
 
             // verifica se o conteúdo já foi criado
-            if (!Contents[component] || (Contents[component] && Contents[component].getId() !== component)) {
+            if (!Contents[component]) {
 
                 if (!Screen) {
                     // gera o criador das telas
@@ -242,6 +260,7 @@ sap.ui.define([
             // adiciona tela para ser exibida na área principal
             screenParts.addMainContent(Contents[component]);
 
+            return;
             // ponto ideal para setar falhas de comunicação com componentes
             setTimeout(function () {
                 if (Contents[component].getId() !== component)
@@ -257,6 +276,13 @@ sap.ui.define([
                             icon: "sap-icon://lateness"
                         });
             }, 3000);
+        },
+        navTo(screen) {
+
+            screenParts.removeAllMainContents();
+
+            screenParts.addMainContent(screen);
+
         },
         /*************************************************************************
          *_getTabContainer.

@@ -18,11 +18,12 @@ sap.ui.define([
             params.that.getView().byId(params.that.IDAPP).setBusy(true);
 
             this.mainContent = new sap.ui.layout.form.SimpleForm({
+                width: '70%',
                 editable: true,
                 layout: "ColumnLayout",
                 columnsM: 2,
-                columnsL: 3,
-                columnsXL: 4
+                columnsL: 2,
+                columnsXL: 2
             });
 
             this.that = params.that;
@@ -216,7 +217,7 @@ sap.ui.define([
 
                 if (params.that.foreignKeys && params.that.foreignKeys.find(e => e[field.split('.')[0]])) continue;
 
-                let vals = params.that.context.find(e => e.field.split('.')[0] === field.split('.')[0] || e === field)
+                let vals = params.that.context.find(e => (e.field.split('.')[0] === field.split('.')[0] || e === field) && (e.foreignKey === undefined || e.foreignKey === false))
 
                 if (!vals || (vals && !vals.field)) {
                     vals = { field: field }
@@ -231,7 +232,7 @@ sap.ui.define([
 
             }
 
-            flds.concat(params.that.context.filter(a => !flds.find(b => b.field === a.field)));
+            flds = flds.concat(params.that.context.filter(a => !flds.find(b => b.field === a.field) && (a.foreignKey === undefined || a.foreignKey === false)));
 
             new ScreenElements(this.that).set(flds, this);
 

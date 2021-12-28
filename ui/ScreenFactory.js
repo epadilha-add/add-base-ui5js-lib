@@ -43,19 +43,17 @@ sap.ui.define([
                                     manifest: true,//component.path + '/manifest.json',
                                     autoPrefixId: true,
                                     async: component.async || screen.async || true,
-                                    url: component.path
+                                    url: component.path || '../components/' + component.name + '/webapp'
                                 })
 
                         } else {
                             lSc = this._defaultPage(screen.key + ":" + screen.name);
                         }
 
-                        s = { screen: lSc, name: screen.key };
-
-                        Screens.push(s);
+                        if (!lSc.getManifest()) throw new TypeError();
 
                     } catch (err) {
-                        let m = 'Erro Method .Constructor() or Not Implemented ' + screen.key + " " + err.toString();
+                        let m = screen.name + ' Not Implemented - ADD-APPM ';
                         lSc = this._defaultPage(m);
 
                     }
@@ -63,6 +61,10 @@ sap.ui.define([
                 } else {
                     lSc = this._defaultPage(screen.key + ":" + screen.name);
                 }
+
+                s = { screen: lSc, name: screen.key };
+
+                Screens.push(s);
 
                 return s.screen;
 
@@ -88,7 +90,8 @@ sap.ui.define([
 
                 return new sap.m.MessagePage(
                     {
-                        text: "Não disponível",
+                        showHeader: false,
+                        text: "Aplicação não disponível",
                         enableFormattedText: true,
                         description: desc || "Welcome DEV",
                         icon: "sap-icon://message-error"

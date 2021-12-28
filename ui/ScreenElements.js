@@ -84,7 +84,7 @@ sap.ui.define([
                                     }
 
                                     if (element.VALUES) {
-                                        var oModel = new JSONModel(element.VALUES);
+                                        var oModel = new JSONModel(element.VALUES.filter(e => e.ACTIVE || e.ACTIVE === undefined));
                                         modelName = this.that.IDAPP + element.CAMPO;
                                         Screen.getView().setModel(oModel, modelName + "PARAM");
                                     } else {
@@ -93,6 +93,8 @@ sap.ui.define([
 
                                     if (field.modelPath) {
                                         modelName = field.modelPath;
+                                    } else if (!modelName) {
+                                        modelName = '/';
                                     }
 
                                     /* else {
