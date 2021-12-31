@@ -230,12 +230,10 @@ sap.ui.define([
             // obtem objeto para identificar qual menú foi selecionado pelo usuário
             var item = oEvent.getParameter('item');
 
-
-            oEvent.getSource()
+            this.getParent()
                 .getParent()
                 .getParent()
-                .getController()
-                .Ui.addMainContent(item.mProperties.key);
+                .getController().Ui.addMainContent(item.mProperties.key);
 
         },
         addMainContent: function (component) {
@@ -256,6 +254,14 @@ sap.ui.define([
                 })
 
             }
+
+            sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel({ root: component }), "rootComponent");
+
+            let m = sap.ui.getCore().getModel("foreignKey");
+
+            if (m)
+                m.oData = m.getData().filter(item => item.parent === component);
+
 
             // adiciona tela para ser exibida na área principal
             screenParts.addMainContent(Contents[component]);

@@ -133,7 +133,7 @@ sap.ui.define([
                             await this.save(params);
                         }
                     }),
-                    //params.that.btBack
+                    // params.that.btBack
                 ];
             } else {
                 //buttons = [
@@ -145,8 +145,10 @@ sap.ui.define([
 
             if (this.component && (this.component.embedded === undefined || this.component.embedded === true))
                 sections[0] = new sap.uxap.ObjectPageSection({
+                    showTitle: false,
                     title: "{i18n>basicData}",
                     subSections: new sap.uxap.ObjectPageSubSection({
+                        mode: sap.uxap.ObjectPageSubSectionMode.Expanded,
                         validateFieldGroup: () => { },
                         blocks: new sap.m.Panel({
                             content: this.mainContent
@@ -163,37 +165,47 @@ sap.ui.define([
                  */
                 sections = sections.concat(params.that.sectionsItems.items);
             }
+            this.title = new sap.m.Label({ text: params[params.that.titleField] || params.that.titleField || null });
+            this.avatar = new sap.m.Avatar({ src: params.LOGO || params.ICON || params.that.icon || params.imageURI, displaySize: sap.m.AvatarSize.XS, tooltip: params.that.IDAPP });
+
+            this.Bar = new sap.m.Bar({
+                contentLeft: [params.that.btBack, this.avatar, this.title],
+                contentMiddle: [],
+                contentRight: buttons
+            })
 
             this.Page = new sap.uxap.ObjectPageLayout({
                 useIconTabBar: true,
                 isChildPage: false,
                 busyIndicatorDelay: 300,
                 showTitleInHeaderContent: false,
-                alwaysShowContentHeader: false, showFooter: false,
-                headerTitle:
+                alwaysShowContentHeader: false,
+                showFooter: true,
+                headerTitle: null,
 
-                    /*                new sap.uxap.ObjectPageDynamicHeaderTitle({
-                                       expandedHeading: new sap.m.Title({ text: params[params.that.titleField] }),
-                                       snappedHeading: new sap.m.FlexBox({ items: [new sap.m.Avatar({ src: params.LOGO || params.that.icon || params.imageURI })] }),
-               
-                                       expandedContent: new sap.m.Title({ text: params[params.that.subtitle] || params.that.subtitle.toUpperCase() || null }),
-               
-                                       snappedContent: new sap.m.Title({ text: params[params.that.titleField] }),
-               
-                                   }), */
+                /*                new sap.uxap.ObjectPageDynamicHeaderTitle({
+                                   expandedHeading: new sap.m.Title({ text: params[params.that.titleField] }),
+                                   snappedHeading: new sap.m.FlexBox({ items: [new sap.m.Avatar({ src: params.LOGO || params.that.icon || params.imageURI })] }),
+           
+                                   expandedContent: new sap.m.Title({ text: params[params.that.subtitle] || params.that.subtitle.toUpperCase() || null }),
+           
+                                   snappedContent: new sap.m.Title({ text: params[params.that.titleField] }),
+           
+                               }), 
 
-                    new sap.uxap.ObjectPageHeader({
-                        objectImageURI: params.LOGO || params.ICON || params.that.icon || params.imageURI,
-                        isObjectTitleAlwaysVisible: true,
-                        showPlaceholder: true,
-                        isObjectIconAlwaysVisible: true,
-                        objectTitle: params[params.that.titleField] || params.that.titleField || null,
-                        objectSubtitle: params[params.that.subtitle] || params.that.subtitle || null,
-                        actions: buttons,
-                        sideContentButton: params.that.btBack
-                    }),
+                new sap.uxap.ObjectPageHeader({
+                    navigationBar: Bar,
+                    objectImageURI: params.LOGO || params.ICON || params.that.icon || params.imageURI,
+                    isObjectTitleAlwaysVisible: true,
+                    showPlaceholder: false,
+                    isObjectIconAlwaysVisible: true,
+                    objectTitle: params[params.that.titleField] || params.that.titleField || null,
+                    objectSubtitle: params[params.that.subtitle] || params.that.subtitle || null,
+                    //actions: buttons,
+                    //sideContentButton: null//params.that.btBack
+                }),*/
 
-                headerContent: [
+                headerContent: [this.Bar
                     //new sap.m.Avatar({ src: params.LOGO || params.that.icon || params.imageURI })
                     //new sap.m.SearchField(),
                     //new sap.m.Label({ text: "Hello!", wrapping: true }),
@@ -205,6 +217,11 @@ sap.ui.define([
                 ],
                 sections: sections
             });
+
+            /*    setTimeout(() => {
+                   this.Page.setSelectedSection(sections[0].getId())
+               }, 3000) */
+
 
             let flds = [];
 

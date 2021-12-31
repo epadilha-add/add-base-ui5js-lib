@@ -169,7 +169,7 @@ sap.ui.define([
 
                                     if (element.VALUES) {
                                         var oModel = new JSONModel(element.VALUES);
-                                        modelName = this.that.IDAPP + element.CAMPO;
+                                        modelName = this.that.IDAPP + field.field || element.CAMPO;
                                         Screen.setModel(oModel, modelName + "PARAM");
 
                                     } else {
@@ -186,9 +186,9 @@ sap.ui.define([
                                     }
 
                                     element.P600A.OBLIGTORY = (field.prop && field.prop.obligatory) ? field.prop.obligatory : false;
-                                    element.P600A.FIELDNAME = element.CAMPO;
+                                    element.P600A.FIELDNAME = field.field || element.CAMPO;
                                     element.P600A.EDIT = Screen.that.edit;
-                                    element.P600A.EDIT = (field.prop && field.prop.key) ? false : true;
+                                    element.P600A.EDIT = (field.prop && field.prop.key || field.key) ? false : true;
 
                                     STRUC.push(element.P600A);
 
@@ -279,7 +279,7 @@ sap.ui.define([
 
                         res.push(new sap.m.Text({
                             //id: Id,
-                            text: '{' + modelName + '>/' + struc.FIELDNAME + '}',
+                            text: (struc.REFTYPE !== 'LB') ? '{' + modelName + '>/' + struc.FIELDNAME + '}' : '{' + that.IDAPP + 'PARAM>/' + struc.FIELDNAME + '}',
                             width: '100%',
                             tooltip: (struc.tooltip) ? struc.tooltip : "",
                             wrapping: false,
@@ -313,7 +313,7 @@ sap.ui.define([
                                 });
 
                                 res.push(new sap.m.ComboBox({
-                                    selectedKey: '{' + that.IDAPP + 'PARAM>/' + struc.FIELDNAME + '}',
+                                    selectedKey: '{' + that.IDAPP + 'PARAM>/' + struc.FIELDNAME.split('.')[0] + '}',
                                     items: {
                                         path: modelName + 'PARAM>/',
                                         template: oItemTemplate
