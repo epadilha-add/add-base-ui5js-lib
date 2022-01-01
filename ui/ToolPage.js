@@ -136,13 +136,14 @@ sap.ui.define([
 
             return screenParts || new sap.m.MessagePage(
                 {
-                    title: '{i18n>error}',
-                    text: '{i18n>serverNotFound}',
+                    title: sap.ui.getCore().getModel("MessagePage").getData().title,
+                    text: sap.ui.getCore().getModel("MessagePage").getData().text,
                     enableFormattedText: false,
                     showHeader: true,
-                    description: '{I18N>connectionError}',
-                    icon: "sap-icon://message-error"
+                    description: sap.ui.getCore().getModel("MessagePage").getData().description,
+                    icon: sap.ui.getCore().getModel("MessagePage").getData().icon
                 });
+
         },
         /*************************************************************************
          *_getScreenParts.

@@ -6,7 +6,7 @@ sap.ui.define([
 ], function (Object, ScreenElements) {
     "use strict";
 
-    return Object.extend("add.ui5js.ui.Crud", {
+    return Object.extend("add.ui5js.ui.View", {
 
         constructor: function (params, backFn) {
 

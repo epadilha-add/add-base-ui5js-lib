@@ -16,16 +16,52 @@ sap.ui.define([
              * servidor remoto previamente configurado 
              * Everton: 17/04/2021
              */
+
+            sap.ui.getCore().setModel(new JSONModel({
+                title: '{i18n>error}',
+                text: '{i18n>serverNotFound}',
+                enableFormattedText: false,
+                showHeader: true,
+                description: '{I18n>connectionError}',
+                icon: "sap-icon://message-error"
+            }), "MessagePage");
+
+            this._setAppId();
+
             let oModel = new JSONModel();
-            oModel.loadData("add/config/" + idapp, null, false);
+            oModel.loadData("add/config/" + this.IDAPP, null, false);
             sap.ui.getCore().setModel(oModel, "AppConfig");
+
+            if (oModel.getData().uuid)
+                sap.ui.getCore().setModel(new JSONModel({
+                    title: oModel.getData().error.name,
+                    text: oModel.getData().error.type,
+                    enableFormattedText: false,
+                    showHeader: true,
+                    description: oModel.getData().error.message,
+                    icon: "sap-icon://private"
+                }), "MessagePage");
 
             let oMe = new JSONModel();
             oMe.loadData("me", null, false);
             sap.ui.getCore().setModel(oMe, "userInfo");
-
             //that.callService = new Function(null, null, oModel.getData().callService)();
 
+        },
+
+        init() {
+
+            this._setAppId();
+
+            try {
+                Object.assign(this, sap.ui.getCore()
+                    .getModel("AppConfig")
+                    .getData()
+                    .components.find(c => c.key === this.IDAPP).cinit)
+                return
+            } catch (error) {
+                return {}
+            }
         },
 
         userInfo: function () {
@@ -75,9 +111,15 @@ sap.ui.define([
             })
         },
 
-        getAppId(that) {
-            // that.baseController = this;
-            return that.getView().getId().split('---').pop()
+        _setAppId() {
+            if (!this.IDAPP)
+                this.IDAPP = this.getView().getViewName().split('.view')[0];
+        },
+
+        getAppId() {
+            if (!this.IDAPP)
+                this._setAppId();
+            return this.IDAPP;
         },
 
         getToolHeader(exParts) {

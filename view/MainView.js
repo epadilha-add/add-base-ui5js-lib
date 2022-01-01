@@ -7,7 +7,7 @@ sap.ui.define(
         "sap/m/MessageToast",
         "../ui/ScreenElements",
         "../ui/ScreenFactory",
-        './Crud'
+        './View'
     ], function (Controller, Filter, FilterOperator, MessageToast, ScreenElements, ScreenFactory) {
         "use strict";
 
@@ -76,9 +76,16 @@ sap.ui.define(
 
                 This = that;
 
+                /**
+                 * inicialização se implementado, verificar component add.crm.corporations
+                 */
+                if (This.init)
+                    This.init();
+
                 sap.ui.core.BusyIndicator.hide();
 
-                This.IDAPP = This.getView().getController().getOwnerComponent().getManifest()["sap.app"].id;
+                if (!This.IDAPP)
+                    This.IDAPP = This.getView().getController().getOwnerComponent().getManifest()["sap.app"].id;
 
                 /**
                  * setModel em ToolPage - addMainContent
@@ -115,7 +122,7 @@ sap.ui.define(
                 //that.normalize = this.normalize;
                 that.callService.IDAPP = that.IDAPP;
 
-                This.getView().byId(This.IDAPP).setBusyIndicatorDelay(50);
+                This.getView().setBusyIndicatorDelay(50);
 
                 this.foreignKeysCheck();
 
@@ -144,6 +151,10 @@ sap.ui.define(
                     that.mainContent
                 );
 
+                if (that.components && that.components.length > 0) {
+                    this.appendComponent(that.components);
+                }
+
                 if (that.history === true || that.history === undefined) {
                     this.appendComponent([
                         {
@@ -162,7 +173,7 @@ sap.ui.define(
 
                 if (this.mockList) return new Promise((r) => r(this.getMokList()));
 
-                This.getView().byId(This.IDAPP).setBusy(true);
+                This.getView().setBusy(true);
 
                 let rows = [];
                 var data = {};
@@ -176,21 +187,11 @@ sap.ui.define(
 
                 }
 
-                /**
-                 * obter o componente pai para realização
-                 */
-                let parents;
-                try {
-                    parents = This.parent;
-                } catch {
-                    parents = undefined;
-                }
-
                 if (This.foreignKeys && This.foreignKeys instanceof Array) {
                     let query = {};
 
                     for (const item of This.foreignKeys) {
-                        if (item.idapp !== This.IDAPP || item.parent !== parents) continue;
+                        if (item.idapp !== This.IDAPP) continue;
                         for (const key in item) {
                             query[key] = item[key];
                         }
@@ -224,7 +225,7 @@ sap.ui.define(
 
                 return This.callService.postSync("add", params).then((resp) => {
 
-                    This.getView().byId(This.IDAPP).setBusy(false);
+                    This.getView().setBusy(false);
 
                     rows = JSON.parse(resp);
 
@@ -249,7 +250,7 @@ sap.ui.define(
 
                 }).catch((e) => {
                     table.setBusy(false);
-                    This.getView().byId(This.IDAPP).setBusy(false);
+                    This.getView().setBusy(false);
                     throw e;
                 })
             },
@@ -313,7 +314,7 @@ sap.ui.define(
 
             create: async function (data) {
 
-                This.getView().byId(This.IDAPP).setBusy(true);
+                This.getView().setBusy(true);
 
                 let vals = {};
 
@@ -342,7 +343,7 @@ sap.ui.define(
 
                 }).then((resp) => {
 
-                    This.getView().byId(This.IDAPP).setBusy(false);
+                    This.getView().setBusy(false);
 
                     if (!resp) throw "errorCreate";
 
@@ -359,7 +360,7 @@ sap.ui.define(
 
             delete: async function (companyId) {
 
-                This.getView().byId(This.IDAPP).setBusy(true);
+                This.getView().setBusy(true);
 
                 let values = This.getView().getModel(This.IDAPP + "PARAM").getData();
                 let inpConf = new sap.m.Input();
@@ -393,13 +394,13 @@ sap.ui.define(
                                 "actionName": This.collection + ".remove"
                             }).then((resp) => {
 
-                                This.getView().byId(This.IDAPP).setBusy(false);
+                                This.getView().setBusy(false);
                                 This.list();
                                 This.message("successDelete");
                                 This.mainContent.back();
 
                             }).catch((err) => {
-                                This.getView().byId(This.IDAPP).setBusy(false);
+                                This.getView().setBusy(false);
                                 This.message("errorDelete");
                             })
 
@@ -408,7 +409,7 @@ sap.ui.define(
                     endButton: new sap.m.Button({
                         text: "{i18n>cancel}",
                         press: function (e) {
-                            This.getView().byId(This.IDAPP).setBusy(false);
+                            This.getView().setBusy(false);
                             dialog.close();
                         }
                     })
@@ -423,7 +424,7 @@ sap.ui.define(
 
             save: async function () {
 
-                This.getView().byId(This.IDAPP).setBusy(true);
+                This.getView().setBusy(true);
 
                 let values = This.getView().getModel(This.IDAPP + "PARAM").getData();
                 let vlas = {};
@@ -456,7 +457,7 @@ sap.ui.define(
                     try {
                         vlas = This.beforeSave(vlas);
                     } catch {
-                        This.getView().byId(This.IDAPP).setBusy(false);
+                        This.getView().setBusy(false);
                         return;
                     }
 
@@ -466,7 +467,7 @@ sap.ui.define(
                     "params": vlas
                 }).then((resp) => {
 
-                    This.getView().byId(This.IDAPP).setBusy(false);
+                    This.getView().setBusy(false);
 
                     if (!resp) return;
 
@@ -510,7 +511,7 @@ sap.ui.define(
                 if (!This.CrudView || !This.CrudView.Page) {
                     crud.delete = This.delete;
                     crud.save = This.save;
-                    This.CrudView = new add.ui5js.ui.Crud(crud, () => This.mainContent.back());
+                    This.CrudView = new add.ui5js.ui.View(crud, () => This.mainContent.back());
                     This.CrudView.activeButton.setSelectedKey(crud.ACTIVE);
                     This.mainContent.addPage(This.CrudView.Page);
                 } else {
@@ -827,7 +828,7 @@ sap.ui.define(
 
             new: async function (oEvent) {
 
-                This.getView().byId(This.IDAPP).setBusy(true);
+                This.getView().setBusy(true);
 
                 var inputs = [];
 
@@ -939,7 +940,7 @@ sap.ui.define(
 
                 This.getView().addContent(dialog);
 
-                This.getView().byId(This.IDAPP).setBusy(false);
+                This.getView().setBusy(false);
 
                 dialog.open();
             },
@@ -1071,7 +1072,7 @@ sap.ui.define(
 
                 if (!This.sectionsItems || This.sectionsItems.length === 0) {
                     This.sectionsItems = {
-                        foreignKeys: items
+                        foreignKeys: items || []
                     }
                 } else {
                     items.index = This.sectionsItems.foreignKeys.length + 1;
@@ -1083,11 +1084,9 @@ sap.ui.define(
                     let i = 0;
                     for (let iterator of This.sectionsItems.foreignKeys) {
                         iterator.index = i;
+                        iterator.parent = This.IDAPP;
                         i++;
                     }
-                    /*       sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel(
-                              This.sectionsItems.foreignKeys
-                          ), " foreignKey");*/
                 }
             },
 
@@ -1401,14 +1400,10 @@ sap.ui.define(
             foreignKeysCheck() {
 
                 let foreignKeys = sap.ui.getCore().getModel("foreignKey");
-                try {
-                    This.parent = foreignKeys.getData().values.that.IDAPP || foreignKeys.getData().values.that.parent;
-                } catch {
-                }
 
                 if (foreignKeys) {
 
-                    let keys = foreignKeys.getData().filter(l => l.idapp === This.IDAPP && l.parent === This.parent);
+                    let keys = foreignKeys.getData().filter(l => l.idapp === This.IDAPP);
 
                     if (keys && keys.length > 0) {
 
