@@ -114,6 +114,11 @@ sap.ui.define([], function () {
 
             let b = JSON.stringify(data);
 
+            Object.assign(b, {
+                m: sap.ui.getCore().getModel("userInfo").getData().currentMandt,
+                a: Object.keys(window["sap-ui-config"]["resourceroots"])[0]
+            })
+
             this._method = this.__method || "POST";
 
             let defaultParam = {

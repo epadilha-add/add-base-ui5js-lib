@@ -31,7 +31,7 @@ sap.ui.define([
                     try {
 
                         let component = sap.ui.getCore().getModel("AppConfig").getData().components.find((c => {
-                            if (c.key == screen.key || c.name == screen.name) return c;
+                            if (c.key == screen.key || c.name == screen.name || c.name === screen || c.key === screen) return c;
                         }))
 
                         if (component) {
@@ -61,6 +61,8 @@ sap.ui.define([
                 } else {
                     lSc = this._defaultPage(screen.key + ":" + screen.name);
                 }
+
+                Object.assign(lSc, That);
 
                 s = { screen: lSc, name: screen.key };
 

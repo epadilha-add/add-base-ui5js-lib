@@ -90,7 +90,11 @@ sap.ui.define(
                 /**
                  * setModel em ToolPage - addMainContent
                  */
-                This.rootComponent = sap.ui.getCore().getModel("rootComponent");
+                try {
+                    This.rootComponent = sap.ui.getCore().getModel("rootComponent").getData().root;
+                } catch {
+                    This.rootComponent = This.IDAPP;
+                }
 
                 if (!that.title)
                     that.title = that.getView().getModel("i18n").getResourceBundle().getText("title");
@@ -125,6 +129,11 @@ sap.ui.define(
                 This.getView().setBusyIndicatorDelay(50);
 
                 this.foreignKeysCheck();
+
+                This.callParams = {
+                    m: sap.ui.getCore().getModel("userInfo").getData().currentMandt,
+                    a: Object.keys(window["sap-ui-config"]["resourceroots"])[0]
+                }
 
                 /**
                  * verifica e habilita edição ou não
@@ -177,13 +186,13 @@ sap.ui.define(
 
                 let rows = [];
                 var data = {};
-                //let model = sap.ui.getCore().getModel("foreignKey");
+                //let model = sap.ui.getCore().getModel("foreignKey" + This.rootComponent);
                 let params = {
                     "method": "POST",
                     "actionName": (This.service) ? This.collection + "." + This.service : This.collection + ".list",
                     "params": {
-                        "pageSize": (This.pageSize) ? This.pageSize : 100
-                    }
+                        "pageSize": (This.pageSize) ? This.pageSize : 100,
+                    }, ...This.callParams
 
                 }
 
@@ -290,25 +299,6 @@ sap.ui.define(
                     }
                 }
 
-                /*              for (const key in lines) {
-             
-                                 if (lines[key] instanceof Object && lines[key].id) {
-             
-                                     for (const field of This.context) {
-             
-                                         if (field.field.split('.')[0] !== key) continue;
-             
-                                         lines[field.field] =
-                                             lines[field.field.split(".")[0]][field.field.split(".").pop()] || lines[field.field];
-             
-                                         if (field.type === 'b')
-                                             lines[field.field] = (lines[field.field]) ? "true" : "false";
-                                     }
-             
-                                     lines[key] = lines[key].id;
-                                 }
-                             } */
-
                 return { ...lines, ...l };
             },
 
@@ -339,7 +329,7 @@ sap.ui.define(
                 return await This.callService.postSync("add", {
                     "method": "POST",
                     "actionName": This.collection + ".create",
-                    "params": vals
+                    "params": vals, ...This.callParams
 
                 }).then((resp) => {
 
@@ -391,7 +381,8 @@ sap.ui.define(
                             await This.callService.postSync("add", {
                                 "method": "DELETE",
                                 "fullPath": "/api/" + This.collection + "/" + companyId,
-                                "actionName": This.collection + ".remove"
+                                "actionName": This.collection + ".remove",
+                                ...This.callParams
                             }).then((resp) => {
 
                                 This.getView().setBusy(false);
@@ -464,7 +455,7 @@ sap.ui.define(
                 await This.callService.postSync("add", {
                     "method": "POST",
                     "actionName": This.collection + ".update",
-                    "params": vlas
+                    "params": vlas, ...This.callParams
                 }).then((resp) => {
 
                     This.getView().setBusy(false);
@@ -814,6 +805,8 @@ sap.ui.define(
                             This.tilePanel.addContent(tile)
 
                         }
+                        if (This.mockList && This.mockList.length > 0)
+                            This.mockList = list.results;
                     })
 
                     return This.tilePanel || new sap.m.ScrollContainer({ height: "80%", vertical: true, focusable: true, content: This.tilePanel })
@@ -949,49 +942,53 @@ sap.ui.define(
 
                 This.panelContent = [];
 
-                This.sF = new sap.m.SearchField({
-                    width: "18.8rem",
-                    liveChange: (evt) => {
-                        This._onSearchList(evt, This.listResult, {});
-                    }
-                }).addStyleClass("sapUiSmallMarginEnd");
-
-                This.btRefresh = new sap.m.Button({
-                    icon: "sap-icon://synchronize",
-                    tooltip: "{i18n>refresh}",
-                    type: sap.m.ButtonType.Transparent,
-                    press: This.refresh,
-                }).addStyleClass("sapUiSmallMarginEnd");
-
-                This.btNew = (This.context.find(c => c.create)) ? new sap.m.Button({
-                    icon: "sap-icon://add-document",
-                    text: "{i18n>new}",
-                    press: This.new,
-                }).addStyleClass("sapUiSmallMarginEnd") : null;
-
-                This.btBack = new sap.m.Button(
-                    {
-                        //icon: "sap-icon://decline",
-                        type: sap.m.ButtonType.Back,
-                        tooltip: "Fechar",
-                        press: () => {
-                            //let v = this.textArea.getValue();
-                            //This.CrudView.Page.destroy();
-                            This.mainContent.back();
+                if (This.sF || This.sF === undefined)
+                    This.sF = new sap.m.SearchField({
+                        width: "18.8rem",
+                        liveChange: (evt) => {
+                            This._onSearchList(evt, This.listResult, {});
                         }
                     }).addStyleClass("sapUiSmallMarginEnd");
 
-                This.btSort = new sap.m.Button(
-                    {
-                        icon: "sap-icon://sort",
-                        type: "Transparent",
-                        tooltip: "ordenar",
-                        press: (oEvent) => {
-                            //let v = this.textArea.getValue();
-                            This._sortTable(oEvent);
-                        }
+                if (This.btRefresh || This.btRefresh === undefined)
+                    This.btRefresh = new sap.m.Button({
+                        icon: "sap-icon://synchronize",
+                        tooltip: "{i18n>refresh}",
+                        type: sap.m.ButtonType.Transparent,
+                        press: This.refresh,
                     }).addStyleClass("sapUiSmallMarginEnd");
 
+                if (This.btNew || This.btNew === undefined)
+                    This.btNew = (This.context.find(c => c.create)) ? new sap.m.Button({
+                        icon: "sap-icon://add-document",
+                        text: "{i18n>new}",
+                        press: This.new,
+                    }).addStyleClass("sapUiSmallMarginEnd") : null;
+
+                if (This.btBack || This.btBack === undefined)
+                    This.btBack = new sap.m.Button(
+                        {
+                            //icon: "sap-icon://decline",
+                            type: sap.m.ButtonType.Back,
+                            tooltip: "Fechar",
+                            press: () => {
+                                //let v = this.textArea.getValue();
+                                //This.CrudView.Page.destroy();
+                                This.mainContent.back();
+                            }
+                        }).addStyleClass("sapUiSmallMarginEnd");
+
+                if (This.btSort || This.btSort === undefined)
+                    This.btSort = new sap.m.Button(
+                        {
+                            icon: "sap-icon://sort",
+                            type: "Transparent",
+                            tooltip: "ordenar",
+                            press: (oEvent) => {
+                                //let v = this.textArea.getValue();
+                                This._sortTable(oEvent);
+                            }
+                        }).addStyleClass("sapUiSmallMarginEnd");
 
                 This.panelContent = [
                     This.sF,
@@ -1000,38 +997,49 @@ sap.ui.define(
                     This.btNew
                 ];
 
-                if (This.foreignKeys && This.foreignKeys.length > 0 || This.showHeader === false) {
+                if ((This.foreignKeys && This.foreignKeys.length > 0 || This.showHeader === false) &&
+                    (!This.sectionsHeader || This.sectionsHeader.length === 0)) {
                     return This._getDetail(This.panelContent);
                 }
 
-                let sections = [
-                    new sap.uxap.ObjectPageSection({
-                        showTitle: false,
-                        title: "{i18n>title}",
-                        tooltip: This.IDAPP,
-                        subSections: new sap.uxap.ObjectPageSubSection({
-                            blocks: (!This.listMode || This.listMode.mode === 'tile') ?
-                                This._getDetail() : new sap.m.Panel({
-                                    content: This._getDetail()
-                                })
-                            // moreBlocks: new sap.m.Label({ text: "Anbother block" })
-                        })
-                    })
-                ]
+                let sections = [];
 
-                if (This.sectionsHeader && This.sectionsHeader instanceof Array) {
+                if (!This.sectionsHeader || This.sectionsHeader.length === 0)
+                    sections = [
+                        new sap.uxap.ObjectPageSection({
+                            showTitle: false,
+                            title: "{i18n>title}",
+                            tooltip: This.IDAPP,
+                            subSections: new sap.uxap.ObjectPageSubSection({
+                                blocks: This._getDetail()
+                                /* (!This.listMode || This.listMode.mode === 'tile') ?
+                                    This._getDetail() : new sap.m.Panel({
+                                        content: This._getDetail()
+                                    }) */
+                                // moreBlocks: new sap.m.Label({ text: "Anbother block" })
+                            })
+                        })
+                    ]
+
+                if (This.sectionsHeader && This.sectionsHeader instanceof Array && This.sectionsHeader.length > 0) {
                     /*
-                       Possibilita incluir mais seções .
+                       Possibilita incluir seções externas.
                        Type: sap.uxap.ObjectPageSection
                      */
-                    sections = sections.concat(This.sectionHeader);
+                    sections = sections.concat(This.sectionsHeader);
                 }
 
-                var Bar = new sap.m.Bar({
-                    contentLeft: [new sap.m.Avatar({ src: This.icon || "sap-icon://approvals", displaySize: sap.m.AvatarSize.XS, tooltip: This.IDAPP }), new sap.m.Label({ text: This.title })], //This.btBack || [new sap.m.Button({ text: "Back", type: sap.m.ButtonType.Back })],
-                    contentMiddle: null,
-                    contentRight: null //This.panelContent || [new sap.m.Button({ text: "Edit" })]
-                })
+                if (This.showHeader || This.showHeader === undefined)
+                    this.Bar = new sap.m.Bar({
+                        contentLeft: [new sap.m.Avatar(
+                            {
+                                src: This.icon || "sap-icon://approvals",
+                                displaySize: sap.m.AvatarSize.XS, tooltip: This.IDAPP
+                            }),
+                        new sap.m.Label({ text: This.title })], //This.btBack || [new sap.m.Button({ text: "Back", type: sap.m.ButtonType.Back })],
+                        contentMiddle: null,
+                        contentRight: null
+                    })
 
                 let opl = new sap.uxap.ObjectPageLayout({
                     useIconTabBar: (This.useIconTabBar) ? false : true,
@@ -1050,7 +1058,7 @@ sap.ui.define(
        
                                }), //.addStyleClass("ObjectPageLayoutTitle"), */
 
-                    headerContent: Bar || This.headerContent || [
+                    headerContent: this.Bar || This.headerContent || [
                         /* new sap.m.SearchField(),
                         //new sap.m.Label({ text: "Hello!", wrapping: true }),
                         /new sap.m.ObjectAttribute({
@@ -1123,7 +1131,7 @@ sap.ui.define(
                         for (const key of This.sectionsItems.foreignKeys) {
 
                             //-> obtem model para conferência. 
-                            var components = sap.ui.getCore().getModel("foreignKey");
+                            var components = sap.ui.getCore().getModel("foreignKey" + This.rootComponent);
                             /**
                              * somente parametros do app
                              */
@@ -1200,7 +1208,7 @@ sap.ui.define(
 
                                 sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel(
                                     keys
-                                ), "foreignKey");
+                                ), "foreignKey" + This.rootComponent);
                             }
 
                             //-verifica se a tela ui5 do componente já foi inserida com aba
@@ -1251,7 +1259,7 @@ sap.ui.define(
                         tileContent: {
                             unit: line[This.listMode.mappingTile.tileContent.unit] || This.listMode.mappingTile.tileContent.unit || null,
                             footer: line[This.listMode.mappingTile.tileContent.footer] || This.listMode.mappingTile.tileContent.footer,
-                            content: [new This.listMode.mappingTile.tileContent.content.type(This.listMode.mappingTile.tileContent.content.params(line))]
+                            content: (This.listMode.mappingTile.tileContent.content) ? [new This.listMode.mappingTile.tileContent.content.type(This.listMode.mappingTile.tileContent.content.params(line))] : null
                         }
                     }
 
@@ -1299,6 +1307,7 @@ sap.ui.define(
                 return true;
 
             },
+
             _sortTable() {
 
                 var vsd1 = new sap.m.ViewSettingsDialog("vsd1", {
@@ -1397,9 +1406,10 @@ sap.ui.define(
                     }
                 })
             },
+
             foreignKeysCheck() {
 
-                let foreignKeys = sap.ui.getCore().getModel("foreignKey");
+                let foreignKeys = sap.ui.getCore().getModel("foreignKey" + This.rootComponent);
 
                 if (foreignKeys) {
 

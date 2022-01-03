@@ -1,4 +1,5 @@
 
+
 sap.ui.define([
     "sap/ui/base/Object",
     "sap/ui/model/json/JSONModel",
@@ -16,6 +17,7 @@ sap.ui.define([
     "use strict";
 
     var That;
+    var This;
     var Screen;
     var Menu = [];
     var TabContainer;
@@ -25,97 +27,100 @@ sap.ui.define([
 
     return Object.extend("add.ui.ToolPage", {
 
-        AddModels: AddModels,
-
-        navToCompany: function (Company) {
-
-
-            if (!this.CompanyView) {
-
-
-                this.CompanyView = new add.usrm.Company(Company, () => this.mainsContent.back());
-                this.mainsContent.addPage(this.CompanyView);
-            } else {
-
-                this.CompanyView.getHeaderTitle().setObjectTitle(Company.header)
-                this.CompanyView.getHeaderTitle().setObjectSubtitle(Company.subheader)
-                this.CompanyView.getHeaderTitle().setObjectImageURI(Company.imageURI)
-
-            }
-
-            this.mainsContent.to(this.CompanyView);
-        },
-        navToProduct: function (Product) {
-
-            if (!this.ProductView) {
-
-
-                this.ProductView = new add.usrm.Product(Product, () => this.mainsContent.back());
-                this.mainsContent.addPage(this.ProductView);
-            } else {
-
-
-                this.ProductView.getHeaderTitle().setObjectTitle(Product.header)
-                this.ProductView.getHeaderTitle().setObjectSubtitle(Product.subheader)
-                this.ProductView.getHeaderTitle().setObjectImageURI(Product.imageURI)
-            }
-
-
-            this.mainsContent.to(this.ProductView);
-        },
-
         onNavBack: function (oEvent) {
             this.getParent().back();
         },
-        constructor: function (that, idapp) {
+        constructor: function (that) {
 
-            That = that;
-            this.that = that;
+            this.IDAPP = that.IDAPP;
             this.callService = that.callService;
-            this.AddModels.constructor(that, idapp);
-            this.prefixID = idapp;
             this.sideNavigation = {};
-            this.toolHeader = {};
-            this.prefixID = null;
-            this.IDAPP = idapp;
+            this.setSideNavigation = that.setSideNavigation;
+            this.ToolHeader = that.ToolHeader;
+            that.appRoot = this;
+            that.apps = {};
+            this.user = that.user;
 
-            That.loadingConnfig(this.IDAPP);
-
-            Screen = new ScreenFactory(this);
+            This = this;
+            That = that;
 
             this.config = sap.ui.getCore().getModel("AppConfig");
 
-            try {
-                this.component =
-                    this.config.getData().navigation[0].key;
-            } catch {
+            if (!this.config || !this.config.getData()) {
+                /**
+                 * caso controller não tenha carregado as configurações
+                 */
+                that.loadingConnfig(this.IDAPP).then((data) => {
+
+                    _continue(this);
+
+                }).catch((err) => {
+
+                    _go(that);
+
+                });
+            } else {
+
+                _continue(this);
             }
 
-            if (!this.component) this.component = this.IDAPP;
+            function _continue(that) {
 
-            Contents[this.component] = new ScreenFactory(That).create({
-                name: this.component
-            })
+                Screen = new ScreenFactory(This);
 
-            this.mainsContent = {};
+                This.config = sap.ui.getCore().getModel("AppConfig");
 
-            this.mainsContent = new sap.m.NavContainer({
-                pages: [Contents[this.component]],
-                initialPage: Contents[this.component]
-            });
+                try {
+                    if (sap.ui.getCore().getModel("userInfo").getData().currentMandt) {
+                        This.component =
+                            This.config.getData().navigation[0].key;
 
-            if (this.component !== this.IDAPP) {
 
-                this._setLoadConfig(idapp);
-                this._setTabContainer();
-                this._setToolHeader();
-                this._setScreenParts();
+                        if (!that.component) that.component = This.IDAPP;
 
+                        Contents[This.component] = new ScreenFactory(This).create({
+                            name: This.component
+                        })
+
+                        This.mainsContent = {};
+
+                        This.mainsContent = new sap.m.NavContainer({
+                            pages: [Contents[This.component]],
+                            initialPage: Contents[This.component]
+                        });
+
+                        if (that.component !== This.IDAPP) {
+                            This._setLoadConfig(This.IDAPP);
+                            This._setTabContainer();
+                            This._setToolHeader();
+                            This._setScreenParts();
+                        }
+                        _go(that);
+
+                    } else {
+
+                        That.selectMandt(That.mandts);
+                    }
+                } catch {
+                }
+            }
+
+            function _go() {
+
+                if (!that.apps[that.IDAPP]) {
+                    that.apps[that.IDAPP] = This.getContent();
+
+                    that.main = new sap.m.NavContainer({
+                        pages: [that.apps[that.IDAPP]],
+                        initialPage: that.apps[that.IDAPP]
+                    });
+
+                    that.getView().getContent()[0].addPage(that.main);
+                } else {
+                    that.main.to(that.apps[that.IDAPP])
+                }
                 sap.ui.core.BusyIndicator.hide();
             }
-
-            //return this.mainsContent;
-
         },
         /*************************************************************************
          *_setMainMenu.
@@ -124,7 +129,8 @@ sap.ui.define([
          *************************************************************************/
         _setLoadConfig: async function (idapp) {
 
-            this.setSideNavigation();
+            if (this.setSideNavigation || this.setSideNavigation === undefined)
+                this._setSideNavigation();
 
         },
         /*************************************************************************
@@ -165,14 +171,15 @@ sap.ui.define([
          * 
          *************************************************************************/
         _getSideNavigation: function (param) {
-            return this.sideNavigation;
+            if (this.setSideNavigation || this.setSideNavigation === undefined)
+                return this.sideNavigation;
         },
         /*************************************************************************
-         *setSideNavigation.
+         *_setSideNavigation.
          * @private
          * 
          *************************************************************************/
-        setSideNavigation: function (model) {
+        _setSideNavigation: function (model) {
 
             this.sideNavigation = new SideNavigation(
                 {
@@ -231,12 +238,10 @@ sap.ui.define([
             // obtem objeto para identificar qual menú foi selecionado pelo usuário
             var item = oEvent.getParameter('item');
 
-            this.getParent()
-                .getParent()
-                .getParent()
-                .getController().Ui.addMainContent(item.mProperties.key);
+            This.addMainContent(item.mProperties.key);
 
         },
+
         addMainContent: function (component) {
             // remove conteúdo para ser setado posteriormente
             screenParts.removeAllMainContents();
@@ -256,13 +261,10 @@ sap.ui.define([
 
             }
 
-            sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel({ root: component }), "rootComponent");
-
-            let m = sap.ui.getCore().getModel("foreignKey");
-
-            if (m)
-                m.oData = m.getData().filter(item => item.parent === component);
-
+            sap.ui.getCore().setModel(
+                new sap.ui.model.json.JSONModel({
+                    root: component
+                }), "rootComponent");
 
             // adiciona tela para ser exibida na área principal
             screenParts.addMainContent(Contents[component]);
@@ -322,6 +324,18 @@ sap.ui.define([
             }).addStyleClass("sapUiResponsivePadding--header");
 
         },
+
+        setToolBarParts(parts) {
+            screenParts.setHeader(new sap.tnt.ToolHeader({
+                content: parts
+            }));
+            return this;
+        },
+
+        setAvatar(avatar) {
+            this.avatar = avatar;
+            return this;
+        },
         /*************************************************************************
          *_getToolHeader
          * @private
@@ -335,9 +349,114 @@ sap.ui.define([
          * @private
          * 
          *************************************************************************/
-        _setToolHeader: function (param) {
+        _setToolHeader: function () {
 
-            this.toolHeader = That.getToolHeader();
+            this.toolHeader = this.getToolHeader();
+
+        },
+        userInfo: function () {
+
+            const links = [];
+
+            const mdt = sap.ui.getCore().getModel("userInfo").getData().currentMandt
+
+            if (That.mandts && That.mandts.length > 0) {
+
+                That.mandts.forEach((mandt) => {
+                    if (mdt !== mandt)
+                        links.push(new sap.m.QuickViewGroupElement({
+                            label: "Outros clientes",
+                            value: mandt,
+                            url: "/?m=" + mandt,
+                            type: sap.m.QuickViewGroupElementType.link
+                        }))
+                })
+            }
+
+            links.push(new sap.m.QuickViewGroupElement({
+                // label: "Website",
+                value: "Sair",
+                url: "/logout",
+                type: sap.m.QuickViewGroupElementType.link
+            }))
+
+            const usr = sap.ui.getCore().getModel("userInfo").getData().content.preferred_username;
+            const name = sap.ui.getCore().getModel("userInfo").getData().content.name;
+
+            return new sap.m.Button({
+                text: sap.ui.getCore().getModel("userInfo").getData().content.email,
+                icon: 'sap-icon://employee',
+                //type: sap.m.ButtonType.Transparent,
+                press: function () {
+                    var userInfo = new sap.m.QuickView({
+                        placement: sap.m.PlacementType.VerticalPreferedBottom,
+                        pages: [
+                            new sap.m.QuickViewPage({
+                                header: 'Cliente:  ' + mdt,
+                                title: name,
+                                description: usr,
+                                //titleUrl: "https://www.sap.com",
+                                avatar: new sap.m.Avatar({
+                                    initials: usr,
+                                    src: "sap-icon://account",
+                                    displayShape: "Square",
+                                    detailBox: new sap.m.LightBox({
+                                        imageContent: new sap.m.LightBoxItem({
+                                            imageSrc: "https://addvisor.com.br/wp-content/uploads/2018/08/addvisor-logo-claro.png",
+                                            title: name
+                                        })
+                                    })
+                                }),
+                                groups: [
+                                    new sap.m.QuickViewGroup({
+                                        //heading: "Store details",
+                                        elements: links
+                                    })
+                                ]
+                            })
+                        ]
+                    });
+
+                    userInfo.openBy(this);
+
+                    That.getView().addContent(userInfo);
+
+                }
+            })
+        },
+        getToolHeader() {
+            let parts = [];
+
+            if (!this.ToolHeader)
+                parts = [
+                    (this.setSideNavigation || this.setSideNavigation === undefined) ? new sap.m.Button({
+                        icon: 'sap-icon://menu2',
+                        type: sap.m.ButtonType.Transparent,
+                        press: function () {
+
+                            var sideExpanded = this.getParent().getParent().getSideExpanded();
+
+                            if (sideExpanded) {
+                                this.setTooltip('Large Size Navigation');
+                            } else {
+                                this.setTooltip('Small Size Navigation');
+                            }
+
+                            this.getParent().getParent().setSideExpanded(!sideExpanded);
+                        },
+                        tooltip: 'Small Size Navigation'
+                    }) : null,
+                    new sap.m.ToolbarSpacer(),
+
+                    //new sap.m.Image({ src: '../../favicon.png' }),
+                    new sap.m.FormattedText({ htmlText: '<h3>' + sap.ui.getCore().getModel("AppConfig").getData().app.title + '</h3>', tooltip: sap.ui.getCore().getModel("AppConfig").getData().app.tooltip }),
+                    new sap.m.ToolbarSpacer(), this.userInfo(), this.notification || null
+                    //new sap.m.Avatar({ displaySize: sap.m.AvatarSize.Custom })
+                ]
+
+            return this.ToolHeader || new sap.tnt.ToolHeader({
+                content: parts
+            });
 
         },
         /*************************************************************************
@@ -402,5 +521,6 @@ sap.ui.define([
                 Tabs = Tabs.filter(item => !(item.name == oItemToClose.mProperties.name));
             }
         }
+
     });
 });

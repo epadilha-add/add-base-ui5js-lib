@@ -7,7 +7,7 @@ sap.ui.define([
 
     return Controller.extend("add.home.app.component.BaseController", {
         callService: callService,
-        loadingConnfig: function (idapp, that) {
+        loadingConnfig: async function (idapp, that) {
             // Log.info("//TODO Definição temporária para obtenção do host");
             /**
              * definição temporária pois a escolha do host deverá ser feita no AS da plataforma,
@@ -16,37 +16,106 @@ sap.ui.define([
              * servidor remoto previamente configurado 
              * Everton: 17/04/2021
              */
-
-            sap.ui.getCore().setModel(new JSONModel({
-                title: '{i18n>error}',
-                text: '{i18n>serverNotFound}',
-                enableFormattedText: false,
-                showHeader: true,
-                description: '{I18n>connectionError}',
-                icon: "sap-icon://message-error"
-            }), "MessagePage");
+            let mdt = jQuery.sap.getUriParameters().get("m");
 
             this._setAppId();
 
-            let oModel = new JSONModel();
-            oModel.loadData("add/config/" + this.IDAPP, null, false);
-            sap.ui.getCore().setModel(oModel, "AppConfig");
-
-            if (oModel.getData().uuid)
-                sap.ui.getCore().setModel(new JSONModel({
-                    title: oModel.getData().error.name,
-                    text: oModel.getData().error.type,
-                    enableFormattedText: false,
-                    showHeader: true,
-                    description: oModel.getData().error.message,
-                    icon: "sap-icon://private"
-                }), "MessagePage");
-
             let oMe = new JSONModel();
             oMe.loadData("me", null, false);
-            sap.ui.getCore().setModel(oMe, "userInfo");
-            //that.callService = new Function(null, null, oModel.getData().callService)();
 
+            try {
+                sap.ui.getCore().setModel(new JSONModel(
+                    {
+                        ...oMe.getData().content,
+                        mandts: oMe.getData().mandts,
+                        appls: oMe.getData().appls
+                    }), "userInfo");
+            } catch (erro) {
+                sap.ui.getCore().setModel(new JSONModel({
+                    title: 'ApplicationError',
+                    text: 'ERR_CONNECTION_REFUSED',
+                    enableFormattedText: false,
+                    showHeader: true,
+                    description: 'Appication unavailabe',
+                    icon: "sap-icon://internet-browser"
+                }), "MessagePage"); throw erro;
+            }
+
+            if (oMe.getData().mandts && oMe.getData().mandts.length === 1 && !mdt)
+                mdt = oMe.getData().mandts[0];
+
+            if (!mdt) {
+
+                this.selectMandt(oMe.getData().mandts);
+
+            } else {
+
+                if (oMe.getData().uuid) {
+                    sap.ui.getCore().setModel(new JSONModel({
+                        title: oModel.getData().error.name,
+                        text: oModel.getData().error.type,
+                        enableFormattedText: false,
+                        showHeader: true,
+                        description: oModel.getData().error.message,
+                        icon: error.icon
+                    }), "MessagePage"); throw oMe.getData().error;
+                }
+
+                let oModel = new JSONModel();
+
+                await oModel.loadData("add/config",
+                    {
+                        m: mdt, //temporário até fazer seletor de empresas
+                        a: this.IDAPP
+                    }, true, "POST")
+                    .catch(error => {
+
+                        if (error.responseText) {
+                            error = JSON.parse(error.responseText).error;
+                        }
+                        sap.ui.getCore().setModel(new JSONModel({
+                            title: error.name,
+                            text: error.type,
+                            enableFormattedText: false,
+                            showHeader: true,
+                            description: error.message,
+                            icon: error.icon
+                        }), "MessagePage");
+
+                        throw error;
+                    });
+
+                sap.ui.getCore().setModel(oModel, "AppConfig");
+
+                if (oModel.getData().uuid) {
+                    sap.ui.getCore().setModel(new JSONModel({
+                        title: oModel.getData().error.name,
+                        text: oModel.getData().error.type,
+                        enableFormattedText: false,
+                        showHeader: true,
+                        description: oModel.getData().error.message,
+                        icon: oModel.getData().error.icon
+                    }), "MessagePage");; throw oMe.getData().error;
+                }
+
+                this.title = oModel.getData().title;
+                this.app = oModel.getData().app;
+                this.navigation = oModel.getData().navigation;
+                this.mandts = oMe.getData().mandts;
+                this.appls = oMe.getData().appls;
+                this.user = oMe.getData();
+
+                if (this.mandts === 1)
+                    oMe.getData().currentMandt = this.mandts[0];
+
+
+
+                if (mdt)
+                    oMe.getData().currentMandt = mdt;
+
+                sap.ui.getCore().setModel(oMe, "userInfo");
+
+            }
         },
 
         init() {
@@ -64,53 +133,6 @@ sap.ui.define([
             }
         },
 
-        userInfo: function () {
-
-            return new sap.m.Button({
-                text: sap.ui.getCore().getModel("userInfo").getData().email,
-                icon: 'sap-icon://employee',
-                //type: sap.m.ButtonType.Transparent,
-                press: function () {
-                    var userInfo = new sap.m.QuickView({
-                        placement: sap.m.PlacementType.VerticalPreferedBottom,
-                        pages: [
-                            new sap.m.QuickViewPage({
-                                header: "Informações do Usuário",
-                                title: sap.ui.getCore().getModel("userInfo").getData().preferred_username,
-                                //titleUrl: "https://www.sap.com",
-                                /*       avatar: new sap.m.Avatar({
-                                          initials: "JD",
-                                          displayShape: "Circle",
-                                          detailBox: new sap.m.LightBox({
-                                              imageContent: sap.m.LightBoxItem({
-                                                  imageSrc: "images/Woman_avatar_01.png",
-                                                  title: "LightBox example"
-                                              })
-                                          })
-                                      }) */
-                                groups: [
-                                    new sap.m.QuickViewGroup({
-                                        //heading: "Store details",
-                                        elements: [
-                                            new sap.m.QuickViewGroupElement({
-                                                // label: "Website",
-                                                value: "Sair",
-                                                url: "/logout",
-                                                type: sap.m.QuickViewGroupElementType.link
-                                            })
-                                        ]
-                                    })
-                                ]
-                            })
-                        ]
-                    });
-
-                    userInfo.openBy(this);
-
-                }
-            })
-        },
-
         _setAppId() {
             if (!this.IDAPP)
                 this.IDAPP = this.getView().getViewName().split('.view')[0];
@@ -122,41 +144,7 @@ sap.ui.define([
             return this.IDAPP;
         },
 
-        getToolHeader(exParts) {
 
-            let extenalParts = (exParts) ? exParts : null;
-
-            let parts = [
-                new sap.m.Button({
-                    icon: 'sap-icon://menu2',
-                    type: sap.m.ButtonType.Transparent,
-                    press: function () {
-
-                        var sideExpanded = this.getParent().getParent().getSideExpanded();
-
-                        if (sideExpanded) {
-                            this.setTooltip('Large Size Navigation');
-                        } else {
-                            this.setTooltip('Small Size Navigation');
-                        }
-
-                        this.getParent().getParent().setSideExpanded(!sideExpanded);
-                    },
-                    tooltip: 'Small Size Navigation'
-                }),
-                new sap.m.ToolbarSpacer(),
-
-                //new sap.m.Image({ src: '../../favicon.png' }),
-                new sap.m.FormattedText({ htmlText: '<h3>' + sap.ui.getCore().getModel("AppConfig").getData().app.title + '</h3>', tooltip: sap.ui.getCore().getModel("AppConfig").getData().app.tooltip }),
-                new sap.m.ToolbarSpacer(), this.userInfo(), this.notification || null
-                //new sap.m.Avatar({ displaySize: sap.m.AvatarSize.Custom })
-            ]
-
-            return new sap.tnt.ToolHeader({
-                content: extenalParts || parts
-            });
-
-        },
         dataFormat(dataFromAdson) {
             return dataFromAdson.substring(6, 8) + "/" +
                 dataFromAdson.substring(4, 6) + "/" +
@@ -172,6 +160,61 @@ sap.ui.define([
                 .getParent()
                 .getController()
                 .Ui.addMainContent(screen);
+        },
+        selectMandt(mandts) {
+
+            sap.ui.core.BusyIndicator.hide();
+
+            const fnDoSearch = function (oEvent, bProductSearch) {
+                var aFilters = [],
+                    sSearchValue = oEvent.getParameter("value"),
+                    itemsBinding = oEvent.getParameter("itemsBinding");
+
+                // create the local filter to apply
+                if (sSearchValue !== undefined && sSearchValue.length > 0) {
+                    aFilters.push(new sap.ui.model.Filter(("m"), sap.ui.model.FilterOperator.Contains, sSearchValue));
+                }
+                // apply the filter to the bound items, and the Select Dialog will update
+                itemsBinding.filter(aFilters, "Application");
+            };
+
+            var template = new sap.m.StandardListItem({
+                title: "{mandt}",
+                //description: "{mandt}",
+                icon: "sap-icon://building",
+                type: "Active"
+            });
+
+            let popUp = new sap.m.SelectDialog({
+                contentHeight: "25%",
+                title: '{i18n>selectCorporation}',
+                search: fnDoSearch,
+                liveChange: fnDoSearch
+            })
+
+            const mdts = {
+                CORPORATIONS: mandts.map(m => { return { mandt: m } })
+            }
+
+            popUp.setModel(new sap.ui.model.json.JSONModel(mdts));
+            popUp.bindAggregation("items", "/CORPORATIONS", template);
+
+            // attach close listener
+            popUp.attachConfirm(function (oEvent) {
+                var selectedItem = oEvent.getParameter("selectedItem");
+                if (selectedItem) {
+                    window.open(window.location.href + "?m=" + selectedItem.getTitle(), "_parent");
+                }
+            })
+
+            popUp.attachCancel(function (oEvent) {
+                window.open(window.location.href + "?m=" + mandts[0], "_parent");
+            })
+
+            this.getView().addContent(popUp);
+
+            popUp.open();
+
         }
     })
 });
