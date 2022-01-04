@@ -165,8 +165,19 @@ sap.ui.define([
                  */
                 sections = sections.concat(params.that.sectionsItems.items);
             }
+
+
+            /*             let logTable = [];
+                        params.that.context.forEach(element => {
+            
+                            logTable.push({ field: element.field, value: params[element.field.split('.')[0]] })
+            
+                        });
+                        console.log("COLLECTION: " + params.that.collection)
+                        console.table(logTable); */
+
             this.title = new sap.m.Label({ text: params[params.that.titleField] || params.that.titleField || null });
-            this.avatar = new sap.m.Avatar({ src: params.LOGO || params.ICON || params.that.icon || params.imageURI, displaySize: sap.m.AvatarSize.XS, tooltip: params.that.IDAPP });
+            this.avatar = new sap.m.Avatar({ src: params.LOGO || params.ICON || params.that.icon || params.imageURI, displaySize: sap.m.AvatarSize.XS, tooltip: params.that.IDAPP + " / " + params.that.collection + " ID: " + params.id });
 
             this.Bar = new sap.m.Bar({
                 contentLeft: [params.that.btBack, this.avatar, this.title],

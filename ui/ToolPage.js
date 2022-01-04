@@ -354,15 +354,15 @@ sap.ui.define([
             this.toolHeader = this.getToolHeader();
 
         },
-        userInfo: function () {
+        userInfo: function (mandts) {
 
             const links = [];
 
             const mdt = sap.ui.getCore().getModel("userInfo").getData().currentMandt
 
-            if (That.mandts && That.mandts.length > 0) {
+            if (mandts && mandts.length > 0) {
 
-                That.mandts.forEach((mandt) => {
+                mandts.forEach((mandt) => {
                     if (mdt !== mandt)
                         links.push(new sap.m.QuickViewGroupElement({
                             label: "Outros clientes",
@@ -450,7 +450,7 @@ sap.ui.define([
 
                     //new sap.m.Image({ src: '../../favicon.png' }),
                     new sap.m.FormattedText({ htmlText: '<h3>' + sap.ui.getCore().getModel("AppConfig").getData().app.title + '</h3>', tooltip: sap.ui.getCore().getModel("AppConfig").getData().app.tooltip }),
-                    new sap.m.ToolbarSpacer(), this.userInfo(), this.notification || null
+                    new sap.m.ToolbarSpacer(), this.userInfo(That.mandts), this.notification || null
                     //new sap.m.Avatar({ displaySize: sap.m.AvatarSize.Custom })
                 ]
 

@@ -82,7 +82,7 @@ sap.ui.define([
             //examples
 
             return [{
-                field: "BUKRS", prop: { obligatory: true },
+                field: "BUKRS",
             },
             {
                 field: "branchEmbedded", prop: { obligatory: false }

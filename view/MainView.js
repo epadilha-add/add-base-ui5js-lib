@@ -104,6 +104,7 @@ sap.ui.define(
                 that.changeMainModel = this.changeMainModel;
                 that.navToCrud = this.navToCrud;
                 that.new = this.new;
+                that.logInfo = this.logInfo;
                 This._sortTable = this._sortTable;
 
                 if (!that.create) that.create = this.create;
@@ -229,8 +230,7 @@ sap.ui.define(
                     params.params = { query: pars };
                 }
 
-                /*    if (params.params)
-                       params.params.pageSize = (This.pageSize) ? This.pageSize : 100; */
+                This.logInfo(params);
 
                 return This.callService.postSync("add", params).then((resp) => {
 
@@ -263,10 +263,16 @@ sap.ui.define(
                     throw e;
                 })
             },
-
+            logInfo(params) {
+                console.table({ COLLECTION: This.collection })
+                console.log("PARAMETERS:")
+                console.table(params.params)
+            },
             setMainModel: function (data) {
 
                 This.listResult = data.results;
+                console.log("RESULTS:")
+                console.table(data.results);
 
                 var model = new sap.ui.model.json.JSONModel(data);
 
@@ -326,12 +332,15 @@ sap.ui.define(
                 if (This.beforeEvent instanceof Function)
                     if (This.beforeEvent("create", vals) === false) return;
 
-                return await This.callService.postSync("add", {
+                const params = {
                     "method": "POST",
                     "actionName": This.collection + ".create",
                     "params": vals, ...This.callParams
+                }
 
-                }).then((resp) => {
+                this.logInfo(params);
+
+                return await This.callService.postSync("add", params).then((resp) => {
 
                     This.getView().setBusy(false);
 
@@ -378,12 +387,16 @@ sap.ui.define(
 
                             dialog.close();
 
-                            await This.callService.postSync("add", {
+                            const params = {
                                 "method": "DELETE",
                                 "fullPath": "/api/" + This.collection + "/" + companyId,
                                 "actionName": This.collection + ".remove",
                                 ...This.callParams
-                            }).then((resp) => {
+                            }
+
+                            This.logInfo(params);
+
+                            await This.callService.postSync("add", params).then((resp) => {
 
                                 This.getView().setBusy(false);
                                 This.list();
@@ -451,12 +464,15 @@ sap.ui.define(
                         This.getView().setBusy(false);
                         return;
                     }
-
-                await This.callService.postSync("add", {
+                const params = {
                     "method": "POST",
                     "actionName": This.collection + ".update",
                     "params": vlas, ...This.callParams
-                }).then((resp) => {
+                }
+
+                This.logInfo(params);
+
+                await This.callService.postSync("add", params).then((resp) => {
 
                     This.getView().setBusy(false);
 
@@ -672,7 +688,7 @@ sap.ui.define(
 
                     const idCol = This.context.find(e => e.field === "id");
 
-                    if (idCol && idCol.visible === true) {
+                    if (idCol && idCol.visible === true || true) {
 
                         cells.push(new sap.m.Text({
                             // width: "8em",
@@ -1034,7 +1050,7 @@ sap.ui.define(
                         contentLeft: [new sap.m.Avatar(
                             {
                                 src: This.icon || "sap-icon://approvals",
-                                displaySize: sap.m.AvatarSize.XS, tooltip: This.IDAPP
+                                displaySize: sap.m.AvatarSize.XS, tooltip: This.IDAPP + " / " + This.collection // + " ID: " + This.values.id
                             }),
                         new sap.m.Label({ text: This.title })], //This.btBack || [new sap.m.Button({ text: "Back", type: sap.m.ButtonType.Back })],
                         contentMiddle: null,
