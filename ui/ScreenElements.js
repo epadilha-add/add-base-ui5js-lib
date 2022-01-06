@@ -71,12 +71,12 @@ sap.ui.define([
 
                             return response.find((element) => {
 
-                                if (field.field.split('.')[0] == element.CAMPO) {
+                                if (field.field.split('.')[0] == element.FIELD) {
 
                                     //sobrepor configurações 
                                     for (const key in field.prop) {
-                                        if (element.P600A[key] || element.P600A[key] === "")
-                                            element.P600A[key] = field.prop[key]
+                                        if (element[key] || element[key] === "")
+                                            element[key] = field.prop[key]
                                     }
 
                                     if (field.prop && field.prop.VALUES) {
@@ -85,7 +85,7 @@ sap.ui.define([
 
                                     if (element.VALUES) {
                                         var oModel = new JSONModel(element.VALUES.filter(e => e.ACTIVE || e.ACTIVE === undefined));
-                                        modelName = this.that.IDAPP + element.CAMPO;
+                                        modelName = this.that.IDAPP + element.FIELD;
                                         Screen.getView().setModel(oModel, modelName + "PARAM");
                                     } else {
                                         modelName = this.that.IDAPP + "PARAM";
@@ -107,15 +107,15 @@ sap.ui.define([
                                         field.prop.obligatory = false;
                                     }
 
-                                    element.P600A.OBLIGTORY = (field.prop && field.prop.obligatory) ? field.prop.obligatory : false;
+                                    element.OBLIGTORY = (field.prop && field.prop.obligatory) ? field.prop.obligatory : false;
 
-                                    element.P600A.FIELDNAME = element.CAMPO;
-                                    //element.P600A.edit = (Screen.that.edit);
+                                    element.FIELDNAME = element.FIELD;
+                                    //element.edit = (Screen.that.edit);
 
-                                    STRUC.push(element.P600A);
+                                    STRUC.push(element);
 
                                     screenElements = this.createElementbyType(
-                                        element.P600A,
+                                        element,
                                         this.that,
                                         modelName)
                                 }
@@ -155,12 +155,12 @@ sap.ui.define([
 
                             response.find((element) => {
 
-                                if (field.field.split('.')[0] == element.CAMPO) {
+                                if (field.field.split('.')[0] == element.FIELD) {
 
                                     //sobrepor configurações 
                                     for (const key in field.prop) {
-                                        if (element.P600A[key] || element.P600A[key] === "")
-                                            element.P600A[key] = field.prop[key]
+                                        if (element[key] || element[key] === "")
+                                            element[key] = field.prop[key]
                                     }
 
                                     if (field.prop && field.prop.VALUES) {
@@ -169,7 +169,7 @@ sap.ui.define([
 
                                     if (element.VALUES) {
                                         var oModel = new JSONModel(element.VALUES);
-                                        modelName = this.that.IDAPP + field.field || element.CAMPO;
+                                        modelName = this.that.IDAPP + field.field || element.FIELD;
                                         Screen.setModel(oModel, modelName + "PARAM");
 
                                     } else {
@@ -185,21 +185,22 @@ sap.ui.define([
                                         field.prop.obligatory = false;
                                     }
 
-                                    element.P600A.OBLIGTORY = (field.prop && field.prop.obligatory) ? field.prop.obligatory : false;
-                                    element.P600A.FIELDNAME = field.field || element.CAMPO;
-                                    element.P600A.EDIT = Screen.that.edit;
-                                    element.P600A.EDIT = (field.prop && field.prop.key || field.key) ? false : true;
+                                    element.OBLIGTORY = (field.prop && field.prop.obligatory) ? field.prop.obligatory : false;
+                                    element.FIELDNAME = field.field || element.FIELD;
+                                    element.EDIT = Screen.that.edit;
+                                    element.EDIT = (field.prop && field.prop.key || field.key) ? false : true;
 
-                                    STRUC.push(element.P600A);
+
+                                    STRUC.push(element);
 
                                     this.createElementbyType(
-                                        element.P600A,
+                                        element,
                                         this.that,
                                         modelName).forEach((obj) => {
                                             Screen.addContent(obj);
                                         });
 
-                                    Log.info(element.CAMPO, 'ScreenElements');
+                                    Log.info(element.FIELD, 'ScreenElements');
 
                                     //field.field = this.that.IDAPP + field.field;
                                 }
@@ -237,9 +238,7 @@ sap.ui.define([
                 //struc.FIELDNAME = that.IDAPP + struc.FIELDNAME;
 
                 let oLabel = new sap.m.Label({
-                    text: (struc.FIELDNAME == "FNSH" || struc.FIELDNAME == "STOP") ?
-                        '{i18n>' + struc.FIELDNAME + '_text}' : (struc.SCRTEXT_M) ?
-                            struc.SCRTEXT_M : (struc.SCRTEXT_L) ? struc.SCRTEXT_L : struc.SCRTEXT_S,
+                    text: struc.DESCR || struc.SCRTEXT_S || struc.SCRTEXT_M || struc.SCRTEXT_L,
                     labelFor: struc.FIELDNAME,
                     visible: ((struc.VISIBLE === 'X') ? true : true),
                     tooltip: struc.FIELDNAME
@@ -328,6 +327,7 @@ sap.ui.define([
 
                                 break;
 
+                            case 'SI':
                             case '':
 
                                 switch (struc.DATATYPE) {

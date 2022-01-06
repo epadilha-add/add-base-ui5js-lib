@@ -66,19 +66,36 @@ sap.ui.define([
 
             function _continue(that) {
 
-                Screen = new ScreenFactory(This);
+                Screen = new ScreenFactory(That);
 
-                This.config = sap.ui.getCore().getModel("AppConfig");
+                if (!This.config)
+                    This.config = sap.ui.getCore().getModel("AppConfig");
 
                 try {
                     if (sap.ui.getCore().getModel("userInfo").getData().currentMandt) {
-                        This.component =
-                            This.config.getData().navigation[0].key;
 
+                        try {
+                            /**
+                             * pode estar sem nenhuma configuação no APPM
+                             *  - obtendo o primeiro app da lista
+                             */
+                            This.component =
+                                This.config.getData().navigation[0].key;
+
+                        } catch {
+                            sap.ui.getCore().setModel(new JSONModel({
+                                title: 'ApplicationError',
+                                text: 'ERR_APPM_HAS_NO_CONFIG',
+                                enableFormattedText: false,
+                                showHeader: true,
+                                description: 'Navigation parameters not found!',
+                                icon: "sap-icon://internet-browser"
+                            }), "MessagePage")
+                        }
 
                         if (!that.component) that.component = This.IDAPP;
 
-                        Contents[This.component] = new ScreenFactory(This).create({
+                        Contents[This.component] = Screen.create({
                             name: This.component
                         })
 
@@ -162,6 +179,11 @@ sap.ui.define([
                 sideContent: this._getSideNavigation(),
                 // mainContents: //this.mainsContent
             });
+
+            sap.ui.getCore().setModel(
+                new sap.ui.model.json.JSONModel({
+                    root: this.component
+                }), "rootComponent");
 
             screenParts.addMainContent(Contents[this.component]);
         },
@@ -266,6 +288,10 @@ sap.ui.define([
                     root: component
                 }), "rootComponent");
 
+            if (Contents['infosys'] && component !== 'infosys') {
+                Contents['infosys'].destroy();
+                delete Contents.infosys;
+            }
             // adiciona tela para ser exibida na área principal
             screenParts.addMainContent(Contents[component]);
 
@@ -365,7 +391,7 @@ sap.ui.define([
                 mandts.forEach((mandt) => {
                     if (mdt !== mandt)
                         links.push(new sap.m.QuickViewGroupElement({
-                            label: "Outros clientes",
+                            label: 'Outros clientes',
                             value: mandt,
                             url: "/?m=" + mandt,
                             type: sap.m.QuickViewGroupElementType.link
@@ -392,7 +418,7 @@ sap.ui.define([
                         placement: sap.m.PlacementType.VerticalPreferedBottom,
                         pages: [
                             new sap.m.QuickViewPage({
-                                header: 'Cliente:  ' + mdt,
+                                header: 'Cliente' + ' ' + mdt,
                                 title: name,
                                 description: usr,
                                 //titleUrl: "https://www.sap.com",
@@ -407,6 +433,54 @@ sap.ui.define([
                                         })
                                     })
                                 }),
+                                groups: [
+                                    new sap.m.QuickViewGroup({
+                                        //heading: "Store details",
+                                        elements: links
+                                    })
+                                ]
+                            })
+                        ]
+                    });
+
+                    userInfo.openBy(this);
+
+                    That.getView().addContent(userInfo);
+
+                }
+            })
+        },
+        appsInfo: function (mandts) {
+
+            const links = [];
+
+            const apps = sap.ui.getCore().getModel("AppConfig").getData().appls;
+
+            if (apps && apps.length > 0) {
+                apps.forEach((app) => {
+                    if (app.IDAPP !== This.IDAPP.replace(/\./g, '-'))
+                        links.push(new sap.m.QuickViewGroupElement("APP" + app.IDAPP, {
+                            label: app.DESCR,
+                            value: app.TITLE,
+                            url: (app.HOST) ? window.location.protocol + "//" + window.location.hostname + ":" + app.HOST : "",
+                            type: sap.m.QuickViewGroupElementType.link
+                        }))
+                })
+            } else {
+                return;
+            }
+
+            return new sap.m.Button({
+                // text: sap.ui.getCore().getModel("userInfo").getData().content.email,
+                icon: 'sap-icon://heatmap-chart',
+                tooltip: 'Outras aplicações',
+                //type: sap.m.ButtonType.Transparent,
+                press: function () {
+                    var userInfo = new sap.m.QuickView({
+                        placement: sap.m.PlacementType.VerticalPreferedBottom,
+                        pages: [
+                            new sap.m.QuickViewPage({
+                                header: 'Outras aplicações',
                                 groups: [
                                     new sap.m.QuickViewGroup({
                                         //heading: "Store details",
@@ -450,7 +524,7 @@ sap.ui.define([
 
                     //new sap.m.Image({ src: '../../favicon.png' }),
                     new sap.m.FormattedText({ htmlText: '<h3>' + sap.ui.getCore().getModel("AppConfig").getData().app.title + '</h3>', tooltip: sap.ui.getCore().getModel("AppConfig").getData().app.tooltip }),
-                    new sap.m.ToolbarSpacer(), this.userInfo(That.mandts), this.notification || null
+                    new sap.m.ToolbarSpacer(), this.appsInfo(), this.userInfo(That.mandts), this.notification || null
                     //new sap.m.Avatar({ displaySize: sap.m.AvatarSize.Custom })
                 ]
 

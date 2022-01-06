@@ -8,20 +8,38 @@ sap.ui.define([
     return Controller.extend("add.home.app.component.BaseController", {
         callService: callService,
         loadingConnfig: async function (idapp, that) {
-            // Log.info("//TODO Definição temporária para obtenção do host");
-            /**
-             * definição temporária pois a escolha do host deverá ser feita no AS da plataforma,
-             * portanto, as requisições serão 100% para o host principal da aplicação (window.location.origin)
-             * e com base nas configurações do App managemant ou appe Add a requisição deverá redirecionar ao
-             * servidor remoto previamente configurado 
-             * Everton: 17/04/2021
-             */
+            /***********************************************
+             * 
+             * carregamento inicial da aplicação
+             *  
+             ***********************************************/
             let mdt = jQuery.sap.getUriParameters().get("m");
-
+            /***********************************************
+             * 
+             * seta o IDAPP do componente, transferindo por 
+             * herança para o controller
+             *  
+             ***********************************************/
             this._setAppId();
-
+            /***********************************************
+             * 
+             * 1ª chamada ADDSON para obter dados básicos
+             * para carregamento da aplicação
+             *  
+             ***********************************************/
             let oMe = new JSONModel();
             oMe.loadData("me", null, false);
+
+            if (oMe.getData().uuid) {
+                sap.ui.getCore().setModel(new JSONModel({
+                    title: oModel.getData().error.name,
+                    text: oModel.getData().error.type,
+                    enableFormattedText: false,
+                    showHeader: true,
+                    description: oModel.getData().error.message,
+                    icon: error.icon
+                }), "MessagePage"); throw oMe.getData().error;
+            }
 
             try {
                 sap.ui.getCore().setModel(new JSONModel(
@@ -42,30 +60,32 @@ sap.ui.define([
             }
 
             if (oMe.getData().mandts && oMe.getData().mandts.length === 1 && !mdt)
+                /***********************************************
+                 * 
+                 * usuário tem acesso a uma única aplicação e cliente
+                 *  
+                 ***********************************************/
                 mdt = oMe.getData().mandts[0];
 
             if (!mdt) {
-
+                /***********************************************
+                 * 
+                 * pop up solicitando a definição do cliente
+                 *  
+                 ***********************************************/
                 this.selectMandt(oMe.getData().mandts);
 
             } else {
-
-                if (oMe.getData().uuid) {
-                    sap.ui.getCore().setModel(new JSONModel({
-                        title: oModel.getData().error.name,
-                        text: oModel.getData().error.type,
-                        enableFormattedText: false,
-                        showHeader: true,
-                        description: oModel.getData().error.message,
-                        icon: error.icon
-                    }), "MessagePage"); throw oMe.getData().error;
-                }
-
+                /***********************************************
+                 * 
+                 * com o cliente definido, seguir em busca de mais
+                 * informações da aplicação e usuário 
+                 ***********************************************/
                 let oModel = new JSONModel();
 
                 await oModel.loadData("add/config",
                     {
-                        m: mdt, //temporário até fazer seletor de empresas
+                        m: mdt,
                         a: this.IDAPP
                     }, true, "POST")
                     .catch(error => {
@@ -97,22 +117,29 @@ sap.ui.define([
                         icon: oModel.getData().error.icon
                     }), "MessagePage");; throw oMe.getData().error;
                 }
-
+                /***********************************************
+                 * 
+                 * setar informações básicas para os componentes
+                 *  
+                 ***********************************************/
                 this.title = oModel.getData().title;
                 this.app = oModel.getData().app;
                 this.navigation = oModel.getData().navigation;
                 this.mandts = oMe.getData().mandts;
                 this.appls = oMe.getData().appls;
                 this.user = oMe.getData();
-
-                if (this.mandts === 1)
-                    oMe.getData().currentMandt = this.mandts[0];
-
-
-
+                /***********************************************
+                 * 
+                 * setar o cliente autenticado
+                 *  
+                 ***********************************************/
                 if (mdt)
                     oMe.getData().currentMandt = mdt;
-
+                /***********************************************
+                 * 
+                 * setar principal model para informações do usuário
+                 *  
+                 ***********************************************/
                 sap.ui.getCore().setModel(oMe, "userInfo");
 
             }
@@ -160,6 +187,9 @@ sap.ui.define([
                 .getParent()
                 .getController()
                 .Ui.addMainContent(screen);
+        },
+        i18n(txt) {
+            return this.getView().getModel("i18n").getResourceBundle().getText(txt);
         },
         selectMandt(mandts) {
 

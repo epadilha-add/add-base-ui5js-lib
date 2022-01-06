@@ -178,7 +178,6 @@ sap.ui.define(
                         }]);
                 }
             },
-
             list: function () {
 
                 if (this.mockList) return new Promise((r) => r(this.getMokList()));
@@ -283,7 +282,6 @@ sap.ui.define(
                     This.getView().setModel(model, "mainModel" + This.IDAPP);
                 }
             },
-
             normalize: function (lines) {
 
                 let key;
@@ -293,7 +291,7 @@ sap.ui.define(
 
                     key = field.field.split(".")[0];
 
-                    if (field.type === 'b' || (typeof lines[key] == 'boolean')) {
+                    if (field.type === 'b' || (typeof lines[key] === 'boolean')) {
                         lines[field.field + 'b'] = (lines[field.field]) ? "true" : "false"; continue;
                     }
 
@@ -307,7 +305,6 @@ sap.ui.define(
 
                 return { ...lines, ...l };
             },
-
             create: async function (data) {
 
                 This.getView().setBusy(true);
@@ -325,8 +322,16 @@ sap.ui.define(
                 }
 
                 for (const key of This.context) {
+
                     if (key.create || key.foreignKey === true)
                         vals[key.field.split(".")[0]] = data[key.field.split(".")[0]];
+
+                    /**
+                    * para o caso de existir valores padrões enviado do construtor
+                    * REF: add.appm.dictionary.controller.MainView
+                    */
+                    if (key.value)
+                        vals[key.field.split(".")[0]] = key.value;
                 }
 
                 if (This.beforeEvent instanceof Function)
@@ -356,7 +361,6 @@ sap.ui.define(
                     return This.normalize(JSON.parse(resp));
                 })
             },
-
             delete: async function (companyId) {
 
                 This.getView().setBusy(true);
@@ -425,7 +429,6 @@ sap.ui.define(
 
 
             },
-
             save: async function () {
 
                 This.getView().setBusy(true);
@@ -495,7 +498,6 @@ sap.ui.define(
                     return true;
                 }
             },
-
             refresh: function () {
 
                 This.list();
@@ -505,12 +507,10 @@ sap.ui.define(
 
                 This.message("successRefresh");
             },
-
             setModel: function (oModel, nameModel) {
 
                 This.getView().setModel(oModel, nameModel);
             },
-
             navToCrud: function (crud) {
 
                 crud.that = This;
@@ -545,12 +545,10 @@ sap.ui.define(
 
                 This.mainContent.to(This.CrudView.Page);
             },
-
             message: function (msg) {
 
                 MessageToast.show(This.getView().getModel("i18n").getResourceBundle().getText(msg || "Nothing here"));
             },
-
             _onSearchList: function (oEvent, list, objectList) {
 
                 if (!This.listMode || This.listMode.mode === 'table') {
@@ -600,7 +598,6 @@ sap.ui.define(
                 return;
 
             },
-
             _getDetail: function (buttons) {
 
                 if (!This.listMode || This.listMode.mode === 'table') {
@@ -610,12 +607,35 @@ sap.ui.define(
 
                     if (!This.context) This.context = [{ field: This.titleField }];
 
+                    const datatype = (field) => {
+
+                        let types = {
+
+                            OTHERS: "{mainModel>" + field.field + "}",
+
+                            DATS: {
+                                path: "mainModel>" + field.field,
+                                type: 'sap.ui.model.type.Date',
+                                formatOptions: {
+                                    style: 'short',
+                                    source: {
+                                        pattern: 'dd/mm/yyyy'
+                                    }
+                                }
+                            }
+                        }
+                        return types[field.datatype] || types.OTHERS;
+                    };
+
                     for (var field of This.context) {
 
                         /**
                         * verifica se são campos standard e se os mesmos serão apresentados
                         */
-                        if (field.visible === false || field.field === "id" || field.field === "ACTIVE" || field.foreignKey === true) continue;
+                        if (field.visible === false ||
+                            field.field === "id" ||
+                            field.field === "ACTIVE" ||
+                            field.foreignKey === true) continue;
 
                         /**
                          * para chaves estrangeiras, não necessário aparecer na sap.m.Table
@@ -625,7 +645,7 @@ sap.ui.define(
 
                         cells.push(new sap.m.Text({
                             //width: "35%",
-                            text: "{mainModel>" + field.field + '}'
+                            text: datatype(field)
                         }).addStyleClass("labelColumnsTableBold"));
 
                         let col = new sap.m.Text({ text: field.text || "{i18n>description}" }).addStyleClass("labelColumnsTable");
@@ -688,7 +708,7 @@ sap.ui.define(
 
                     const idCol = This.context.find(e => e.field === "id");
 
-                    if (idCol && idCol.visible === true || true) {
+                    if (idCol && idCol.visible === true) {
 
                         cells.push(new sap.m.Text({
                             // width: "8em",
@@ -830,11 +850,9 @@ sap.ui.define(
                 }
 
             },
-
             _getMainModel: function () {
                 return This.getView().getModel("mainModel" + This.IDAPP);
             },
-
             new: async function (oEvent) {
 
                 This.getView().setBusy(true);
@@ -849,7 +867,7 @@ sap.ui.define(
 
                     let screenField = await new ScreenElements(This).getElementScreenByName([key], This);
 
-                    if (screenField.length === 0) continue;
+                    if (!screenField || screenField.length === 0) continue;
 
                     screenField[1].field = key.field;
 
@@ -953,7 +971,6 @@ sap.ui.define(
 
                 dialog.open();
             },
-
             _getMainLayout: function () {
 
                 This.panelContent = [];
@@ -1091,7 +1108,6 @@ sap.ui.define(
 
                 return opl;
             },
-
             appendComponent(items) {
 
                 if (!This.sectionsItems || This.sectionsItems.length === 0) {
@@ -1113,7 +1129,6 @@ sap.ui.define(
                     }
                 }
             },
-
             changeMainModel: async (data) => {
 
                 var oModel = table.getModel("mainModel");
@@ -1132,7 +1147,6 @@ sap.ui.define(
 
                 oModel.refresh(true);
             },
-
             pressToNav: function (values) {
 
                 if (This.sectionsItems) {
@@ -1259,7 +1273,6 @@ sap.ui.define(
                     }
                 }
             },
-
             tileParameters: function (line) {
                 //modelo para entendimento
                 if (This.listMode && This.listMode.mappingTile)
@@ -1307,7 +1320,6 @@ sap.ui.define(
                     }
                 }
             },
-
             getMokList: function () {
 
                 if (!This.mockList) return false;
@@ -1323,7 +1335,6 @@ sap.ui.define(
                 return true;
 
             },
-
             _sortTable() {
 
                 var vsd1 = new sap.m.ViewSettingsDialog("vsd1", {
@@ -1422,7 +1433,6 @@ sap.ui.define(
                     }
                 })
             },
-
             foreignKeysCheck() {
 
                 let foreignKeys = sap.ui.getCore().getModel("foreignKey" + This.rootComponent);

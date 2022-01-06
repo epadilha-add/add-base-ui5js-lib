@@ -54,7 +54,7 @@ sap.ui.define([
 
                     } catch (err) {
                         let m = screen.name + ' Not Implemented - ADD-APPM ';
-                        lSc = this._defaultPage(m);
+                        lSc = this._defaultPage(m, screen);
 
                     }
 
@@ -86,18 +86,41 @@ sap.ui.define([
                     this.Log.error(m);
                 }
             },
-            _defaultPage(desc) {
+            _defaultPage(desc, screen) {
 
                 sap.ui.core.BusyIndicator.hide();
+                let msg = {};
+                switch (screen.name || screen.key) {
+                    case 'infosys':
 
-                return new sap.m.MessagePage(
-                    {
-                        showHeader: false,
-                        text: "Aplicação não disponível",
-                        enableFormattedText: true,
-                        description: desc || "Welcome DEV",
-                        icon: "sap-icon://message-error"
-                    })
+                        msg = new sap.ui.core.HTML({
+                            preferDOM: true,
+                            sanitizeContent: false,
+                            content: "<iframe height='100%' width='100%' src='/status'></iframe>"
+                        })
+
+                        return msg;
+                        break;
+
+                    default:
+                        msg = new sap.m.MessagePage(
+                            {
+                                showHeader: false,
+                                text: "Aplicação não disponível",
+                                enableFormattedText: true,
+                                description: desc || "Welcome DEV",
+                                icon: "sap-icon://message-error"
+                            })
+                        break;
+                }
+
+
+                try {
+                    That.getView().addContent(msg);
+                } catch {
+
+                }
+                return msg;
             }
         });
     });
