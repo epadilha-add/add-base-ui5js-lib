@@ -461,7 +461,8 @@ sap.ui.define([
                     if (app.IDAPP !== This.IDAPP.replace(/\./g, '-'))
                         links.push(new sap.m.QuickViewGroupElement("APP" + app.IDAPP, {
                             label: app.DESCR,
-                            value: app.TITLE,
+                            value: app.CTITL,
+                            target: '_parent',
                             url: (app.HOST) ? window.location.protocol + "//" + window.location.hostname + ":" + app.HOST : "",
                             type: sap.m.QuickViewGroupElementType.link
                         }))

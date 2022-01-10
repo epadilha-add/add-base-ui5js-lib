@@ -47,6 +47,8 @@ sap.ui.define([], function () {
 
             }).catch((err) => {
 
+                sap.ui.core.BusyIndicator.hide();
+
                 if (err.status)
                     sap.m.MessageBox.show(err.url,
                         {

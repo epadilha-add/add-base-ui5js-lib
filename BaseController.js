@@ -171,8 +171,8 @@ sap.ui.define([
             return this.IDAPP;
         },
 
-
         dataFormat(dataFromAdson) {
+            //substituir por sap.Types
             return dataFromAdson.substring(6, 8) + "/" +
                 dataFromAdson.substring(4, 6) + "/" +
                 dataFromAdson.substring(0, 4) + " " +

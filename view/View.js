@@ -2,21 +2,38 @@
 sap.ui.define([
     "../BaseController",
     "../ui/ScreenElements",
+    "sap/ui/richtexteditor/RichTextEditor",
     "sap/uxap/ObjectPageLayout"
-], function (Object, ScreenElements) {
+], function (Object, ScreenElements, RichTextEditor) {
     "use strict";
 
+    let MainView = {};
+    let View = {};
     return Object.extend("add.ui5js.ui.View", {
 
-        constructor: function (params, backFn) {
+        constructor: function (params) {
+
+            MainView = params.that;
+            View = this;
 
             this.component = {};
+            /*************************************
+             * 
+             * Verifica se o componente será embedded 
+             * ou navegará para uma segunda tela
+             * 
+             *************************************/
+            if (MainView.sectionsItems && MainView.sectionsItems.foreignKeys)
+                this.component = MainView.sectionsItems.foreignKeys.find(e => e.parent === MainView.IDAPP && (e.embedded || e.embedded === undefined))
 
-            if (params.that.sectionsItems && params.that.sectionsItems.foreignKeys)
-                this.component = params.that.sectionsItems.foreignKeys.find(e => e.parent === params.that.IDAPP && (e.embedded || e.embedded === undefined))
+            MainView.getView().byId(MainView.IDAPP).setBusy(true);
 
-            params.that.getView().byId(params.that.IDAPP).setBusy(true);
-
+            /*************************************
+             * 
+             * Principal componente container para os objetos 
+             * de tela.
+             * 
+             *************************************/
             this.mainContent = new sap.ui.layout.form.SimpleForm({
                 width: '70%',
                 editable: true,
@@ -25,8 +42,13 @@ sap.ui.define([
                 columnsL: 2,
                 columnsXL: 2
             });
-
-            this.that = params.that;
+            /*************************************
+             * 
+             * Outros tipos de componentes de tela não compatíveis
+             * com SimpleForm
+             * 
+             *************************************/
+            this.otherContent = new sap.m.Panel();
 
             this.setId(params.id);
             if (!this.delete)
@@ -34,7 +56,6 @@ sap.ui.define([
 
             if (!this.save)
                 this.save = params.save;
-
 
             /*************************************
              * 
@@ -51,13 +72,13 @@ sap.ui.define([
                 ],
                 selectionChange: function (oEvent) {
 
-                    let values = params.that.getView().getModel(params.that.IDAPP + "PARAM").getData();
+                    let values = MainView.getView().getModel(MainView.IDAPP + "PARAM").getData();
 
                     let selectValue = (oEvent.getParameter("item").getKey() === "false") ? false : true;
 
                     let inpConf = new sap.m.Input();
 
-                    params.that.dialogActive = new sap.m.Dialog({
+                    MainView.dialogActive = new sap.m.Dialog({
 
                         contentWidth: "35%",
 
@@ -66,7 +87,7 @@ sap.ui.define([
                         content: [new sap.m.Panel({
                             content: [
                                 new sap.m.Label({
-                                    text: "{i18n>write} '" + values[params.that.titleField] + "' {i18n>toConfirm}"
+                                    text: "{i18n>write} '" + values[MainView.titleField] + "' {i18n>toConfirm}"
                                 }),
                                 inpConf]
                         })],
@@ -77,44 +98,44 @@ sap.ui.define([
 
                             press: async function () {
 
-                                if (inpConf.getValue() != values[params.that.titleField]) return;
+                                if (inpConf.getValue() != values[MainView.titleField]) return;
 
                                 values["ACTIVE"] = selectValue;
 
-                                params.that.dialogActive.close();
-                                params.that.dialogActive.destroy();
-                                params.that.save();
+                                MainView.dialogActive.close();
+                                MainView.dialogActive.destroy();
+                                MainView.save();
                             }
                         }),
                         endButton: new sap.m.Button({
                             text: "{i18n>cancel}",
                             press: function (e) {
 
-                                params.that.getView().byId(params.that.IDAPP).setBusy(false);
+                                MainView.getView().byId(MainView.IDAPP).setBusy(false);
 
                                 //   setTimeout(
                                 //     function () {
-                                var items = params.that.CrudView.activeButton.getItems().map(function (itm) { return itm.getId() });
-                                params.that.CrudView.activeButton.setSelectedItem(items[(values["ACTIVE"]) ? 0 : 1]);
-                                params.that.CrudView.activeButton.setSelectedKey(values["ACTIVE"])
+                                var items = MainView.View.activeButton.getItems().map(function (itm) { return itm.getId() });
+                                MainView.View.activeButton.setSelectedItem(items[(values["ACTIVE"]) ? 0 : 1]);
+                                MainView.View.activeButton.setSelectedKey(values["ACTIVE"])
                                 //  }, 1000);
 
-                                params.that.dialogActive.close();
-                                params.that.dialogActive.destroy();
+                                MainView.dialogActive.close();
+                                MainView.dialogActive.destroy();
                             }
                         })
                     })
 
-                    params.that.getView().addContent(params.that.dialogActive);
+                    MainView.getView().addContent(MainView.dialogActive);
 
-                    params.that.dialogActive.open();
+                    MainView.dialogActive.open();
 
                 }
             });
 
             let buttons = [];
 
-            if (params.that.edit === true || params.that.edit === undefined) {
+            if (MainView.edit === true || MainView.edit === undefined) {
                 buttons = [
                     new sap.m.Button({
                         icon: "sap-icon://delete",
@@ -132,18 +153,18 @@ sap.ui.define([
                         press: async (oEvent) => {
                             await this.save(params);
                         }
-                    }),
-                    // params.that.btBack
+                    })
                 ];
-            } else {
-                //buttons = [
-                //   params.that.btBack
-                // ];
             }
 
             let sections = [];
 
             if (this.component && (this.component.embedded === undefined || this.component.embedded === true))
+                /*************************************
+                 * 
+                 * se for um componente embedded, considerar aba
+                 * 
+                 *************************************/
                 sections[0] = new sap.uxap.ObjectPageSection({
                     showTitle: false,
                     title: "{i18n>basicData}",
@@ -151,36 +172,34 @@ sap.ui.define([
                         mode: sap.uxap.ObjectPageSubSectionMode.Expanded,
                         validateFieldGroup: () => { },
                         blocks: new sap.m.Panel({
-                            content: this.mainContent
+                            content: [this.mainContent, this.otherContent]
                         })
                         // moreBlocks: new sap.m.Label({ text: "Anbother block" })
                     })
                 })
 
 
-            if (params.that.sectionsItems) {
-                /*
-                   Possibilita incluir mais seções .
+            if (MainView.sectionsItems) {
+                /************************************************
+                   Possibilita incluir mais seções a partir do controller.
                    Type: sap.uxap.ObjectPageSection
-                 */
-                sections = sections.concat(params.that.sectionsItems.items);
+                   Esse parametro tem prioridade
+                 ***********************************************/
+                sections = sections.concat(MainView.sectionsItems.items);
             }
 
+            this.title = new sap.m.Label({
+                text: params[MainView.titleField] || MainView.titleField || null
+            });
 
-            /*             let logTable = [];
-                        params.that.context.forEach(element => {
-            
-                            logTable.push({ field: element.field, value: params[element.field.split('.')[0]] })
-            
-                        });
-                        console.log("COLLECTION: " + params.that.collection)
-                        console.table(logTable); */
-
-            this.title = new sap.m.Label({ text: params[params.that.titleField] || params.that.titleField || null });
-            this.avatar = new sap.m.Avatar({ src: params.LOGO || params.ICON || params.that.icon || params.imageURI, displaySize: sap.m.AvatarSize.XS, tooltip: params.that.IDAPP + " / " + params.that.collection + " ID: " + params.id });
+            this.avatar = new sap.m.Avatar({
+                src: params.LOGO || params.ICON || MainView.icon || params.imageURI,
+                displaySize: sap.m.AvatarSize.XS,
+                tooltip: MainView.IDAPP + " / " + MainView.collection + " ID: " + params.id
+            });
 
             this.Bar = new sap.m.Bar({
-                contentLeft: [params.that.btBack, this.avatar, this.title],
+                contentLeft: [MainView.btBack, this.avatar, this.title],
                 contentMiddle: [],
                 contentRight: buttons
             })
@@ -193,78 +212,14 @@ sap.ui.define([
                 alwaysShowContentHeader: false,
                 showFooter: true,
                 headerTitle: null,
-
-                /*                new sap.uxap.ObjectPageDynamicHeaderTitle({
-                                   expandedHeading: new sap.m.Title({ text: params[params.that.titleField] }),
-                                   snappedHeading: new sap.m.FlexBox({ items: [new sap.m.Avatar({ src: params.LOGO || params.that.icon || params.imageURI })] }),
-           
-                                   expandedContent: new sap.m.Title({ text: params[params.that.subtitle] || params.that.subtitle.toUpperCase() || null }),
-           
-                                   snappedContent: new sap.m.Title({ text: params[params.that.titleField] }),
-           
-                               }), 
-
-                new sap.uxap.ObjectPageHeader({
-                    navigationBar: Bar,
-                    objectImageURI: params.LOGO || params.ICON || params.that.icon || params.imageURI,
-                    isObjectTitleAlwaysVisible: true,
-                    showPlaceholder: false,
-                    isObjectIconAlwaysVisible: true,
-                    objectTitle: params[params.that.titleField] || params.that.titleField || null,
-                    objectSubtitle: params[params.that.subtitle] || params.that.subtitle || null,
-                    //actions: buttons,
-                    //sideContentButton: null//params.that.btBack
-                }),*/
-
-                headerContent: [this.Bar
-                    //new sap.m.Avatar({ src: params.LOGO || params.that.icon || params.imageURI })
-                    //new sap.m.SearchField(),
-                    //new sap.m.Label({ text: "Hello!", wrapping: true }),
-                    /*new sap.m.ObjectAttribute({
-                        title: "Phone",
-                        customContent: new sap.m.Link({ text: "+33 6 4512 5158" }),
-                        active: true
-                    })*/
-                ],
+                headerContent: [this.Bar],
                 sections: sections
             });
 
-            /*    setTimeout(() => {
-                   this.Page.setSelectedSection(sections[0].getId())
-               }, 3000) */
-
-
-            let flds = [];
-
-            let exclude = ["CREDAT", "ERNAM", "MANDT", "CHADAT", "CHANAM", "ACTIVE", "id", "delete", "save", "that"];
-
-            // obter relação de campos com base no regitro selecionado
-            for (const field in params) {
-
-                if (exclude.find(e => e === field || e === field.field)) continue;
-
-                if (params.that.foreignKeys && params.that.foreignKeys.find(e => e[field.split('.')[0]])) continue;
-
-                let vals = params.that.context.find(e => (e.field.split('.')[0] === field.split('.')[0] || e === field) && (e.foreignKey === undefined || e.foreignKey === false))
-
-                if (!vals || (vals && !vals.field)) {
-                    vals = { field: field }
-                }
-
-                if (flds.find(f => f.field.split('.')[0] === vals.field.split('.')[0])) continue;
-
-                flds.push(vals);
-
-                if (!vals)
-                    params.that.context.push(field);
-
-            }
-
-            flds = flds.concat(params.that.context.filter(a => !flds.find(b => b.field === a.field) && (a.foreignKey === undefined || a.foreignKey === false)));
-
-            new ScreenElements(this.that).set(flds, this);
-
-            params.that.getView().byId(params.that.IDAPP).setBusy(false);
+            new ScreenElements(MainView).set(MainView.context, View).then(() => {
+                View.Page.setBusy(false);
+                MainView.getView().byId(MainView.IDAPP).setBusy(false);
+            });
 
             return this;
         },
@@ -279,7 +234,7 @@ sap.ui.define([
 
         setModel(oModel, nameModel) {
 
-            this.that.getView().setModel(oModel, nameModel);
+            MainView.getView().setModel(oModel, nameModel);
         },
 
         addContent(content) {
@@ -288,6 +243,16 @@ sap.ui.define([
                 this.mainContent = this.mainContent.concat(content);
             } else {
                 this.mainContent.addContent(content);
+            }
+
+        },
+
+        addOtherContent(content) {
+
+            if (content instanceof Array) {
+                this.otherContent = this.otherContent.concat(content);
+            } else {
+                this.otherContent.addContent(content);
             }
 
         },

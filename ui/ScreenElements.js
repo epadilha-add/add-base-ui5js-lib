@@ -4,31 +4,47 @@ sap.ui.define([
     "sap/base/Log",
     "sap/ui/model/json/JSONModel",
     "../commons/AddModels",
-    "../callService"],
-    function (Object, Log, JSONModel, AddModels, callService) {
+    "../callService",
+    "sap/ui/richtexteditor/RichTextEditor"],
+    function (Object, Log, JSONModel, AddModels, callService, RichTextEditor) {
         'use strict';
-
+        let MainView = {};
         return Object.extend("ScreenElements", {
 
             that: null,
 
             constructor: function (that) {
-                this.that = that;
-
+                MainView = that;
             },
 
             getStruc: function (param, valuesHelp) {
+
+                if (MainView.fieldcat) return new Promise(p => p(MainView.fieldcat));
 
                 let listFields = [];
 
                 if (param.length > 0) {
 
                     param.forEach(element => {
-                        listFields.push({ "CAMPO": element.field.split('.')[0] || element });
+
+                        let fields = (element.field) ? element.field.split('.') : element.split('.');
+
+                        if (fields[0])
+                            listFields.push({ "CAMPO": fields[0] });
+
+                        if (fields[1])
+                            listFields.push({ "CAMPO": fields[1] });
                     });
 
                 } else {
-                    listFields.push({ "CAMPO": param.field.split('.')[0] || param });
+
+                    let fields = (param.field) ? param.field.split('.') : param.split('.');
+
+                    if (fields[0])
+                        listFields.push({ "CAMPO": fields[0] });
+
+                    if (fields[1])
+                        listFields.push({ "CAMPO": fields[1] });
                 }
 
                 let req = {
@@ -62,49 +78,32 @@ sap.ui.define([
 
                 return await this.getStruc(param, valueHelp).then((response) => {
 
-                    response = JSON.parse(response);
+                    if (typeof response === 'string')
+                        response = JSON.parse(response);
+
                     let screenElements = [];
                     let modelName = null;
                     try {
 
                         param.forEach((field) => { //==>keep sequence
+                            let fld = field.field.split('.');
+                            fld = (fld[1]) ? fld[1] : fld[0];
+                            response.find((element) => {
 
-                            return response.find((element) => {
-
-                                if (field.field.split('.')[0] == element.FIELD) {
-
-                                    //sobrepor configurações 
-                                    for (const key in field.prop) {
-                                        if (element[key] || element[key] === "")
-                                            element[key] = field.prop[key]
-                                    }
-
-                                    if (field.prop && field.prop.VALUES) {
-                                        element.VALUES = field.prop.VALUES;
-                                    }
+                                if (fld === element.FIELD) {
 
                                     if (element.VALUES) {
                                         var oModel = new JSONModel(element.VALUES.filter(e => e.ACTIVE || e.ACTIVE === undefined));
-                                        modelName = this.that.IDAPP + element.FIELD;
+                                        modelName = MainView.IDAPP + element.FIELD;
                                         Screen.getView().setModel(oModel, modelName + "PARAM");
                                     } else {
-                                        modelName = this.that.IDAPP + "PARAM";
+                                        modelName = MainView.IDAPP + "PARAM";
                                     }
 
                                     if (field.modelPath) {
                                         modelName = field.modelPath;
                                     } else if (!modelName) {
                                         modelName = '/';
-                                    }
-
-                                    /* else {
-                                        modelName = '/';
-                                    } */
-
-                                    if (field.prop && !field.prop.obligatory) {
-                                        if (!field.prop)
-                                            field.prop = {};
-                                        field.prop.obligatory = false;
                                     }
 
                                     element.OBLIGTORY = (field.prop && field.prop.obligatory) ? field.prop.obligatory : false;
@@ -116,8 +115,8 @@ sap.ui.define([
 
                                     screenElements = this.createElementbyType(
                                         element,
-                                        this.that,
-                                        modelName)
+                                        MainView,
+                                        modelName, 1)
                                 }
 
                             })
@@ -145,64 +144,69 @@ sap.ui.define([
 
                 //  Screen.body.setBusy(true);
 
-                await this.getStruc(param, valueHelp).then((response) => {
+                return this.getStruc(param, valueHelp).then((response) => {
 
-                    response = JSON.parse(response);
+                    if (typeof response === 'string')
+                        response = JSON.parse(response);
 
                     try {
 
                         param.forEach((field) => { //==>keep sequence
-
+                            let fld = field.field.split('.');
+                            fld = (fld[1]) ? fld[1] : fld[0];
                             response.find((element) => {
 
-                                if (field.field.split('.')[0] == element.FIELD) {
+                                if (fld === element.FIELD) {
 
-                                    //sobrepor configurações 
-                                    for (const key in field.prop) {
-                                        if (element[key] || element[key] === "")
-                                            element[key] = field.prop[key]
-                                    }
-
-                                    if (field.prop && field.prop.VALUES) {
-                                        element.VALUES = field.prop.VALUES;
-                                    }
+                                    element = { ...element, ...field };
 
                                     if (element.VALUES) {
                                         var oModel = new JSONModel(element.VALUES);
-                                        modelName = this.that.IDAPP + field.field || element.FIELD;
+                                        modelName = MainView.IDAPP + field.field || element.FIELD;
                                         Screen.setModel(oModel, modelName + "PARAM");
 
                                     } else {
-                                        modelName = this.that.IDAPP + "PARAM";
+                                        modelName = MainView.IDAPP + "PARAM";
                                     }
 
                                     if (field.modelPath) {
                                         modelName = field.modelPath;
                                     }
-                                    if (field.prop && !field.prop.obligatory) {
-                                        if (!field.prop)
-                                            field.prop = {};
-                                        field.prop.obligatory = false;
-                                    }
 
-                                    element.OBLIGTORY = (field.prop && field.prop.obligatory) ? field.prop.obligatory : false;
                                     element.FIELDNAME = field.field || element.FIELD;
-                                    element.EDIT = Screen.that.edit;
-                                    element.EDIT = (field.prop && field.prop.key || field.key) ? false : true;
+                                    element.EDIT = MainView.edit;
+                                    element.EDIT = (field.key || field.foreignKey) ? false : true;
 
+                                    /**
+                                     * caso seja um campo com '.' ref type é sempre input
+                                     */
+                                    if (field.field.split('.')[1]) {
+                                        element.REFTYPE = "";
+                                        element.EDIT = false;
+                                    }
 
                                     STRUC.push(element);
 
                                     this.createElementbyType(
                                         element,
-                                        this.that,
-                                        modelName).forEach((obj) => {
-                                            Screen.addContent(obj);
+                                        MainView,
+                                        modelName, 2).forEach((obj) => {
+
+                                            switch (element.REFTYPE) {
+                                                case 'RT':
+                                                    Screen.addOtherContent(obj);
+                                                    break;
+                                                default:
+                                                    Screen.addContent(obj);
+                                                    break;
+                                            }
+
+
                                         });
 
                                     Log.info(element.FIELD, 'ScreenElements');
 
-                                    //field.field = this.that.IDAPP + field.field;
+                                    //field.field = MainView.IDAPP + field.field;
                                 }
 
                             })
@@ -217,7 +221,7 @@ sap.ui.define([
                     }
 
                     //Grava estrutura para tela de seleção
-                    //this.that.setModel(STRUC, "PARAM");
+                    //MainView.setModel(STRUC, "PARAM");
                     // Screen.body.setBusy(false);
 
                 });
@@ -225,7 +229,7 @@ sap.ui.define([
                 Screen.Page.setBusy(false);
 
             },
-            createElementbyType: function (struc, that, modelName) {
+            createElementbyType: function (struc, that, modelName, caller) {
                 'user strict';
 
                 // return [new sap.m.Input()];
@@ -235,10 +239,10 @@ sap.ui.define([
                 var placeholder;
                 var res = [];
 
-                //struc.FIELDNAME = that.IDAPP + struc.FIELDNAME;
+                let txt = struc.DESCR || struc.SCRTEXT_S || struc.SCRTEXT_M || struc.SCRTEXT_L;
 
                 let oLabel = new sap.m.Label({
-                    text: struc.DESCR || struc.SCRTEXT_S || struc.SCRTEXT_M || struc.SCRTEXT_L,
+                    text: txt,
                     labelFor: struc.FIELDNAME,
                     visible: ((struc.VISIBLE === 'X') ? true : true),
                     tooltip: struc.FIELDNAME
@@ -278,29 +282,16 @@ sap.ui.define([
 
                         res.push(new sap.m.Text({
                             //id: Id,
-                            text: (struc.REFTYPE !== 'LB') ? '{' + modelName + '>/' + struc.FIELDNAME + '}' : '{' + that.IDAPP + 'PARAM>/' + struc.FIELDNAME + '}',
+                            text: (struc.REFTYPE !== 'LB') ? '{' + that.IDAPP + 'PARAM>/' + struc.FIELDNAME + '}' : '{' + that.IDAPP + 'PARAM>/' + struc.FIELDNAME + '}',
                             width: '100%',
                             tooltip: (struc.tooltip) ? struc.tooltip : "",
                             wrapping: false,
                         }))
-                        /*            
-                                   res.push(new sap.m.Label({
-                                       tooltip: (struc.tooltip) ? struc.tooltip : "",
-                                       wrapping: false,
-                                       text: {
-                                           path: modelName + '>/' + struc.FIELDNAME,
-                                           //type: vType,
-                                           formatOptions: {
-                                               maxIntegerDigits: maxInt,
-                                               maxFractionDigits: decimals
-                                           }
-                                       }
-                                   })) */
 
                         break;
                     default:
-
-
+                        //struc.prop => completo { substitui completamente as propriedades }
+                        //struc.propInclude => incluir { apenas inclui nóvas propriedades }
                         switch (struc.REFTYPE) {
 
                             case 'LB':
@@ -311,13 +302,16 @@ sap.ui.define([
                                     text: '{' + modelName + 'PARAM>' + struc.LBDESCR + '}',
                                 });
 
-                                res.push(new sap.m.ComboBox({
+                                let prop = (struc.prop) ? (struc.prop) : {
                                     selectedKey: '{' + that.IDAPP + 'PARAM>/' + struc.FIELDNAME.split('.')[0] + '}',
                                     items: {
                                         path: modelName + 'PARAM>/',
                                         template: oItemTemplate
-                                    }
-                                }));
+                                    },
+                                    ...struc.propInclude
+                                };
+
+                                res.push(new sap.m.ComboBox(prop));
 
                                 break;
 
@@ -327,6 +321,20 @@ sap.ui.define([
 
                                 break;
 
+                            case 'RT':
+                                res.push(new RichTextEditor({
+                                    width: "100%",
+                                    height: "400px",
+                                    showGroupClipboard: true,
+                                    showGroupStructure: true,
+                                    showGroupFont: true,
+                                    showGroupInsert: true,
+                                    showGroupLink: true,
+                                    showGroupUndo: true,
+                                    value: '{' + modelName + '>/' + struc.FIELDNAME + '}',
+                                    tooltip: (struc.tooltip) ? struc.tooltip : "",
+                                }))
+                                break;
                             case 'SI':
                             case '':
 
@@ -339,7 +347,7 @@ sap.ui.define([
 
 
                                         res.push(new sap.m.Input({
-                                            id: Id,
+
                                             tooltip: (struc.tooltip) ? struc.tooltip : "",
                                             // wrapping: false, -> incompatível
                                             value: {
@@ -516,6 +524,33 @@ sap.ui.define([
                 res[0].setLabelFor(res[1].getId().toString());
 
                 res[1].REFTYPE = struc.REFTYPE;
+
+                if (struc.CINFO)
+                    res[0].addEventDelegate({
+                        onmouseover: function (oEvent) {
+
+                            if (!this['rp' + res[0].getId()])
+                                this['rp' + res[0].getId()] =
+                                    new sap.m.ResponsivePopover("ResponsivePopover" + res[0].getId(), {
+                                        contentWidth: '40%', contentHeight: '40%',
+                                        showHeader: false,
+                                        content: new sap.ui.core.HTML({
+                                            preferDOM: true,
+                                            sanitizeContent: false,
+                                            content: "<div>" + struc.CINFO + "</div>"
+                                        })
+                                    })
+
+                            this['rp' + res[0].getId()].openBy(res[0]);
+                        }
+                    })
+
+                /**
+                 * aqui necessário ter o ID para possíveis valicações
+                 */
+                let fcat = MainView.fieldcat.find(f => f.field === struc.FIELDNAME);
+                if (fcat)
+                    (caller === 1) ? fcat.idUi5New = res[1].getId() : fcat.idUi5 = res[1].getId();
 
                 return res;
 
