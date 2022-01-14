@@ -268,12 +268,13 @@ sap.ui.define([
             // remove conteúdo para ser setado posteriormente
             screenParts.removeAllMainContents();
 
-            sap.ui.core.BusyIndicator.show();
+
 
             // verifica se o conteúdo já foi criado
             if (!Contents[component]) {
 
                 if (!Screen) {
+                    sap.ui.core.BusyIndicator.show();
                     // gera o criador das telas
                     Screen = new ScreenFactory(this);
                 }
