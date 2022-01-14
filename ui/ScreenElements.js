@@ -5,8 +5,10 @@ sap.ui.define([
     "sap/ui/model/json/JSONModel",
     "../commons/AddModels",
     "../callService",
-    "sap/ui/richtexteditor/RichTextEditor"],
-    function (Object, Log, JSONModel, AddModels, callService, RichTextEditor) {
+    "sap/ui/richtexteditor/RichTextEditor",
+    "sap/ui/codeeditor/CodeEditor",
+    "sap/ui/core/Fragment"],
+    function (Object, Log, JSONModel, AddModels, callService, RichTextEditor, CodeEditor, Fragment) {
         'use strict';
         let MainView = {};
         return Object.extend("ScreenElements", {
@@ -106,10 +108,10 @@ sap.ui.define([
                                         modelName = '/';
                                     }
 
-                                    element.OBLIGTORY = (field.prop && field.prop.obligatory) ? field.prop.obligatory : false;
-
                                     element.FIELDNAME = element.FIELD;
-                                    //element.edit = (Screen.that.edit);
+
+                                    if (field.create && !field.foreignKey && field.key === true)
+                                        element.REFTYPE = ''; //input
 
                                     STRUC.push(element);
 
@@ -142,7 +144,8 @@ sap.ui.define([
                 let valueHelp = true;
                 let modelName = null;
 
-                //  Screen.body.setBusy(true);
+                param = param.filter(fld => (fld.showUi === undefined || fld.showUi === true)
+                    && (fld.foreignKey === undefined || fld.foreignKey === false));
 
                 return this.getStruc(param, valueHelp).then((response) => {
 
@@ -152,6 +155,7 @@ sap.ui.define([
                     try {
 
                         param.forEach((field) => { //==>keep sequence
+
                             let fld = field.field.split('.');
                             fld = (fld[1]) ? fld[1] : fld[0];
                             response.find((element) => {
@@ -175,7 +179,7 @@ sap.ui.define([
 
                                     element.FIELDNAME = field.field || element.FIELD;
                                     element.EDIT = MainView.edit;
-                                    element.EDIT = (field.key || field.foreignKey) ? false : true;
+                                    element.EDIT = (field.key) ? false : true;
 
                                     /**
                                      * caso seja um campo com '.' ref type é sempre input
@@ -185,28 +189,26 @@ sap.ui.define([
                                         element.EDIT = false;
                                     }
 
-                                    STRUC.push(element);
+                                    //STRUC.push(element);
 
                                     this.createElementbyType(
                                         element,
                                         MainView,
-                                        modelName, 2).forEach((obj) => {
+                                        modelName, 2, Screen).forEach((obj) => {
 
-                                            switch (element.REFTYPE) {
-                                                case 'RT':
-                                                    Screen.addOtherContent(obj);
-                                                    break;
-                                                default:
-                                                    Screen.addContent(obj);
-                                                    break;
-                                            }
+                                            if (obj)
+                                                switch (element.REFTYPE) {
+                                                    case 'RT':
+                                                    case 'CE':
+                                                        Screen.addOtherContent(obj);
+                                                        break;
+                                                    default:
+                                                        Screen.addContent(obj);
+                                                        break;
+                                                }
 
 
                                         });
-
-                                    Log.info(element.FIELD, 'ScreenElements');
-
-                                    //field.field = MainView.IDAPP + field.field;
                                 }
 
                             })
@@ -215,21 +217,13 @@ sap.ui.define([
 
                     } catch (error) {
 
-                        // Screen.setBusy(false);
-
-                        Log.info("ERROR:-->" + JSON.stringify(error), 'ScreenElements');
+                        Log.error("error", 'ScreenElements', error);
                     }
-
-                    //Grava estrutura para tela de seleção
-                    //MainView.setModel(STRUC, "PARAM");
-                    // Screen.body.setBusy(false);
 
                 });
 
-                Screen.Page.setBusy(false);
-
             },
-            createElementbyType: function (struc, that, modelName, caller) {
+            createElementbyType: function (struc, that, modelName, caller, Screen) {
                 'user strict';
 
                 // return [new sap.m.Input()];
@@ -380,7 +374,22 @@ sap.ui.define([
                                         break;
 
                                     default:
-                                        res.push(new sap.m.Input().bindProperty("value", modelName + '>/' + struc.FIELDNAME));
+                                        if (struc.MASK) {
+                                            let params = JSON.parse(struc.MASK)
+                                            let mask = params.mask;
+                                            delete params.mask;
+
+                                            let roles = new sap.m.MaskInputRule({
+                                                ...params || { maskFormatSymbol: "C", regex: "[A-Z0-9]" }
+                                            })
+
+                                            res.push(new sap.m.MaskInput({
+                                                mask: mask,
+                                                rules: [roles]
+                                            }).bindProperty("value", modelName + '>/' + struc.FIELDNAME));
+                                        } else {
+                                            res.push(new sap.m.Input().bindProperty("value", modelName + '>/' + struc.FIELDNAME));
+                                        }
                                         break;
 
                                 }
@@ -510,10 +519,72 @@ sap.ui.define([
 
                                 break;
 
+                            case 'CE':
+
+                                if (!MainView.codeeditor) return [];
+
+                                let tabs = {};
+
+                                MainView.ceP = new CodeEditor({
+                                    height: "500px",
+                                    type: "javascript",
+                                    colorTheme: "chrome"
+                                }).bindProperty("value", modelName + '>/' + struc.FIELDNAME);
+
+                                MainView.ceE = new CodeEditor({
+                                    height: "500px",
+                                    type: "javascript",
+                                    colorTheme: "chrome"
+                                })
+
+                                MainView.ceE.setVisible(false);
+
+                                MainView.ceS = new CodeEditor({
+                                    height: "500px",
+                                    type: "javascript",
+                                    colorTheme: "chrome"
+                                });
+
+                                MainView.ceS.setVisible(false);
+
+                                MainView.ceD = new CodeEditor({
+                                    height: "500px",
+                                    type: "javascript",
+                                    colorTheme: "chrome"
+                                });
+
+                                MainView.ceD.setVisible(false);
+
+                             /*    if (MainView.codeeditor().liveChange)
+                                    ce.attachLiveChange(MainView.codeeditor().liveChange) */;
+
+                                if (MainView.codeeditor().tabs && MainView.codeeditor().tabs.length > 0) {
+                                    tabs = MainView.codeeditor().tabs.map((editor) => {
+                                        return new sap.m.IconTabFilter({
+                                            icon: editor.icon,
+                                            text: editor.title,
+                                            key: editor.key
+                                        });
+                                    })
+                                    MainView.View.addOtherContent(new sap.m.IconTabHeader({
+                                        select: (oEvent) => {
+                                            MainView.codeeditor().onSelectTab(oEvent, MainView)
+                                        },
+                                        items: tabs
+                                    }))
+                                }
+
+                                MainView.View.addOtherContent(MainView.ceP);
+                                MainView.View.addOtherContent(MainView.ceE);
+                                MainView.View.addOtherContent(MainView.ceS);
+                                MainView.View.addOtherContent(MainView.ceD);
+
+                                return [];
+
                             default:
 
                                 Log.info(struc.FIELDNAME, "type (MI,MC,TP,..) no defined");
-                                return;
+                                return [];
 
                         }
 
@@ -525,25 +596,32 @@ sap.ui.define([
 
                 res[1].REFTYPE = struc.REFTYPE;
 
-                if (struc.CINFO)
+                if (struc.CINFO) {
+
                     res[0].addEventDelegate({
-                        onmouseover: function (oEvent) {
+                        onmouseover: () => {
+                            this.timeout = window.setTimeout(function (oEvent) {
 
-                            if (!this['rp' + res[0].getId()])
-                                this['rp' + res[0].getId()] =
-                                    new sap.m.ResponsivePopover("ResponsivePopover" + res[0].getId(), {
-                                        contentWidth: '40%', contentHeight: '40%',
-                                        showHeader: false,
-                                        content: new sap.ui.core.HTML({
-                                            preferDOM: true,
-                                            sanitizeContent: false,
-                                            content: "<div>" + struc.CINFO + "</div>"
+                                if (!this['rp' + res[0].getId()])
+                                    this['rp' + res[0].getId()] =
+                                        new sap.m.ResponsivePopover("ResponsivePopover" + res[0].getId(), {
+                                            contentWidth: '40%', contentHeight: '40%',
+                                            showHeader: false,
+                                            content: new sap.ui.core.HTML({
+                                                preferDOM: true,
+                                                sanitizeContent: false,
+                                                content: "<div>" + struc.CINFO + "</div>"
+                                            })
                                         })
-                                    })
 
-                            this['rp' + res[0].getId()].openBy(res[0]);
+                                this['rp' + res[0].getId()].openBy(res[0]);
+                            }, 1700)
+                        },
+                        onmouseout: () => {
+                            if (this.timeout) window.clearTimeout(this.timeout)
                         }
                     })
+                }
 
                 /**
                  * aqui necessário ter o ID para possíveis valicações

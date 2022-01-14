@@ -35,22 +35,42 @@ sap.ui.define([
                         }))
 
                         if (component) {
-                            lSc = new sap.ui.core.ComponentContainer(
-                                {
-                                    id: component.name + new Date().getTime(),
-                                    name: component.name,
-                                    //manifestFirst: true,
-                                    manifest: true,//component.path + '/manifest.json',
-                                    autoPrefixId: true,
-                                    async: component.async || screen.async || true,
-                                    url: component.path || '../components/' + component.name + '/webapp'
-                                })
+
+
+                            var oComp = sap.ui.getCore().createComponent({
+                                name: component.name,
+                                id: That.IDAPP + '-' + component.name,
+                                autoPrefixId: false,
+                                url: component.path || '../components/' + component.name + '/webapp'
+                            });
+
+                            lSc = new sap.ui.core.ComponentContainer(That.IDAPP + '-' + component.name, {
+                                async: component.async || screen.async || true,
+                                component: oComp
+                            });
+
+                            /*   lSc = new sap.ui.core.ComponentContainer(
+                                  {
+                                      id: That.IDAPP + '-' + component.name,
+                                      name: component.name,
+                                      //manifestFirst: true,
+                                      manifest: true,//component.path + '/manifest.json',
+                                      autoPrefixId: true,
+                                      async: component.async || screen.async || true,
+                                      url: component.path || '../components/' + component.name + '/webapp',
+                                      componentCreated: (oCom) => {
+                                          debugger;
+
+                                      }
+                                      //settings: { tooltip: That.IDAPP }
+                                  }) */
+                            // })
 
                         } else {
                             lSc = this._defaultPage(screen.key + ":" + screen.name);
                         }
 
-                        if (!lSc.getManifest()) throw new TypeError();
+                        // if (!lSc.getManifest()) throw new TypeError();
 
                     } catch (err) {
                         let m = screen.name + ' Not Implemented - ADD-APPM ';

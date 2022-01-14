@@ -438,7 +438,7 @@ sap.ui.define([
                         countAtivi++;
                         var eLane = {
                             id: modelIndex,
-                            icon: "sap-icon://process",
+                            icon: "sap-icon://variants",
                             label: oValue.DESCR,
                             //label: 'teste',
                             position: modelIndex

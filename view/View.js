@@ -1,4 +1,3 @@
-
 sap.ui.define([
     "../BaseController",
     "../ui/ScreenElements",
@@ -16,6 +15,11 @@ sap.ui.define([
             MainView = params.that;
             View = this;
 
+            if (MainView.onSelectLine)
+                if (!MainView.onSelectLine(params, MainView)) return;
+
+            this.setBtEvents();
+
             this.component = {};
             /*************************************
              * 
@@ -26,7 +30,7 @@ sap.ui.define([
             if (MainView.sectionsItems && MainView.sectionsItems.foreignKeys)
                 this.component = MainView.sectionsItems.foreignKeys.find(e => e.parent === MainView.IDAPP && (e.embedded || e.embedded === undefined))
 
-            MainView.getView().byId(MainView.IDAPP).setBusy(true);
+            MainView.getView().setBusy(true);
 
             /*************************************
              * 
@@ -35,12 +39,12 @@ sap.ui.define([
              * 
              *************************************/
             this.mainContent = new sap.ui.layout.form.SimpleForm({
-                width: '70%',
+                width: '100%',
                 editable: true,
-                layout: "ColumnLayout",
-                columnsM: 2,
-                columnsL: 2,
-                columnsXL: 2
+                layout: "ResponsiveGridLayout",
+                columnsM: 1,
+                columnsL: 1,
+                columnsXL: 1
             });
             /*************************************
              * 
@@ -104,14 +108,16 @@ sap.ui.define([
 
                                 MainView.dialogActive.close();
                                 MainView.dialogActive.destroy();
-                                MainView.save();
+
+                                View.save();
+                                //MainView.save();
                             }
                         }),
                         endButton: new sap.m.Button({
                             text: "{i18n>cancel}",
                             press: function (e) {
 
-                                MainView.getView().byId(MainView.IDAPP).setBusy(false);
+                                MainView.getView().setBusy(false);
 
                                 //   setTimeout(
                                 //     function () {
@@ -142,6 +148,17 @@ sap.ui.define([
                         text: "{i18n>delete}",
                         type: sap.m.ButtonType.Transparent,//type: "Reject",
                         press: () => {
+
+                            //sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].deletes.forEach(del => del());
+                            sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].deletes[0]();
+
+                            try {
+                                sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].deletes.splice(0, 1);
+                            } catch (error) {
+
+                            }
+                            return;
+
                             this.delete(this.getId());
                         }
                     }),
@@ -151,6 +168,14 @@ sap.ui.define([
                         type: sap.m.ButtonType.Transparent,
                         text: "{i18n>save}",
                         press: async (oEvent) => {
+
+                            //sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].saves.forEach(save => save());
+
+                            View.save();
+
+
+                            return;
+
                             await this.save(params);
                         }
                     })
@@ -204,6 +229,18 @@ sap.ui.define([
                 contentRight: buttons
             })
 
+            /*          for (const section of sections) {
+                         section.addEventDelegate({
+                             onmouseover: () => {
+                                 debugger;
+                                 sap.ui.getCore().setModel(
+                                     new sap.ui.model.json.JSONModel({
+                                         root: MainView.IDAPP
+                                     }), "rootParent");
+                             }
+                         })
+                     } */
+
             this.Page = new sap.uxap.ObjectPageLayout({
                 useIconTabBar: true,
                 isChildPage: false,
@@ -213,12 +250,19 @@ sap.ui.define([
                 showFooter: true,
                 headerTitle: null,
                 headerContent: [this.Bar],
+                sectionChange: (oEvent) => {
+                    /*                  debugger;
+                                     sap.ui.getCore().setModel(
+                                         new sap.ui.model.json.JSONModel({
+                                             root: MainView.IDAPP
+                                         }), "rootParent"); */
+                },
                 sections: sections
             });
 
             new ScreenElements(MainView).set(MainView.context, View).then(() => {
                 View.Page.setBusy(false);
-                MainView.getView().byId(MainView.IDAPP).setBusy(false);
+                MainView.getView().setBusy(false);
             });
 
             return this;
@@ -228,6 +272,33 @@ sap.ui.define([
             this.id = Id;
         },
 
+        save() {
+            sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].saves[0]();
+
+            try {
+                sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].saves.splice(0, 1);
+            } catch (error) {
+
+            }
+        },
+
+        setBtEvents() {
+            try {
+                sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].saves.unshift(MainView.save);
+                sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].deletes.unshift(MainView.delete);
+            } catch (error) {
+                alert(error);
+            }
+
+            this.nivel = sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].saves.length;
+        },
+        removeBtEvents() {
+            try {
+                sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].saves.splice(0, 1);
+                sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].deletes.splice(0, 1);
+            } catch {
+            }
+        },
         getId() {
             return this.id;
         },

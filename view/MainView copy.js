@@ -23,8 +23,10 @@ sap.ui.define(
 
                 sap.ui.core.BusyIndicator.hide();
 
-                MainView = Object.assign(this, that);
+                debugger;
 
+
+                MainView = Object.assign(this, that);
                 /**
                  * inicialização do contexto
                  */
@@ -45,18 +47,6 @@ sap.ui.define(
 
                 MainView.foreignKeysCheck();
 
-                let firstPage = MainView.getMainLayout();
-
-                MainView.mainContent = new sap.m.NavContainer({
-                    pages: [firstPage],
-                    initialPage: firstPage
-                })
-
-                MainView.getView().getContent()[0].addPage(
-
-                    MainView.mainContent
-                );
-
                 MainView.callParams = {
                     m: sap.ui.getCore().getModel("userInfo").getData().currentMandt,
                     a: Object.keys(window["sap-ui-config"]["resourceroots"])[0]
@@ -75,6 +65,17 @@ sap.ui.define(
                     return res;
                 });
 
+                let firstPage = MainView.getMainLayout();
+
+                MainView.mainContent = new sap.m.NavContainer({
+                    pages: [firstPage],
+                    initialPage: firstPage
+                })
+
+                MainView.getView().byId(MainView.IDAPP).addPage(
+
+                    MainView.mainContent
+                );
 
                 if (MainView.components && MainView.components.length > 0) {
                     MainView.appendComponent(MainView.components);
@@ -1359,13 +1360,13 @@ sap.ui.define(
                     }
                 })
             },
-            foreignKeysCheck(page) {
+            foreignKeysCheck() {
 
                 let foreignKeys = sap.ui.getCore().getModel("foreignKey" + MainView.rootComponent);
 
                 if (foreignKeys) {
 
-                    let keys = foreignKeys.getData().filter(l => l.idapp === MainView.IDAPP && l.parent === this.getView().getId().split('-')[0]);
+                    let keys = foreignKeys.getData().filter(l => l.idapp === MainView.IDAPP);
 
                     if (keys && keys.length > 0) {
 

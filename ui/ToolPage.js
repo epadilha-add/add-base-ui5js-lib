@@ -268,6 +268,8 @@ sap.ui.define([
             // remove conteúdo para ser setado posteriormente
             screenParts.removeAllMainContents();
 
+            sap.ui.core.BusyIndicator.show();
+
             // verifica se o conteúdo já foi criado
             if (!Contents[component]) {
 
@@ -287,6 +289,11 @@ sap.ui.define([
                 new sap.ui.model.json.JSONModel({
                     root: component
                 }), "rootComponent");
+
+            sap.ui.getCore().setModel(
+                new sap.ui.model.json.JSONModel({
+                    root: component
+                }), "rootParent");
 
             if (Contents['infosys'] && component !== 'infosys') {
                 Contents['infosys'].destroy();
@@ -473,7 +480,7 @@ sap.ui.define([
 
             return new sap.m.Button({
                 // text: sap.ui.getCore().getModel("userInfo").getData().content.email,
-                icon: 'sap-icon://heatmap-chart',
+                icon: 'sap-icon://grid',
                 tooltip: 'Outras aplicações',
                 //type: sap.m.ButtonType.Transparent,
                 press: function () {
