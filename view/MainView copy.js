@@ -17,7 +17,7 @@ sap.ui.define(
         let componentHistory = "add.modification.history";
         let promises = [];
         let sections = [];
-        return Controller.extend("add.ui.crud.MainView", {
+        return Controller.extend("add.ui.cust.MainView", {
 
             constructor: function (that) {
 
@@ -280,7 +280,7 @@ sap.ui.define(
                     return MainView.normalize(JSON.parse(resp));
                 })
             },
-            delete: async function (companyId) {
+            delete: async function (corporationId) {
 
                 MainView.getView().setBusy(true);
 
@@ -312,7 +312,7 @@ sap.ui.define(
 
                             const params = {
                                 "method": "DELETE",
-                                "fullPath": "/api/" + MainView.collection + "/" + companyId,
+                                "fullPath": "/api/" + MainView.collection + "/" + corporationId,
                                 "actionName": MainView.collection + ".remove",
                                 ...MainView.callParams
                             }
@@ -450,31 +450,31 @@ sap.ui.define(
 
                 MainView.getView().setModel(oModel, nameModel);
             },
-            navToCrud: function (crud) {
+            navToCrud: function (cust) {
 
-                crud.that = MainView;
+                cust.that = MainView;
 
                 if (!MainView.View || !MainView.View.Page) {
-                    crud.delete = MainView.delete;
-                    crud.save = MainView.save;
-                    MainView.View = new add.ui5js.ui.View(crud, () => MainView.mainContent.back());
-                    MainView.View.activeButton.setSelectedKey(crud.ACTIVE);
+                    cust.delete = MainView.delete;
+                    cust.save = MainView.save;
+                    MainView.View = new add.ui5js.ui.View(cust, () => MainView.mainContent.back());
+                    MainView.View.activeButton.setSelectedKey(cust.ACTIVE);
                     MainView.mainContent.addPage(MainView.View.Page);
                 } else {
 
                     MainView.obligatoryCheck().setNoneAll();
-                    MainView.View.setId(crud.id);
-                    MainView.View.setBtEvents(crud.id);
-                    MainView.View.title.setText(crud[MainView.titleField]);
-                    MainView.View.avatar.setSrc(crud.LOGO || crud.ICON || crud.that.icon || crud.imageURI)
-                    MainView.View.activeButton.setSelectedKey(crud.ACTIVE)
+                    MainView.View.setId(cust.id);
+                    MainView.View.setBtEvents(cust.id);
+                    MainView.View.title.setText(cust[MainView.titleField]);
+                    MainView.View.avatar.setSrc(cust.LOGO || cust.ICON || cust.that.icon || cust.imageURI)
+                    MainView.View.activeButton.setSelectedKey(cust.ACTIVE)
                 }
 
                 let values = {};
-                for (const key in crud) {
-                    if (!(crud[key] instanceof Object))
-                        // values[MainView.IDAPP + key.toUpperCase()] = crud[key];
-                        values[key.toUpperCase()] = crud[key];
+                for (const key in cust) {
+                    if (!(cust[key] instanceof Object))
+                        // values[MainView.IDAPP + key.toUpperCase()] = cust[key];
+                        values[key.toUpperCase()] = cust[key];
                 }
 
                 var oModel = new sap.ui.model.json.JSONModel(values);
@@ -1546,7 +1546,7 @@ sap.ui.define(
                     }))]
                 Promise.all(promises);
                 /**
-                * inicialização se implementado, verificar component add.crm.corporations
+                * inicialização se implementado, verificar component add.tax.corporations
                 */
                 if (MainView.init)
                     MainView.init();
@@ -1557,7 +1557,7 @@ sap.ui.define(
                 MainView.rootComponent = sap.ui.getCore().getModel("rootComponent").getData().root;
                 // MainView.rootParent = sap.ui.getCore().getModel("rootParent").getData().root;
                 /**
-                * eventos crud
+                * eventos cust
                 */
                 if (!sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent]) {
                     sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent] = {};
@@ -1565,7 +1565,7 @@ sap.ui.define(
                     sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].deletes = [];
                 }
                 /**
-                * eventos crud
+                * eventos cust
                 */
                 MainView.beforeList = MainView.getView().getController().beforeList;
                 MainView.afterList = MainView.getView().getController().afterList;

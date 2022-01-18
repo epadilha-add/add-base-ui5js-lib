@@ -5,7 +5,7 @@ sap.ui.define([
 ], function (Controller, JSONModel, callService) {
     "use strict";
 
-    return Controller.extend("add.home.app.component.BaseController", {
+    return Controller.extend("add.base.ui5js.lib.BaseController", {
         callService: callService,
         loadingConnfig: async function (idapp, that) {
             /***********************************************
@@ -13,6 +13,7 @@ sap.ui.define([
              * carregamento inicial da aplicação
              *  
              ***********************************************/
+
             let mdt = jQuery.sap.getUriParameters().get("m");
             /***********************************************
              * 
@@ -199,13 +200,13 @@ sap.ui.define([
                 var aFilters = [],
                     sSearchValue = oEvent.getParameter("value"),
                     itemsBinding = oEvent.getParameter("itemsBinding");
-
+                debugger;
                 // create the local filter to apply
                 if (sSearchValue !== undefined && sSearchValue.length > 0) {
-                    aFilters.push(new sap.ui.model.Filter(("m"), sap.ui.model.FilterOperator.Contains, sSearchValue));
+                    aFilters.push(new sap.ui.model.Filter("mandt", sap.ui.model.FilterOperator.Contains, sSearchValue));
                 }
                 // apply the filter to the bound items, and the Select Dialog will update
-                itemsBinding.filter(aFilters, "Application");
+                itemsBinding.filter(aFilters);
             };
 
             var template = new sap.m.StandardListItem({

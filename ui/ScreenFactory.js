@@ -22,30 +22,30 @@ sap.ui.define([
                 let s = null;
                 let lSc = null;
 
-                s = Screens.find((e) => {
-                    if (e.name == screen.key) return s;
-                });
+                s = Screens.find(e => e.name === screen.key);
 
-                if (!s) {
+                if (true) {
 
                     try {
 
                         let component = sap.ui.getCore().getModel("AppConfig").getData().components.find((c => {
                             if (c.key == screen.key || c.name == screen.name || c.name === screen || c.key === screen) return c;
                         }))
-
+                        //debugger;
                         if (component) {
 
 
                             var oComp = sap.ui.getCore().createComponent({
                                 name: component.name,
-                                id: That.IDAPP + '-' + component.name,
+                                id: screen.idapp + '-' + component.name,
                                 autoPrefixId: false,
+                                propagateModel: false,
                                 url: component.path || '../components/' + component.name + '/webapp'
                             });
 
-                            lSc = new sap.ui.core.ComponentContainer(That.IDAPP + '-' + component.name, {
+                            lSc = new sap.ui.core.ComponentContainer({
                                 async: component.async || screen.async || true,
+                                propagateModel: false,
                                 component: oComp
                             });
 
@@ -79,7 +79,7 @@ sap.ui.define([
                     }
 
                 } else {
-                    lSc = this._defaultPage(screen.key + ":" + screen.name);
+                    return s.screen;//this._defaultPage(screen.key + ":" + screen.name);
                 }
 
                 Object.assign(lSc, That);

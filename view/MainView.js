@@ -1,4 +1,4 @@
-"use strict";
+
 sap.ui.define(
     [
         "../BaseController",
@@ -9,7 +9,7 @@ sap.ui.define(
         "../ui/ScreenFactory",
         './View'
     ], function (Controller, Filter, FilterOperator, MessageToast, ScreenElements, ScreenFactory) {
-
+        "use strict";
 
         let dialog = {};
         let table = {};
@@ -17,7 +17,7 @@ sap.ui.define(
         let componentHistory = "add.modification.history";
         let promises = [];
         let sections = [];
-        return Controller.extend("add.ui.crud.MainView", {
+        return Controller.extend("add.ui.View.MainView", {
 
             constructor: function (that) {
 
@@ -29,6 +29,8 @@ sap.ui.define(
                  * inicialização do contexto
                  */
                 MainView.initContext();
+
+                MainView.Screen = new ScreenFactory(MainView);
                 /**
                  * setModel em ToolPage - addMainContent
                  */
@@ -37,9 +39,6 @@ sap.ui.define(
                 } catch {
                     MainView.rootComponent = MainView.IDAPP;
                 }
-
-                if (!MainView.title)
-                    MainView.title = MainView.getView().getModel("i18n").getResourceBundle().getText("title");
 
                 MainView.getView().setBusyIndicatorDelay(50);
 
@@ -146,6 +145,10 @@ sap.ui.define(
 
                 MainView.logInfo(params);
 
+
+
+                _UriComplement(params);
+
                 return MainView.callService.postSync("add", params).then((resp) => {
 
                     MainView.getView().setBusy(false);
@@ -172,11 +175,31 @@ sap.ui.define(
 
                     MainView.setMainModel(data);
 
+                    if (data.results.length === 1 && MainView.navIfOne
+                        && MainView.context.find(c => c.create)) {
+                        /**
+                         * navegar diretamente para o segundo nível 
+                         */
+                        MainView.pressToNav(data.results[0]);
+                        MainView.navToView(data.results[0]);
+                    }
+
                 }).catch((e) => {
                     table.setBusy(false);
                     MainView.getView().setBusy(false);
                     throw e;
                 })
+
+                function _UriComplement(params) {
+                    const fK = MainView.context.find(c => c.foreignKey === true);
+                    if (fK && !params.params.query) {
+                        params.params.query = {};
+                        let idFK = jQuery.sap.getUriParameters().get("id");
+                        if (idFK)
+                            params.params.query.id = idFK;
+
+                    }
+                }
             },
             logInfo(params) {
                 console.table({ COLLECTION: MainView.collection })
@@ -279,77 +302,90 @@ sap.ui.define(
                     return MainView.normalize(JSON.parse(resp));
                 })
             },
-            delete: async function (companyId) {
+            delete: async function (corporationId) {
 
                 MainView.getView().setBusy(true);
 
                 let values = MainView.getView().getModel(MainView.IDAPP + "PARAM").getData();
                 let inpConf = new sap.m.Input();
-                var dialog = new sap.m.Dialog({
 
-                    //contentWidth: "35%",
+                if (!MainView.dialogDelete) {
+                    MainView.dialogDelete = new sap.m.Dialog({
 
-                    title: "{i18n>deleteConfirm}",
-
-                    content: [new sap.m.Panel({
+                        contentWidth: "50%",
+                        stretch: sap.ui.Device.system.phone,
+                        title: "{i18n>deleteConfirm}",
+                        type: "Message",
                         content: [
-                            new sap.m.Label({
-                                text: "{i18n>write} '" + values[MainView.titleField] + "' {i18n>toConfirm}"
-                            }),
-                            inpConf]
-                    })],
+                            new sap.m.Panel({
+                                //allowWrapping: true,
+                                content: [
+                                    new sap.ui.layout.VerticalLayout({
+                                        width: "100%",
+                                        content: [
+                                            new sap.m.Label({
+                                                text: "{i18n>write} '" + values[MainView.titleField] + "' {i18n>toConfirm}"
+                                            }),
+                                            inpConf]
+                                    })]
+                            })],
 
-                    beginButton: new sap.m.Button({
+                        beginButton: new sap.m.Button({
 
-                        text: "{i18n>confirm}",
+                            text: "{i18n>confirm}",
 
-                        press: async function () {
+                            press: async function () {
 
-                            if (inpConf.getValue() != values[MainView.titleField]) return;
+                                if (inpConf.getValue() != values[MainView.titleField]) return;
 
-                            dialog.close();
+                                MainView.dialogDelete.close();
 
-                            const params = {
-                                "method": "DELETE",
-                                "fullPath": "/api/" + MainView.collection + "/" + companyId,
-                                "actionName": MainView.collection + ".remove",
-                                ...MainView.callParams
+                                const params = {
+                                    "method": "DELETE",
+                                    "fullPath": "/api/" + MainView.collection + "/" + corporationId,
+                                    "actionName": MainView.collection + ".remove",
+                                    ...MainView.callParams
+                                }
+
+                                MainView.logInfo(params);
+
+                                if (MainView.beforeDeleting instanceof Function)
+                                    if (!MainView.beforeDeleting(resp, MainView)) return;
+
+                                await MainView.callService.postSync("add", params).then((resp) => {
+
+                                    if (MainView.afterDeleting instanceof Function)
+                                        MainView.afterDeleting(resp, MainView);
+
+                                    MainView.getView().setBusy(false);
+                                    MainView.list();
+                                    MainView.message("successDelete");
+                                    sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].deletes.splice(0, 1);
+                                    MainView.mainContent.back();
+
+                                }).catch((err) => {
+                                    MainView.getView().setBusy(false);
+                                    MainView.message("errorDelete");
+
+                                })
+
                             }
-
-                            MainView.logInfo(params);
-
-                            if (MainView.beforeDeleting instanceof Function)
-                                if (!MainView.beforeDeleting(resp, MainView)) return;
-
-                            await MainView.callService.postSync("add", params).then((resp) => {
-
-                                if (MainView.afterDeleting instanceof Function)
-                                    MainView.afterDeleting(resp, MainView);
-
+                        }),
+                        endButton: new sap.m.Button({
+                            text: "{i18n>cancel}",
+                            press: function (e) {
                                 MainView.getView().setBusy(false);
-                                MainView.list();
-                                MainView.message("successDelete");
-                                MainView.mainContent.back();
+                                MainView.dialogDelete.close();
 
-                            }).catch((err) => {
-                                MainView.getView().setBusy(false);
-                                MainView.message("errorDelete");
-                            })
-
-                        }
-                    }),
-                    endButton: new sap.m.Button({
-                        text: "{i18n>cancel}",
-                        press: function (e) {
-                            MainView.getView().setBusy(false);
-                            dialog.close();
-                        }
+                            }
+                        })
                     })
-                })
 
-                MainView.getView().addContent(dialog);
+                    MainView.getView().addContent(MainView.dialogDelete);
+                }
 
-                dialog.open();
+                MainView.dialogDelete.open();
+
 
             },
             save: async function () {
@@ -449,31 +485,30 @@ sap.ui.define(
 
                 MainView.getView().setModel(oModel, nameModel);
             },
-            navToCrud: function (crud) {
+            navToView: function (View) {
 
-                crud.that = MainView;
+                View.that = MainView;
 
                 if (!MainView.View || !MainView.View.Page) {
-                    crud.delete = MainView.delete;
-                    crud.save = MainView.save;
-                    MainView.View = new add.ui5js.ui.View(crud, () => MainView.mainContent.back());
-                    MainView.View.activeButton.setSelectedKey(crud.ACTIVE);
+                    View.delete = MainView.delete;
+                    View.save = MainView.save;
+                    MainView.View = new add.ui5js.ui.View(View, () => MainView.mainContent.back());
+                    MainView.View.activeButton.setSelectedKey((View.ACTIVE) ? 'true' : 'false');
                     MainView.mainContent.addPage(MainView.View.Page);
                 } else {
-
                     MainView.obligatoryCheck().setNoneAll();
-                    MainView.View.setId(crud.id);
-                    MainView.View.setBtEvents(crud.id);
-                    MainView.View.title.setText(crud[MainView.titleField]);
-                    MainView.View.avatar.setSrc(crud.LOGO || crud.ICON || crud.that.icon || crud.imageURI)
-                    MainView.View.activeButton.setSelectedKey(crud.ACTIVE)
+                    MainView.View.setId(View.id);
+                    MainView.View.setBtEvents(View.id);
+                    MainView.View.title.setText(View[MainView.titleField]);
+                    MainView.View.avatar.setSrc(View.LOGO || View.ICON || View.that.icon || View.imageURI)
+                    MainView.View.activeButton.setSelectedKey((View.ACTIVE) ? 'true' : 'false')
                 }
 
                 let values = {};
-                for (const key in crud) {
-                    if (!(crud[key] instanceof Object))
-                        // values[MainView.IDAPP + key.toUpperCase()] = crud[key];
-                        values[key.toUpperCase()] = crud[key];
+                for (const key in View) {
+                    if (!(View[key] instanceof Object))
+                        // values[MainView.IDAPP + key.toUpperCase()] = View[key];
+                        values[key.toUpperCase()] = View[key];
                 }
 
                 var oModel = new sap.ui.model.json.JSONModel(values);
@@ -570,6 +605,8 @@ sap.ui.define(
 
                     table = new sap.m.Table({
                         //contextualWidth: "Auto",
+                        //alternateRowColors: true,
+                        //backgroundDesign: sap.m.BackgroundDesign.Transparent,
                         //sticky: new sap.m.Sticky.ColumnHeaders,
                         popinLayout: "GridSmall",
                         inset: false,
@@ -614,23 +651,19 @@ sap.ui.define(
                                 field.field === "ACTIVE" ||
                                 field.foreignKey === true) continue;
 
-                            /**
-                             * para chaves estrangeiras, não necessário aparecer na sap.m.Table
-                             */
-                            //if (MainView.sectionsItems && MainView.sectionsItems.foreignKeys)
-                            //   if (MainView.sectionsItems.foreignKeys.find(f => f.foreignKey.split('.')[0] === field.split('.')[0])) continue;
-
                             cells.push(new sap.m.Text({
                                 //width: "35%",
-                                text: datatype(field)
+                                text: datatype(field),
+                                wrapping: false,
                             }).addStyleClass("labelColumnsTableBold"));
 
-                            let col = new sap.m.Text({ text: field.text || "{i18n>description}" }).addStyleClass("labelColumnsTable");
+                            let col = new sap.m.Text({ tooltip: field.SCRTEXT_L + " : " + field.field, text: field.text || "{i18n>description}" }).addStyleClass("labelColumnsTable");
 
                             //armazena id para mudar o texto posterior
                             field.byIdText = col.getId();
 
                             columns.push(new sap.m.Column({
+
                                 header: [col]
                             }));
                         }
@@ -720,7 +753,7 @@ sap.ui.define(
                                         var oModel = oEvent.getSource().oBindingContexts;
                                         var values = { ...oModel.mainModel.getObject() };
                                         MainView.pressToNav(values);
-                                        MainView.navToCrud(values);
+                                        MainView.navToView(values);
                                     },
 
                                 cells: cells
@@ -774,7 +807,7 @@ sap.ui.define(
 
                                     MainView.pressToNav(values);
 
-                                    MainView.navToCrud(values);
+                                    MainView.navToView(values);
                                 });
 
                             line.byId = tile.getId();
@@ -821,10 +854,12 @@ sap.ui.define(
                     type: "Message",
                     contentWidth: "50%",
                     content: [
-                        new sap.ui.layout.HorizontalLayout({
+                        new sap.m.Panel({
+                            // width: "90%",
+                            //allowWrapping: true,
                             content: [
                                 new sap.ui.layout.VerticalLayout({
-                                    width: "90%",
+                                    width: "100%",
                                     content: inputs
                                 })]
                         })],
@@ -863,6 +898,7 @@ sap.ui.define(
                             for (const field of MainView.context) {
                                 if (vals && field.create && !vals[field.field.split('.')[0]]) {
                                     vals = null;
+                                    throw new TypeError("Err " + field.field + " empty")
                                 }
                             }
 
@@ -884,10 +920,10 @@ sap.ui.define(
 
                                 vals.ACTIVE = false;
 
-                                MainView.navToCrud(vals);
+                                MainView.navToView(vals);
 
                             } catch (error) {
-                                MainView.message(error); return;
+                                throw new TypeError(error); return;
                             }
 
                             table.getModel("mainModel").getData().results.unshift(vals);
@@ -944,7 +980,7 @@ sap.ui.define(
                         {
                             //icon: "sap-icon://decline",
                             type: sap.m.ButtonType.Back,
-                            tooltip: "Fechar",
+                            tooltip: "Voltar",
                             press: () => {
                                 MainView.View.removeBtEvents();
                                 MainView.mainContent.back();
@@ -1016,11 +1052,11 @@ sap.ui.define(
 
                 let opl = new sap.uxap.ObjectPageLayout({
                     useIconTabBar: (MainView.useIconTabBar) ? false : true,
-                    subSectionVisibilityChange: () => {
-                        sap.ui.getCore().setModel(
-                            new sap.ui.model.json.JSONModel({
-                                root: MainView.IDAPP
-                            }), "rootParent");
+                    navigate: (oEvent) => {
+
+                        if (MainView.onNavigateSection)
+                            if (!MainView.onNavigateSection(oEvent, MainView, View)) return;
+
                     },
                     isChildPage: false,
                     headerContent: this.Bar || MainView.headerContent || [
@@ -1175,7 +1211,7 @@ sap.ui.define(
 
                                 //->incluir tela no índice indicado
                                 MainView.sectionsItems.items[key.index || 0] =
-                                    new sap.uxap.ObjectPageSection({
+                                    new sap.uxap.ObjectPageSection(MainView.IDAPP + '--_' + key.idapp, {
                                         showTitle: false,
                                         title: key.title,
                                         subSections: new sap.uxap.ObjectPageSubSection({
@@ -1183,18 +1219,47 @@ sap.ui.define(
                                         })
                                     })
 
+                                //-> criar componente com base no idd
+                                MainView.sectionsItems.items[key.index || 0].getSubSections()[0].addBlock(
+                                    new sap.m.Panel()
+                                )
+
                             } else {
                                 //-> já existe a tela, então eliminá-la para posterior criação de uma nova.
                                 //- necessáio para disparar o onInit do controller do componente.
+
+
                                 MainView.sectionsItems.items[key.index || 0].getSubSections()[0].destroyBlocks();
+
+                                if (MainView.secId && MainView.secId === key.idapp) {
+
+                                    MainView[MainView.IDAPP + '--_' + key.idapp] = true;
+                                    //-> criar componente com base no idd
+                                    MainView.sectionsItems.items[key.index || 0].getSubSections()[0].addBlock(
+                                        MainView.Screen.create({
+                                            name: key.idapp,
+                                            key: key.idapp,
+                                            idapp: MainView.IDAPP
+                                        })
+                                    )
+                                } else {
+
+                                    MainView[MainView.IDAPP + '--_' + key.idapp] = false;
+
+                                    MainView.sectionsItems.items[key.index || 0].getSubSections()[0].addBlock(
+                                        new sap.m.Panel()
+                                    )
+                                }
                             }
 
-                            //-> criar componente com base no idd
-                            MainView.sectionsItems.items[key.index || 0].getSubSections()[0].addBlock(new ScreenFactory(MainView).create({
-                                name: key.idapp,
-                                key: key.idapp,
-                                idapp: MainView.IDAPP
-                            }))
+                            /*  MainView.sectionsItems.items[key.index || 0].getSubSections()[0].addBlock(
+                                 MainView.Screen.create({
+                                     name: key.idapp,
+                                     key: key.idapp,
+                                     idapp: MainView.IDAPP
+                                 })
+                             ) */
+
                         }
                     }
                 }
@@ -1384,6 +1449,11 @@ sap.ui.define(
 
                     } else {
                         MainView.foreignKeys = undefined;
+
+                        if (MainView.context.find(c => c.foreignKey === true))
+                            //-> BUG mesmo prevendo chave estrangeira, não foi encontrado
+                            // o filtro..analisar
+                            debugger;
                     }
 
                     if (foreignKeys.getData().length > 0) {
@@ -1396,8 +1466,11 @@ sap.ui.define(
                             (foreignKeys.getData().values.that.sectionsItems.foreignKeys.find(l => l.edit === true && l.idapp === MainView.IDAPP && l.parent === MainView.parent)) ? MainView.edit = true : null;
                     }
 
+                } else {
+                    MainView.title = MainView.getView().getModel("i18n").getResourceBundle().getText("title");
                 }
-            }, async checkContext(that) {
+            },
+            async checkContext(that) {
 
                 return new Promise((r) => r());;
 
@@ -1527,7 +1600,7 @@ sap.ui.define(
                 */
                 promises = [Promise.resolve(new ScreenElements(MainView)
                     .getStruc(MainView.context, true).then((data) => {
-                        //debugger;
+                        if (!data) { console.error("ERR_GET_STRUCT_FAILED"); return }
                         MainView.fieldcat = JSON.parse(data);
                         for (let el of MainView.context) {
 
@@ -1545,7 +1618,7 @@ sap.ui.define(
                     }))]
                 Promise.all(promises);
                 /**
-                * inicialização se implementado, verificar component add.crm.corporations
+                * inicialização se implementado, verificar component add.tax.corporations
                 */
                 if (MainView.init)
                     MainView.init();
@@ -1553,10 +1626,17 @@ sap.ui.define(
                 * App principal e componente principal
                 */
                 MainView.rootApp = Object.keys(window["sap-ui-config"]["resourceroots"])[0];
-                MainView.rootComponent = sap.ui.getCore().getModel("rootComponent").getData().root;
-                // MainView.rootParent = sap.ui.getCore().getModel("rootParent").getData().root;
+                if (sap.ui.getCore().getModel("rootComponent")) {
+                    MainView.rootComponent = sap.ui.getCore().getModel("rootComponent").getData().root;
+                    MainView.rootParent = this.getView().getId().split('-')[0];
+                } else {
+                    MainView.rootApp = this.getView().getId();
+                    MainView.rootParent = this.getView().getId().split('---')[0];
+                    MainView.rootComponent = this.getView().getId().split('---')[1];
+
+                }
                 /**
-                * eventos crud
+                * preparação das arrayys, eventos save e delete
                 */
                 if (!sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent]) {
                     sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent] = {};
@@ -1564,7 +1644,7 @@ sap.ui.define(
                     sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].deletes = [];
                 }
                 /**
-                * eventos crud
+                * metodos NÃO OBRIGATÓRIOS sobrecarregdos
                 */
                 MainView.beforeList = MainView.getView().getController().beforeList;
                 MainView.afterList = MainView.getView().getController().afterList;
@@ -1576,7 +1656,10 @@ sap.ui.define(
                 MainView.afterDeleting = MainView.getView().getController().afterDeleting;
                 MainView.codeeditor = MainView.getView().getController().codeeditor;
                 MainView.onSelectLine = MainView.getView().getController().onSelectLine;
-
+                MainView.onNavigateSection = MainView.getView().getController().onNavigateSection
+                /**
+                * metodos OBRIGATÓRIOS sobrecarregdos
+                */
                 if (MainView.getView().getController().normalize)
                     MainView.normalize = MainView.getView().getController().normalize;
                 if (MainView.getView().getController().list)
@@ -1587,6 +1670,14 @@ sap.ui.define(
                     MainView.save = MainView.getView().getController().save;
                 if (MainView.getView().getController().delete)
                     MainView.delete = MainView.getView().getController().delete;
+
+                /**
+                * permitir setar navIfOne via GET
+                * se nIO (navIfOne) for = 1, a nevegação será automática para
+                * o segundo nível da View
+                */
+                MainView.navIfOne = (jQuery.sap.getUriParameters().get("nIO") === "1") ? true : false;
+
             }
 
         });

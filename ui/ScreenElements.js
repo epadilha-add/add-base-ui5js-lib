@@ -200,10 +200,10 @@ sap.ui.define([
                                                 switch (element.REFTYPE) {
                                                     case 'RT':
                                                     case 'CE':
-                                                        Screen.addOtherContent(obj);
+                                                        Screen.addOtherContent(obj, field.section);
                                                         break;
                                                     default:
-                                                        Screen.addContent(obj);
+                                                        Screen.addContent(obj, field.section);
                                                         break;
                                                 }
 
@@ -380,15 +380,17 @@ sap.ui.define([
                                             delete params.mask;
 
                                             let roles = new sap.m.MaskInputRule({
-                                                ...params || { maskFormatSymbol: "C", regex: "[A-Z0-9]" }
+                                                ...params || { maskFormatSymbol: "C", regex: "[A-Z0-9]" },
+                                                ...struc.propInclude
                                             })
 
                                             res.push(new sap.m.MaskInput({
                                                 mask: mask,
-                                                rules: [roles]
+                                                rules: [roles],
+                                                ...struc.propInclude
                                             }).bindProperty("value", modelName + '>/' + struc.FIELDNAME));
                                         } else {
-                                            res.push(new sap.m.Input().bindProperty("value", modelName + '>/' + struc.FIELDNAME));
+                                            res.push(new sap.m.Input({ ...struc.propInclude }).bindProperty("value", modelName + '>/' + struc.FIELDNAME));
                                         }
                                         break;
 
@@ -518,7 +520,21 @@ sap.ui.define([
                                 }));
 
                                 break;
+                            case 'DP':
+                                res.push(new sap.m.DatePicker({
+                                    //id: Id,
+                                    tooltip: (struc.tooltip) ? struc.tooltip : "",
+                                    displayFormat: "dd-MM-yyyy",
+                                    valueFormat: "yyyyMMdd",
+                                    change: (struc.submit) ? struc.submit : function () { },
+                                    enabled: true, //(struc.EDIT) ? true : false,
+                                    //   submit: vSubmit,
+                                    value: {
+                                        path: modelName + '>/' + struc.FIELDNAME
+                                    }
+                                }));
 
+                                break;
                             case 'CE':
 
                                 if (!MainView.codeeditor) return [];
@@ -529,13 +545,15 @@ sap.ui.define([
                                     height: "500px",
                                     type: "javascript",
                                     colorTheme: "chrome"
-                                }).bindProperty("value", modelName + '>/' + struc.FIELDNAME);
+                                }).bindProperty("value", modelName + '>/SOURCE');
+
+                                MainView.ceP.addStyleClass("sapMPanelContentSource")
 
                                 MainView.ceE = new CodeEditor({
                                     height: "500px",
                                     type: "javascript",
                                     colorTheme: "chrome"
-                                })
+                                }).bindProperty("value", modelName + '>/MOK');
 
                                 MainView.ceE.setVisible(false);
 

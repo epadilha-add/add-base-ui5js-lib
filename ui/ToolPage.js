@@ -39,6 +39,8 @@ sap.ui.define([
             this.ToolHeader = that.ToolHeader;
             that.appRoot = this;
             that.apps = {};
+            that.addMainContent = this.addMainContent;
+            that.upContent = this.upContent;
             this.user = that.user;
 
             This = this;
@@ -79,8 +81,16 @@ sap.ui.define([
                              * pode estar sem nenhuma configuação no APPM
                              *  - obtendo o primeiro app da lista
                              */
-                            This.component =
-                                This.config.getData().navigation[0].key;
+
+                            let app = jQuery.sap.getUriParameters().get("app");
+
+                            if (app) {
+                                that.setSideNavigation = false;
+                                This.component = app;
+                            } else {
+                                This.component =
+                                    This.config.getData().navigation[0].key;
+                            }
 
                         } catch {
                             sap.ui.getCore().setModel(new JSONModel({
@@ -264,11 +274,14 @@ sap.ui.define([
 
         },
 
+        upContent(component) {
+            Contents[component.getId()] = component;
+
+            This.addMainContent(component.getId());
+        },
         addMainContent: function (component) {
             // remove conteúdo para ser setado posteriormente
             screenParts.removeAllMainContents();
-
-
 
             // verifica se o conteúdo já foi criado
             if (!Contents[component]) {
@@ -464,7 +477,7 @@ sap.ui.define([
 
             const apps = sap.ui.getCore().getModel("AppConfig").getData().appls;
 
-            if (apps && apps.length > 0) {
+            if (apps && apps.length > 1) {
                 apps.forEach((app) => {
                     if (app.IDAPP !== This.IDAPP.replace(/\./g, '-'))
                         links.push(new sap.m.QuickViewGroupElement("APP" + app.IDAPP, {
@@ -508,6 +521,9 @@ sap.ui.define([
             })
         },
         getToolHeader() {
+
+            if (jQuery.sap.getUriParameters().get("tb") === "0") return;
+
             let parts = [];
 
             if (!this.ToolHeader)
@@ -520,9 +536,9 @@ sap.ui.define([
                             var sideExpanded = this.getParent().getParent().getSideExpanded();
 
                             if (sideExpanded) {
-                                this.setTooltip('Large Size Navigation');
+                                //this.setTooltip('Large Size Navigation');
                             } else {
-                                this.setTooltip('Small Size Navigation');
+                                //this.setTooltip('Small Size Navigation');
                             }
 
                             this.getParent().getParent().setSideExpanded(!sideExpanded);
