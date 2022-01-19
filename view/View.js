@@ -165,6 +165,9 @@ sap.ui.define([
                         urlParams.set('tb', "0"); //"turn-off toolbar"
                         urlParams.set('nIO', "1"); // "turn-on navIfOne"
 
+                        /*    window.open(urlParams.toString());
+                           return; */
+
                         if (!View.messageDialog)
                             View.messageDialog = new sap.m.Dialog({
                                 verticalScrolling: false,
@@ -275,6 +278,21 @@ sap.ui.define([
                 displaySize: sap.m.AvatarSize.XS,
                 tooltip: MainView.IDAPP + " / " + MainView.collection + " ID: " + params.id
             });
+
+            this.avatar.ondblclick = () => {
+                /*           debugger;
+                          let urlParams = new URLSearchParams(window.location.search);
+                          urlParams.set('app', MainView.IDAPP);
+                          urlParams.set('id', params.id);
+                          urlParams.set('tb', "0"); //"turn-off toolbar"
+                          urlParams.set('nIO', "1"); // "turn-on navIfOne"
+          
+                          const el = document.createElement('textarea');
+          
+                          el.value  urlParams.toString()
+          
+                          window.clipboardData.setData("Text", urlParams.toString()); */
+            }
 
             this.Bar = new sap.m.Bar({
                 contentLeft: [MainView.btBack, this.avatar, this.title],
