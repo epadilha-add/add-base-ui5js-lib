@@ -1,4 +1,3 @@
-
 sap.ui.define(
     [
         "../BaseController",
@@ -305,7 +304,7 @@ sap.ui.define(
             delete: async function (corporationId) {
 
                 MainView.getView().setBusy(true);
-
+                debugger;
                 let values = MainView.getView().getModel(MainView.IDAPP + "PARAM").getData();
                 let inpConf = new sap.m.Input();
 
@@ -342,7 +341,7 @@ sap.ui.define(
 
                                 const params = {
                                     "method": "DELETE",
-                                    "fullPath": "/api/" + MainView.collection + "/" + corporationId,
+                                    "fullPath": "/api/" + MainView.collection + "/" + values.ID,
                                     "actionName": MainView.collection + ".remove",
                                     ...MainView.callParams
                                 }
@@ -350,22 +349,25 @@ sap.ui.define(
                                 MainView.logInfo(params);
 
                                 if (MainView.beforeDeleting instanceof Function)
-                                    if (!MainView.beforeDeleting(resp, MainView)) return;
+                                    if (!MainView.beforeDeleting(resp, MainView)) return false;
 
-                                await MainView.callService.postSync("add", params).then((resp) => {
+                                return await MainView.callService.postSync("add", params).then((resp) => {
 
                                     if (MainView.afterDeleting instanceof Function)
                                         MainView.afterDeleting(resp, MainView);
 
+                                    if (!resp) throw new TypeError('ERR_ON_DELETE')
+
                                     MainView.getView().setBusy(false);
                                     MainView.list();
                                     MainView.message("successDelete");
-                                    sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].deletes.splice(0, 1);
                                     MainView.mainContent.back();
+                                    return true;
 
                                 }).catch((err) => {
                                     MainView.getView().setBusy(false);
                                     MainView.message("errorDelete");
+                                    return false;
 
                                 })
 
@@ -376,6 +378,7 @@ sap.ui.define(
                             press: function (e) {
                                 MainView.getView().setBusy(false);
                                 MainView.dialogDelete.close();
+                                return false;
 
                             }
                         })
@@ -394,8 +397,6 @@ sap.ui.define(
 
                 let values = MainView.getView().getModel(MainView.IDAPP + "PARAM").getData();
                 let vlas = {};
-
-                if (!obligatoryFields()) return;
 
                 for (const key in values) {
 
@@ -437,34 +438,33 @@ sap.ui.define(
 
                 MainView.logInfo(params);
 
-                if (!MainView.obligatoryCheck().checkByData(vlas)) return;
+                if (!MainView.obligatoryCheck().checkByData(vlas)) return false;
 
 
                 if (MainView.beforeSaving instanceof Function)
-                    if (!MainView.beforeSaving(vlas, MainView)) return;
+                    if (!MainView.beforeSaving(vlas, MainView)) return false;
 
-                await MainView.callService.postSync("add", params).then((resp) => {
+                return await MainView.callService.postSync("add", params).then((resp) => {
 
                     if (MainView.afterSaving instanceof Function)
                         resp = MainView.afterSaving(resp, MainView);
 
                     MainView.getView().setBusy(false);
 
-                    if (!resp) return;
+                    if (!resp) return false;
 
                     MainView.changeMainModel(resp);
 
                     MainView.message("successUpdate");
                     MainView.mainContent.back();
 
+                    return true;
+
                 }).catch((err) => {
                     MainView.message("errorUpdate");
+                    return false;
                 })
 
-                function obligatoryFields() {
-
-                    return true;
-                }
             },
             refresh: function () {
 
@@ -576,6 +576,15 @@ sap.ui.define(
 
                 if (!MainView.listMode || MainView.listMode.mode === 'table') {
 
+                    return _table(buttons);
+
+                } else if (MainView.listMode.mode === 'tile') {
+
+                    return _tile(buttons);
+                }
+
+                function _table(buttons) {
+
                     let cells = [];
                     let columns = [];
                     let container = new sap.m.ScrollContainer({ height: "80%", vertical: true, focusable: true, content: [] });
@@ -651,13 +660,27 @@ sap.ui.define(
                                 field.field === "ACTIVE" ||
                                 field.foreignKey === true) continue;
 
-                            cells.push(new sap.m.Text({
-                                //width: "35%",
-                                text: datatype(field),
-                                wrapping: false,
-                            }).addStyleClass("labelColumnsTableBold"));
+                            let txt = field.SCRTEXT_S || field.SCRTEXT_M || field.SCRTEXT_L || field.DESCR || field.FIELDNAME;
 
-                            let col = new sap.m.Text({ tooltip: field.SCRTEXT_L + " : " + field.field, text: field.text || "{i18n>description}" }).addStyleClass("labelColumnsTable");
+                            if (!field.ISICON) {
+                                cells.push(new sap.m.Text({
+                                    //width: "35%",
+                                    text: datatype(field),
+                                    wrapping: false,
+                                }).addStyleClass("labelColumnsTableBold"));
+                            } else {
+                                cells.push(new sap.m.ObjectStatus({
+                                    icon: {
+                                        parts: ["mainModel>" + field.field],
+                                        formatter: (data) => {
+
+                                            return data;
+                                        }
+                                    }
+                                }).addStyleClass("labelColumnsTable"))
+                            }
+
+                            let col = new sap.m.Text({ tooltip: field.SCRTEXT_L + " : " + field.field, text: txt }).addStyleClass("labelColumnsTable");
 
                             //armazena id para mudar o texto posterior
                             field.byIdText = col.getId();
@@ -765,9 +788,11 @@ sap.ui.define(
                     });
 
                     container.setBusy(true);
-                    return container;
 
-                } else {
+                    return container;
+                }
+
+                function _tile(buttons) {
 
                     let list = [];
 
@@ -820,9 +845,7 @@ sap.ui.define(
                     })
 
                     return MainView.tilePanel || new sap.m.ScrollContainer({ height: "80%", vertical: true, focusable: true, content: MainView.tilePanel })
-
                 }
-
             },
             _getMainModel: function () {
                 return MainView.getView().getModel("mainModel" + MainView.IDAPP);
@@ -950,124 +973,140 @@ sap.ui.define(
             },
             getMainLayout: function () {
 
-                MainView.panelContent = [];
+                if (MainView.mode === 'selectScreen') {
 
-                if (MainView.sF || MainView.sF === undefined)
-                    MainView.sF = new sap.m.SearchField({
-                        width: "18.8rem",
-                        liveChange: (evt) => {
-                            MainView._onSearchList(evt, MainView.listResult, {});
-                        }
-                    }).addStyleClass("sapUiSmallMarginEnd");
+                    return _selectScreenPage();
 
-                if (MainView.btRefresh || MainView.btRefresh === undefined)
-                    MainView.btRefresh = new sap.m.Button({
-                        icon: "sap-icon://synchronize",
-                        tooltip: "{i18n>refresh}",
-                        type: sap.m.ButtonType.Transparent,
-                        press: MainView.refresh,
-                    }).addStyleClass("sapUiSmallMarginEnd");
+                } else {
 
-                if (MainView.btNew || MainView.btNew === undefined)
-                    MainView.btNew = (MainView.context.find(c => c.create)) ? new sap.m.Button({
-                        icon: "sap-icon://add-document",
-                        text: "{i18n>new}",
-                        press: MainView.new,
-                    }).addStyleClass("sapUiSmallMarginEnd") : null;
+                    return _objectPageLayout();
+                }
 
-                if (MainView.btBack || MainView.btBack === undefined)
-                    MainView.btBack = new sap.m.Button(
-                        {
-                            //icon: "sap-icon://decline",
-                            type: sap.m.ButtonType.Back,
-                            tooltip: "Voltar",
-                            press: () => {
-                                MainView.View.removeBtEvents();
-                                MainView.mainContent.back();
+                function _selectScreenPage() {
+                    return new sap.m.Page({ icon: "sap-icon://email", title: "Tela de seleção", footer: new sap.m.OverflowToolbar({ content: new sap.m.Button({ text: "But" }) }) });
+                }
+
+                function _objectPageLayout() {
+
+                    MainView.panelContent = [];
+
+                    if (MainView.sF || MainView.sF === undefined)
+                        MainView.sF = new sap.m.SearchField({
+                            width: "18.8rem",
+                            liveChange: (evt) => {
+                                MainView._onSearchList(evt, MainView.listResult, {});
                             }
                         }).addStyleClass("sapUiSmallMarginEnd");
 
-                if (MainView.btSort || MainView.btSort === undefined)
-                    MainView.btSort = new sap.m.Button(
-                        {
-                            icon: "sap-icon://sort",
-                            type: "Transparent",
-                            tooltip: "ordenar",
-                            press: (oEvent) => {
-                                //let v = this.textArea.getValue();
-                                MainView._sortTable(oEvent);
-                            }
+                    if (MainView.btRefresh || MainView.btRefresh === undefined)
+                        MainView.btRefresh = new sap.m.Button({
+                            icon: "sap-icon://synchronize",
+                            tooltip: "{i18n>refresh}",
+                            type: sap.m.ButtonType.Transparent,
+                            press: MainView.refresh,
                         }).addStyleClass("sapUiSmallMarginEnd");
 
-                MainView.panelContent = [
-                    MainView.sF,
-                    MainView.btRefresh,
-                    // MainView.btSort,
-                    MainView.btNew
-                ];
+                    if (MainView.btNew || MainView.btNew === undefined)
+                        MainView.btNew = (MainView.context.find(c => c.create)) ? new sap.m.Button({
+                            icon: "sap-icon://add-document",
+                            text: "{i18n>new}",
+                            press: MainView.new,
+                        }).addStyleClass("sapUiSmallMarginEnd") : null;
 
-                if ((MainView.foreignKeys && MainView.foreignKeys.length > 0 || MainView.showHeader === false) &&
-                    (!MainView.sectionsHeader || MainView.sectionsHeader.length === 0)) {
-                    return MainView._getDetail(MainView.panelContent);
-                }
-
-                let sections = [];
-
-                if (!MainView.sectionsHeader || MainView.sectionsHeader.length === 0)
-                    sections = [
-                        new sap.uxap.ObjectPageSection({
-                            showTitle: false,
-                            title: "{i18n>title}",
-                            tooltip: MainView.IDAPP,
-                            subSections: new sap.uxap.ObjectPageSubSection({
-                                blocks: MainView._getDetail()
-                                /* (!MainView.listMode || MainView.listMode.mode === 'tile') ?
-                                    MainView._getDetail() : new sap.m.Panel({
-                                        content: MainView._getDetail()
-                                    }) */
-                                // moreBlocks: new sap.m.Label({ text: "Anbother block" })
-                            })
-                        })
-                    ]
-
-                if (MainView.sectionsHeader && MainView.sectionsHeader instanceof Array && MainView.sectionsHeader.length > 0) {
-                    /*
-                       Possibilita incluir seções externas.
-                       Type: sap.uxap.ObjectPageSection
-                     */
-                    sections = sections.concat(MainView.sectionsHeader);
-                }
-
-                if (MainView.showHeader || MainView.showHeader === undefined)
-                    this.Bar = new sap.m.Bar({
-                        contentLeft: [new sap.m.Avatar(
+                    if (MainView.btBack || MainView.btBack === undefined)
+                        MainView.btBack = new sap.m.Button(
                             {
-                                src: MainView.icon || "sap-icon://approvals",
-                                displaySize: sap.m.AvatarSize.XS, tooltip: MainView.IDAPP + " / " + MainView.collection // + " ID: " + MainView.values.id
-                            }),
-                        new sap.m.Label({ text: MainView.title })], //MainView.btBack || [new sap.m.Button({ text: "Back", type: sap.m.ButtonType.Back })],
-                        contentMiddle: null,
-                        contentRight: null
+                                //icon: "sap-icon://decline",
+                                type: sap.m.ButtonType.Back,
+                                tooltip: "Voltar",
+                                press: () => {
+                                    MainView.View.removeBtEvents();
+                                    MainView.mainContent.back();
+                                }
+                            }).addStyleClass("sapUiSmallMarginEnd");
+
+                    if (MainView.btSort || MainView.btSort === undefined)
+                        MainView.btSort = new sap.m.Button(
+                            {
+                                icon: "sap-icon://sort",
+                                type: "Transparent",
+                                tooltip: "ordenar",
+                                press: (oEvent) => {
+                                    //let v = this.textArea.getValue();
+                                    MainView._sortTable(oEvent);
+                                }
+                            }).addStyleClass("sapUiSmallMarginEnd");
+
+                    MainView.panelContent = [
+                        MainView.sF,
+                        MainView.btRefresh,
+                        // MainView.btSort,
+                        MainView.btNew
+                    ];
+
+                    if ((MainView.foreignKeys && MainView.foreignKeys.length > 0 || MainView.showHeader === false) &&
+                        (!MainView.sectionsHeader || MainView.sectionsHeader.length === 0)) {
+                        return MainView._getDetail(MainView.panelContent);
+                    }
+
+                    let sections = [];
+
+                    if (!MainView.sectionsHeader || MainView.sectionsHeader.length === 0)
+                        sections = [
+                            new sap.uxap.ObjectPageSection({
+                                showTitle: false,
+                                title: "{i18n>title}",
+                                tooltip: MainView.IDAPP,
+                                subSections: new sap.uxap.ObjectPageSubSection({
+                                    blocks: MainView._getDetail()
+                                    /* (!MainView.listMode || MainView.listMode.mode === 'tile') ?
+                                        MainView._getDetail() : new sap.m.Panel({
+                                            content: MainView._getDetail()
+                                        }) */
+                                    // moreBlocks: new sap.m.Label({ text: "Anbother block" })
+                                })
+                            })
+                        ]
+
+                    if (MainView.sectionsHeader && MainView.sectionsHeader instanceof Array && MainView.sectionsHeader.length > 0) {
+                        /*
+                           Possibilita incluir seções externas.
+                           Type: sap.uxap.ObjectPageSection
+                         */
+                        sections = sections.concat(MainView.sectionsHeader);
+                    }
+
+                    if (MainView.showHeader || MainView.showHeader === undefined)
+                        MainView.Bar = new sap.m.Bar({
+                            contentLeft: [new sap.m.Avatar(
+                                {
+                                    src: MainView.icon || "sap-icon://approvals",
+                                    displaySize: sap.m.AvatarSize.XS, tooltip: MainView.IDAPP + " / " + MainView.collection // + " ID: " + MainView.values.id
+                                }),
+                            new sap.m.Label({ text: MainView.title })], //MainView.btBack || [new sap.m.Button({ text: "Back", type: sap.m.ButtonType.Back })],
+                            contentMiddle: null,
+                            contentRight: null
+                        })
+
+                    let opl = new sap.uxap.ObjectPageLayout({
+                        useIconTabBar: (MainView.useIconTabBar) ? false : true,
+                        navigate: (oEvent) => {
+
+                            if (MainView.onNavigateSection)
+                                if (!MainView.onNavigateSection(oEvent, MainView, View)) return;
+
+                        },
+                        isChildPage: false,
+                        headerContent: MainView.Bar || MainView.headerContent || [
+                        ],
+                        sections: sections
                     })
+                    /*       setTimeout(() => {
+                              opl.setSelectedSection(sections[0].getId())
+                          }, 3000) */
 
-                let opl = new sap.uxap.ObjectPageLayout({
-                    useIconTabBar: (MainView.useIconTabBar) ? false : true,
-                    navigate: (oEvent) => {
-
-                        if (MainView.onNavigateSection)
-                            if (!MainView.onNavigateSection(oEvent, MainView, View)) return;
-
-                    },
-                    isChildPage: false,
-                    headerContent: this.Bar || MainView.headerContent || [
-                    ],
-                    sections: sections
-                })
-                /*       setTimeout(() => {
-                          opl.setSelectedSection(sections[0].getId())
-                      }, 3000) */
-
-                return opl;
+                    return opl;
+                }
             },
             appendComponent(items) {
 
@@ -1564,8 +1603,8 @@ sap.ui.define(
                                 setNone(field.idUi5);
                             }
                         }
-                        return check;
                     }
+                    return check;
                 }
 
                 function setError(id) {

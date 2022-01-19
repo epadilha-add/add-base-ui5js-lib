@@ -114,11 +114,17 @@ sap.ui.define([
                                         element.REFTYPE = ''; //input
 
                                     STRUC.push(element);
+                                    try {
+                                        screenElements = this.createElementbyType(
+                                            element,
+                                            MainView,
+                                            modelName, 1)
 
-                                    screenElements = this.createElementbyType(
-                                        element,
-                                        MainView,
-                                        modelName, 1)
+                                    } catch (error) {
+
+
+                                        throw field.field;
+                                    }
                                 }
 
                             })
@@ -126,7 +132,8 @@ sap.ui.define([
                         })
 
                     } catch (error) {
-                        Log.info("ERROR:-->" + JSON.stringify(error), 'ScreenElements');
+
+                        Log.error("error", 'ScreenElements', error);
                     }
 
                     return screenElements;
@@ -190,25 +197,31 @@ sap.ui.define([
                                     }
 
                                     //STRUC.push(element);
-
-                                    this.createElementbyType(
-                                        element,
-                                        MainView,
-                                        modelName, 2, Screen).forEach((obj) => {
-
-                                            if (obj)
-                                                switch (element.REFTYPE) {
-                                                    case 'RT':
-                                                    case 'CE':
-                                                        Screen.addOtherContent(obj, field.section);
-                                                        break;
-                                                    default:
-                                                        Screen.addContent(obj, field.section);
-                                                        break;
-                                                }
+                                    try {
+                                        this.createElementbyType(
+                                            element,
+                                            MainView,
+                                            modelName, 2, Screen).forEach((obj) => {
 
 
-                                        });
+                                                if (obj)
+                                                    switch (element.REFTYPE) {
+                                                        case 'RT':
+                                                        case 'CE':
+                                                            Screen.addOtherContent(obj, field.section);
+                                                            break;
+                                                        default:
+                                                            Screen.addContent(obj, field.section);
+                                                            break;
+                                                    }
+
+                                            });
+
+                                    } catch (error) {
+
+                                        throw field.field;
+                                    }
+
                                 }
 
                             })
@@ -229,23 +242,21 @@ sap.ui.define([
                 // return [new sap.m.Input()];
 
                 var chnd;
-                var tooltip;
-                var placeholder;
                 var res = [];
 
-                let txt = struc.DESCR || struc.SCRTEXT_S || struc.SCRTEXT_M || struc.SCRTEXT_L;
+                let txt = struc.SCRTEXT_S || struc.SCRTEXT_M || struc.SCRTEXT_L || struc.DESCR || struc.FIELDNAME;
+                let tooltip = struc.FIELDNAME + " " + struc.SCRTEXT_L || struc.SCRTEXT_M || struc.SCRTEXT_S || struc.FIELDNAME;
+                let placeholder = struc.SCRTEXT_S || struc.SCRTEXT_M || struc.SCRTEXT_L || struc.FIELDNAME;
 
                 let oLabel = new sap.m.Label({
                     text: txt,
                     labelFor: struc.FIELDNAME,
                     visible: ((struc.VISIBLE === 'X') ? true : true),
-                    tooltip: struc.FIELDNAME
+                    tooltip: tooltip
                 });
 
                 res.push(oLabel);
 
-                tooltip = (struc.SCRTEXT_S) ? struc.SCRTEXT_S + ':' + struc.FIELDNAME : struc.SCRTEXT_M + ':' + struc.FIELDNAME;
-                placeholder = (struc.SCRTEXT_S) ? struc.SCRTEXT_S : struc.SCRTEXT_M;
 
                 var decimals = 0;
                 var maxInt = 0;
@@ -612,33 +623,51 @@ sap.ui.define([
 
                 res[0].setLabelFor(res[1].getId().toString());
 
+
+
                 res[1].REFTYPE = struc.REFTYPE;
 
                 if (struc.CINFO) {
 
-                    res[0].addEventDelegate({
-                        onmouseover: () => {
-                            this.timeout = window.setTimeout(function (oEvent) {
+                    res[0].ondblclick = function (oEvent) {
 
-                                if (!this['rp' + res[0].getId()])
-                                    this['rp' + res[0].getId()] =
-                                        new sap.m.ResponsivePopover("ResponsivePopover" + res[0].getId(), {
-                                            contentWidth: '40%', contentHeight: '40%',
-                                            showHeader: false,
-                                            content: new sap.ui.core.HTML({
-                                                preferDOM: true,
-                                                sanitizeContent: false,
-                                                content: "<div>" + struc.CINFO + "</div>"
-                                            })
-                                        })
+                        if (!this['rp' + res[0].getId()])
+                            this['rp' + res[0].getId()] =
+                                new sap.m.ResponsivePopover("ResponsivePopover" + res[0].getId(), {
+                                    contentWidth: '40%', contentHeight: '40%',
+                                    showHeader: false,
+                                    content: new sap.ui.core.HTML({
+                                        preferDOM: true,
+                                        sanitizeContent: false,
+                                        content: "<div>" + struc.CINFO + "</div>"
+                                    })
+                                })
 
-                                this['rp' + res[0].getId()].openBy(res[0]);
-                            }, 1700)
-                        },
-                        onmouseout: () => {
-                            if (this.timeout) window.clearTimeout(this.timeout)
-                        }
-                    })
+                        this['rp' + res[0].getId()].openBy(res[0]);
+                    }
+                    /*         res[0].addEventDelegate({
+                                onmouseover: () => {
+                                    this.timeout = window.setTimeout(function (oEvent) {
+        
+                                        if (!this['rp' + res[0].getId()])
+                                            this['rp' + res[0].getId()] =
+                                                new sap.m.ResponsivePopover("ResponsivePopover" + res[0].getId(), {
+                                                    contentWidth: '40%', contentHeight: '40%',
+                                                    showHeader: false,
+                                                    content: new sap.ui.core.HTML({
+                                                        preferDOM: true,
+                                                        sanitizeContent: false,
+                                                        content: "<div>" + struc.CINFO + "</div>"
+                                                    })
+                                                })
+        
+                                        this['rp' + res[0].getId()].openBy(res[0]);
+                                    }, 1700)
+                                },
+                                onmouseout: () => {
+                                    if (this.timeout) window.clearTimeout(this.timeout)
+                                }
+                            }) */
                 }
 
                 /**

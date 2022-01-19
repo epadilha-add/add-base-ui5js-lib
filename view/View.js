@@ -375,17 +375,25 @@ sap.ui.define([
         },
 
         save() {
-            sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].saves[0]();
-
-            try {
-                sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].saves.splice(0, 1);
-            } catch (error) {
-
-            }
+            sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].saves[0]().then((res) => {
+                if (res)
+                    try {
+                        sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].saves.splice(0, 1);
+                    } catch (error) {
+                    }
+            })
         },
 
         delete() {
-            sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].deletes[0]()
+            sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].deletes[0]().then((res) => {
+
+                if (res)
+                    try {
+                        sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].deletes.splice(0, 1);
+                    } catch (error) {
+                    }
+            });
+
         },
 
         setBtEvents() {
@@ -421,15 +429,6 @@ sap.ui.define([
 
             View.sections[index].getSubSections()[0].getBlocks()[0].getContent()[0].addContent(content);
 
-
-            return;
-
-            if (content instanceof Array) {
-                this.mainContent = this.mainContent.concat(content);
-            } else {
-                this.mainContent.addContent(content);
-            }
-
         },
 
         addOtherContent(content, section) {
@@ -437,15 +436,6 @@ sap.ui.define([
             let index = (section) ? (section.index || 0) : 0;
 
             View.sections[index].getSubSections()[0].getBlocks()[0].getContent()[1].addContent(content);
-
-
-            return;
-
-            if (content instanceof Array) {
-                this.otherContent = this.otherContent.concat(content);
-            } else {
-                this.otherContent.addContent(content);
-            }
 
         },
 
@@ -455,7 +445,13 @@ sap.ui.define([
         },
         getContainer(indexSection, sec) {
 
-            let infoSection = MainView.infoSections.find(s => s.index === indexSection) || {};
+            let infoSection = {}
+            if (MainView.infoSections && MainView.infoSections instanceof Array) {
+                infoSection = MainView.infoSections.find(s => s.index === indexSection) || {};
+            } else if (MainView.infoSections) {
+                infoSection = MainView.infoSections;
+            }
+
             if (!sec) sec = {};
 
             let subSec = [new sap.uxap.ObjectPageSubSection({
