@@ -146,6 +146,77 @@ sap.ui.define([
             }
         },
 
+        async refreshForeignKeyDependency(oEvent, This) {
+            /**
+             * used in 'selectScreen' mode
+             * ref:  add.tax.operation.extractor.controller.MainView
+             * ref: _setForeignKeyDependency
+             */
+            let fields = This.fieldcat.filter(c => c.FOREIGNKEY);
+
+            if (!fields) return;
+            /**
+             * stop components
+             */
+            for (const f of fields) {
+                sap.ui.getCore().byId(f.idUi5).setBusy(true);
+            }
+            /**
+             * get id if necessary
+             */
+            This._setAppId();
+
+            let params = { params: {} };
+            /**
+             * parameters prepare
+             */
+            for (const field of This.fieldcat) {
+                switch (field.REFTYPE) {
+                    case 'LB':
+                        params.params[field.REFKIND || field.field] = sap.ui.getCore().byId(field.idUi5).getSelectedKey();
+                    case 'MC':
+                        params.params[field.REFKIND || field.field] = {
+                            $in: sap.ui.getCore().byId(field.idUi5).getSelectedKeys()
+                        }
+                        break;
+                    default:
+                        params.params[field.REFKIND || field.field] = sap.ui.getCore().byId(field.idUi5).getValue();
+                        break;
+                }
+            }
+            /**
+             * get new values with foreignKey
+             */
+            This.Screen.getStruc(This.fieldcat.filter(c => c.FOREIGNKEY), true, params).then((res) => {
+                res = JSON.parse(res);
+                if (!(res instanceof Array)) res = [res];
+                for (const r of res) {
+                    /**
+                    * for each new values, update model
+                    */
+                    if (r.VALUES || r.RFFLD) {
+                        if (!r.VALUES)
+                            r.VALUES = [];
+                        let oModel = new sap.ui.model.json.JSONModel(
+                            r.VALUES.filter(e => e.ACTIVE || e.ACTIVE === undefined) || []
+                        );
+                        This.getView().setModel(oModel, This.IDAPP + r.FIELD + "PARAM");
+                    }
+                }
+                for (const f of fields) {
+                    /**
+                    * release dependecies
+                    */
+                    sap.ui.getCore().byId(f.idUi5).setBusy(false);
+                }
+            }).catch(err => {
+                for (const f of fields) {
+                    sap.ui.getCore().byId(f.idUi5).setBusy(false);
+                }
+                console.error(err);
+            });
+        },
+
         init() {
 
             this._setAppId();
@@ -164,6 +235,9 @@ sap.ui.define([
         _setAppId() {
             if (!this.IDAPP)
                 this.IDAPP = this.getView().getViewName().split('.view')[0];
+
+            if (!this.IDAPP)
+                this.IDAPP = Object.keys(window["sap-ui-config"]["resourceroots"])[0];
         },
 
         getAppId() {

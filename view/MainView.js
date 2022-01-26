@@ -6,7 +6,8 @@ sap.ui.define(
         "sap/m/MessageToast",
         "../ui/ScreenElements",
         "../ui/ScreenFactory",
-        './View'
+        './View',
+        './ViewTable'
     ], function (Controller, Filter, FilterOperator, MessageToast, ScreenElements, ScreenFactory) {
         "use strict";
 
@@ -27,7 +28,7 @@ sap.ui.define(
                 /**
                  * inicialização do contexto
                  */
-                MainView.initContext();
+                MainView.initContext(that);
 
                 MainView.Screen = new ScreenFactory(MainView);
                 /**
@@ -57,7 +58,8 @@ sap.ui.define(
 
                 MainView.callParams = {
                     m: sap.ui.getCore().getModel("userInfo").getData().currentMandt,
-                    a: Object.keys(window["sap-ui-config"]["resourceroots"])[0]
+                    a: Object.keys(window["sap-ui-config"]["resourceroots"])[0],
+                    ...MainView.callParams
                 }
 
                 /**
@@ -144,8 +146,6 @@ sap.ui.define(
 
                 MainView.logInfo(params);
 
-
-
                 _UriComplement(params);
 
                 return MainView.callService.postSync("add", params).then((resp) => {
@@ -213,7 +213,9 @@ sap.ui.define(
 
                 var model = new sap.ui.model.json.JSONModel(data);
 
-                if (!MainView.listMode || MainView.listMode.mode !== 'tile') {
+                if (MainView.mode === 'selectScreen') {
+                    MainView.getView().setModel(model, "mainModel");
+                } else if (!MainView.listMode || MainView.listMode.mode !== 'tile') {
                     table.setModel(model, "mainModel");
                     table.setBusy(false);
                 } else {
@@ -226,24 +228,36 @@ sap.ui.define(
                 let l = { ...lines };
 
                 for (const field of MainView.context) {
-
+                    /*                if (!lines[field.field])
+                                       lines[field.field] = "";
+               
+                                   key = field.field.split(".")[0];
+               
+                                   if (field.type === 'boolean' || (typeof lines[key] === 'boolean' || lines[field.field] === 'X' || lines[key] === true || lines[key] === false)) {
+                                       lines[field.field] = (lines[field.field]) ? true : false;
+                                       l[field.field] = lines[field.field];
+                                       lines[field.field + 'b'] = (lines[field.field]) ? "true" : "false"; continue;
+                                   } */
                     key = field.field.split(".")[0];
-
-                    if (field.type === 'boolean' || (typeof lines[key] === 'boolean' || lines[field.field] === 'X')) {
-                        lines[field.field] = (lines[field.field]) ? true : false;
-                        l[field.field] = lines[field.field];
-                        lines[field.field + 'b'] = (lines[field.field]) ? "true" : "false"; continue;
-                    }
-
                     if (lines[key] instanceof Object && lines[key].id) {
-                        lines[field.field] =
-                            lines[key][field.field.split(".").pop()] || lines[field.field];
-
-                        l[key] = lines[key].id;
+                        for (const k in lines[key]) {
+                            if (lines[key + '.' + k]) continue;
+                            lines[key + '.' + k] = (lines[key][k] === true || lines[key][k] === false) ? (lines[key][k] === true) ? 'true' : 'false' : lines[key][k];
+                        }
+                        lines[key] = lines[key].id;
                     }
                 }
 
-                return { ...lines, ...l };
+
+                //lines = { ...lines, ...l };
+
+                for (var k in lines) {
+                    //if (lines.hasOwnProperty(k)) {
+                    lines["str__" + k.split('.')[0]] = String(lines[k]);
+                    //}
+                }
+
+                return lines;
             },
             create: async function (data) {
 
@@ -315,6 +329,8 @@ sap.ui.define(
                         stretch: sap.ui.Device.system.phone,
                         title: "{i18n>deleteConfirm}",
                         type: "Message",
+                        state: sap.ui.core.ValueState.Error,
+                        icon: "sap-icon://delete",
                         content: [
                             new sap.m.Panel({
                                 //allowWrapping: true,
@@ -332,7 +348,8 @@ sap.ui.define(
                         beginButton: new sap.m.Button({
 
                             text: "{i18n>confirm}",
-
+                            type: sap.m.ButtonType.Negative,
+                            icon: "sap-icon://delete",
                             press: async function () {
 
                                 if (inpConf.getValue() != values[MainView.titleField]) return;
@@ -383,6 +400,8 @@ sap.ui.define(
                             }
                         })
                     })
+
+
 
                     MainView.getView().addContent(MainView.dialogDelete);
                 }
@@ -477,9 +496,122 @@ sap.ui.define(
                     if (!MainView.afterRefresh(vlas, MainView)) return;
 
                 if (MainView.listMode && MainView.listMode.mode === 'tile')
-                    MainView._getDetail();
+                    MainView.getContent();
 
                 MainView.message("successRefresh");
+            },
+            execute: async function (oEvent) {
+
+                let selectScreen = _getSelectScreenValues();
+
+                if (MainView.obligatoryCheck().checkByData(selectScreen) === false) return;
+
+                MainView.selectScreen.setBusy(true);
+
+                MainView.headerToolbar.setBlocked(true);
+
+                for (const key in selectScreen) {
+                    if (!selectScreen[key] || selectScreen[key] === null)
+                        delete selectScreen[key];
+                }
+
+                let params = {
+                    "method": "POST",
+                    //"timeout": 500000,
+                    "actionName": MainView.collection + "." + MainView.service || ".list",
+                    "params": {
+                        "pageSize": MainView.pageSize || 100,
+                        "query": selectScreen
+                    }, ...MainView.callParams
+
+                }
+
+                await MainView.callService.postSync("add", params)
+                    .then((res) => {
+
+                        if (res) {
+                            res = JSON.parse(res);
+                        } else {
+                            throw new TypeError("ERR_TIMEOUT");
+                        }
+
+                        if (res && res.DATA.length === 0) {
+                            MainView.headerToolbar.setBlocked(false);
+                            MainView.selectScreen.setBusy(false);
+                            MainView.message("dataNotFound");
+                            return;
+                        }
+
+                        if (MainView.afterExecute)
+                            res = MainView.afterExecute(res);
+
+                        if (res.DATA instanceof Array) {
+                            res.DATA = res.DATA.map((lines) => {
+                                return MainView.normalize(lines);
+                            })
+
+                        } else {
+                            res.DATA = [];
+                        }
+
+                        MainView.navToViewTable(res);
+                        MainView.selectScreen.setBusy(false);
+                        MainView.headerToolbar.setBlocked(false);
+
+                    }).catch((e) => {
+                        MainView.headerToolbar.setBlocked(false);
+                        MainView.selectScreen.setBusy(false);
+                        throw e;
+                    })
+
+                function _getSelectScreenValues() {
+
+                    let selectScreen = {};
+                    /**
+                     * parameters prepare - screenSelect
+                     */
+                    for (const field of MainView.fieldcat) {
+
+                        switch (field.REFTYPE) {
+                            case 'LB':
+                                selectScreen[field.field] = sap.ui.getCore().byId(field.idUi5).getSelectedKey();
+                                if (selectScreen[field.field].length === 0)
+                                    selectScreen[field.field] = '';
+                            case 'MC':
+                                selectScreen[field.REFKIND || field.field] = {
+                                    $in: sap.ui.getCore().byId(field.idUi5).getSelectedKeys()
+                                }
+                                if (selectScreen[field.REFKIND || field.field].$in.length === 0)
+                                    selectScreen[field.REFKIND || field.field] = '';
+                                break;
+                            case 'DR':
+
+                                if (!sap.ui.getCore().byId(field.idUi5).getValue()) {
+                                    selectScreen[field.field] = ''; continue;
+                                }
+
+                                let from = sap.ui.core.format.DateFormat.getDateInstance({
+                                    pattern: "YYYYMMdd"
+                                }).format(sap.ui.getCore().byId(field.idUi5).getFrom());
+
+                                let to = sap.ui.core.format.DateFormat.getDateInstance({
+                                    pattern: "YYYYMMdd"
+                                }).format(sap.ui.getCore().byId(field.idUi5).getTo());
+
+                                selectScreen[field.field] = {
+                                    $gte: from,
+                                    $lte: to
+                                }
+
+                                break;
+                            default:
+                                selectScreen[field.field] = sap.ui.getCore().byId(field.idUi5).getValue();
+                                break;
+                        }
+                    }
+                    return selectScreen;
+                }
+
             },
             setModel: function (oModel, nameModel) {
 
@@ -493,16 +625,17 @@ sap.ui.define(
                     View.delete = MainView.delete;
                     View.save = MainView.save;
                     MainView.View = new add.ui5js.ui.View(View, () => MainView.mainContent.back());
-                    MainView.View.activeButton.setSelectedKey((View.ACTIVE) ? 'true' : 'false');
                     MainView.mainContent.addPage(MainView.View.Page);
                 } else {
                     MainView.obligatoryCheck().setNoneAll();
                     MainView.View.setId(View.id);
                     MainView.View.setBtEvents(View.id);
                     MainView.View.title.setText(View[MainView.titleField]);
-                    MainView.View.avatar.setSrc(View.LOGO || View.ICON || View.that.icon || View.imageURI)
-                    MainView.View.activeButton.setSelectedKey((View.ACTIVE) ? 'true' : 'false')
+                    MainView.View.avatar.setSrc(View.LOGO || View.ICON || View.that.icon || View.imageURI);
                 }
+
+                MainView.View.activeButton.setState((View.ACTIVE) ? true : false);
+                MainView.View.activeButton.setTooltip((View.ACTIVE) ? MainView.i18n("active") : MainView.i18n("deactivate"))
 
                 let values = {};
                 for (const key in View) {
@@ -521,7 +654,7 @@ sap.ui.define(
 
                 MessageToast.show(MainView.getView().getModel("i18n").getResourceBundle().getText(msg || "Nothing here"));
             },
-            _onSearchList: function (oEvent, list, objectList) {
+            onSearchList: function (oEvent, list, objectList) {
 
                 if (!MainView.listMode || MainView.listMode.mode === 'table') {
                     var sValue = oEvent.getParameter("newValue");
@@ -529,8 +662,9 @@ sap.ui.define(
                     let listFilter = [new sap.ui.model.Filter("id", FilterOperator.Contains, sValue)];
 
                     for (const field of this.context) {
-                        if (typeof list[0][field.field] == 'boolean') continue;
-                        listFilter.push(new sap.ui.model.Filter(field.field, FilterOperator.Contains, sValue));
+                        // if (typeof list[0][field.field] === 'boolean' || field.DATATYPE !== 'CHAR' || list[0][field.field] === undefined) continue;
+
+                        listFilter.push(new sap.ui.model.Filter('str__' + field.field, FilterOperator.Contains, sValue));
                     }
 
                     var InputFilter = new sap.ui.model.Filter({
@@ -572,18 +706,52 @@ sap.ui.define(
                 return;
 
             },
-            _getDetail: function (buttons) {
+            addContent: function (content) {
+                MainView.selectScreen.getContent()[0].addContent(content);
+            },
+            addOtherContent: function (content) {
+                MainView.selectScreen.getContent()[0].addContent(content);
+            },
+            getContent: function (buttons) {
 
-                if (!MainView.listMode || MainView.listMode.mode === 'table') {
+                if (MainView.mode === 'selectScreen') {
 
-                    return _table(buttons);
+                    MainView.selectScreen = new sap.m.Panel({
+                        headerText: null,//new sap.m.Label({ text: MainView.title }),
+                        headerToolbar: MainView.headerToolbar,
+                        content: new sap.ui.layout.form.SimpleForm({
+                            width: '90%',
+                            editable: true,
+                            layout: "ResponsiveGridLayout",
+                            columnsM: 2,
+                            columnsL: 2,
+                            columnsXL: 2
+                        })
+                    }
+                    );
+
+                    MainView.selectScreen.setBusyIndicatorDelay(50);
+                    MainView.selectScreen.setBusy(true);
+
+                    Promise.all(promises).then((data) => {
+
+                        new ScreenElements(MainView).set(MainView.context, MainView);
+
+                        MainView.selectScreen.setBusy(false);
+                    })
+
+                    return MainView.selectScreen;
+
+                } else if (!MainView.listMode || MainView.listMode.mode === 'table') {
+
+                    return _list(buttons);
 
                 } else if (MainView.listMode.mode === 'tile') {
 
                     return _tile(buttons);
                 }
 
-                function _table(buttons) {
+                function _list(buttons) {
 
                     let cells = [];
                     let columns = [];
@@ -689,6 +857,9 @@ sap.ui.define(
 
                                 header: [col]
                             }));
+
+                            //columns[columns.length].setSortProperty("str__" + field.FIELDNAME); //filter
+                            //columns[columns.length].setFilterProperty("str__" + field.FIELDNAME); //filter 
                         }
 
                         const actCol = MainView.context.find(e => e.field === "ACTIVE");
@@ -847,9 +1018,6 @@ sap.ui.define(
                     return MainView.tilePanel || new sap.m.ScrollContainer({ height: "80%", vertical: true, focusable: true, content: MainView.tilePanel })
                 }
             },
-            _getMainModel: function () {
-                return MainView.getView().getModel("mainModel" + MainView.IDAPP);
-            },
             new: async function (oEvent) {
 
                 MainView.getView().setBusy(true);
@@ -971,47 +1139,41 @@ sap.ui.define(
 
                 dialog.open();
             },
+            navToViewTable: function (result) {
+
+                result.that = MainView;
+
+                var oModel = new sap.ui.model.json.JSONModel(result.DATA);
+
+                MainView.getView().setModel(oModel);
+
+                if (!MainView.View || !MainView.View.Page) {
+                    MainView.View = new add.ui5js.ui.ViewTable(result, () => MainView.mainContent.back());
+                    MainView.mainContent.addPage(MainView.View.Page);
+                } else {
+                    MainView.obligatoryCheck().setNoneAll();
+                    // MainView.View.setId(View.id);
+                    // MainView.View.setBtEvents(View.id);
+                    MainView.View.title.setText(MainView.title);
+                    MainView.View.avatar.setSrc(MainView.icon);
+                }
+
+                MainView.mainContent.to(MainView.View.Page);
+            },
             getMainLayout: function () {
 
-                if (MainView.mode === 'selectScreen') {
-
-                    return _selectScreenPage();
-
-                } else {
-
-                    return _objectPageLayout();
-                }
-
-                function _selectScreenPage() {
-                    return new sap.m.Page({ icon: "sap-icon://email", title: "Tela de seleção", footer: new sap.m.OverflowToolbar({ content: new sap.m.Button({ text: "But" }) }) });
-                }
+                return _objectPageLayout();
 
                 function _objectPageLayout() {
 
                     MainView.panelContent = [];
 
-                    if (MainView.sF || MainView.sF === undefined)
-                        MainView.sF = new sap.m.SearchField({
-                            width: "18.8rem",
-                            liveChange: (evt) => {
-                                MainView._onSearchList(evt, MainView.listResult, {});
-                            }
-                        }).addStyleClass("sapUiSmallMarginEnd");
-
-                    if (MainView.btRefresh || MainView.btRefresh === undefined)
-                        MainView.btRefresh = new sap.m.Button({
-                            icon: "sap-icon://synchronize",
-                            tooltip: "{i18n>refresh}",
-                            type: sap.m.ButtonType.Transparent,
-                            press: MainView.refresh,
-                        }).addStyleClass("sapUiSmallMarginEnd");
-
-                    if (MainView.btNew || MainView.btNew === undefined)
-                        MainView.btNew = (MainView.context.find(c => c.create)) ? new sap.m.Button({
-                            icon: "sap-icon://add-document",
-                            text: "{i18n>new}",
-                            press: MainView.new,
-                        }).addStyleClass("sapUiSmallMarginEnd") : null;
+                    MainView.avatar = new sap.m.Avatar(
+                        {
+                            src: MainView.icon || "sap-icon://approvals",
+                            displaySize: sap.m.AvatarSize.XS,
+                            tooltip: MainView.IDAPP + " / " + MainView.collection // + " ID: " + MainView.values.id
+                        });
 
                     if (MainView.btBack || MainView.btBack === undefined)
                         MainView.btBack = new sap.m.Button(
@@ -1025,29 +1187,33 @@ sap.ui.define(
                                 }
                             }).addStyleClass("sapUiSmallMarginEnd");
 
-                    if (MainView.btSort || MainView.btSort === undefined)
-                        MainView.btSort = new sap.m.Button(
-                            {
-                                icon: "sap-icon://sort",
-                                type: "Transparent",
-                                tooltip: "ordenar",
-                                press: (oEvent) => {
-                                    //let v = this.textArea.getValue();
-                                    MainView._sortTable(oEvent);
-                                }
-                            }).addStyleClass("sapUiSmallMarginEnd");
+                    switch (MainView.mode) {
+                        case 'selectScreen':
 
-                    MainView.panelContent = [
-                        MainView.sF,
-                        MainView.btRefresh,
-                        // MainView.btSort,
-                        MainView.btNew
-                    ];
+                            _setScreenSelectButton();
 
-                    if ((MainView.foreignKeys && MainView.foreignKeys.length > 0 || MainView.showHeader === false) &&
-                        (!MainView.sectionsHeader || MainView.sectionsHeader.length === 0)) {
-                        return MainView._getDetail(MainView.panelContent);
+                            break;
+
+                        default:
+
+                            _setViewButtons();
+
+                            if ((MainView.foreignKeys && MainView.foreignKeys.length > 0 || MainView.showHeader === false) &&
+                                (!MainView.sectionsHeader || MainView.sectionsHeader.length === 0)) {
+                                return MainView.getContent(MainView.panelContent);
+                            }
+
+
+                            break;
                     }
+
+                    if (MainView.showHeader || MainView.showHeader === undefined)
+
+                        MainView.Bar = new sap.m.Bar({
+                            contentLeft: [MainView.avatar, new sap.m.Label({ text: MainView.title })], //MainView.btBack || [new sap.m.Button({ text: "Back", type: sap.m.ButtonType.Back })],
+                            contentMiddle: null,
+                            contentRight: null
+                        })
 
                     let sections = [];
 
@@ -1058,12 +1224,7 @@ sap.ui.define(
                                 title: "{i18n>title}",
                                 tooltip: MainView.IDAPP,
                                 subSections: new sap.uxap.ObjectPageSubSection({
-                                    blocks: MainView._getDetail()
-                                    /* (!MainView.listMode || MainView.listMode.mode === 'tile') ?
-                                        MainView._getDetail() : new sap.m.Panel({
-                                            content: MainView._getDetail()
-                                        }) */
-                                    // moreBlocks: new sap.m.Label({ text: "Anbother block" })
+                                    blocks: MainView.getContent()
                                 })
                             })
                         ]
@@ -1076,24 +1237,11 @@ sap.ui.define(
                         sections = sections.concat(MainView.sectionsHeader);
                     }
 
-                    if (MainView.showHeader || MainView.showHeader === undefined)
-                        MainView.Bar = new sap.m.Bar({
-                            contentLeft: [new sap.m.Avatar(
-                                {
-                                    src: MainView.icon || "sap-icon://approvals",
-                                    displaySize: sap.m.AvatarSize.XS, tooltip: MainView.IDAPP + " / " + MainView.collection // + " ID: " + MainView.values.id
-                                }),
-                            new sap.m.Label({ text: MainView.title })], //MainView.btBack || [new sap.m.Button({ text: "Back", type: sap.m.ButtonType.Back })],
-                            contentMiddle: null,
-                            contentRight: null
-                        })
-
-                    let opl = new sap.uxap.ObjectPageLayout({
+                    return new sap.uxap.ObjectPageLayout({
                         useIconTabBar: (MainView.useIconTabBar) ? false : true,
                         navigate: (oEvent) => {
-
                             if (MainView.onNavigateSection)
-                                if (!MainView.onNavigateSection(oEvent, MainView, View)) return;
+                                if (!MainView.onNavigateSection(oEvent, MainView)) return;
 
                         },
                         isChildPage: false,
@@ -1101,11 +1249,90 @@ sap.ui.define(
                         ],
                         sections: sections
                     })
-                    /*       setTimeout(() => {
-                              opl.setSelectedSection(sections[0].getId())
-                          }, 3000) */
 
-                    return opl;
+                    function _setScreenSelectButton() {
+
+                        MainView.headerToolbar = new sap.m.Toolbar({
+                            design: "Transparent",
+                            content: [
+                                /*  MainView.avatar,
+                                 new sap.m.Label({ text: MainView.title }), */
+                                new sap.m.Button(
+                                    {
+                                        icon: "sap-icon://process",
+                                        text: "{i18n>execute}",
+                                        press: MainView.execute
+                                    }).addStyleClass("sapUiSmallMarginEnd"),
+                                new sap.m.Button(
+                                    {
+                                        blocked: true,
+                                        icon: "sap-icon://date-time",
+                                        text: "{i18n>plan}",
+                                        press: () => { }
+                                    }).addStyleClass("sapUiSmallMarginEnd"),
+                                new sap.m.Button(
+                                    {
+                                        blocked: true,
+                                        icon: "sap-icon://save",
+                                        text: "{i18n>save}",
+                                        press: () => { }
+                                    }),
+                                new sap.m.Button(
+                                    {
+                                        blocked: true,
+                                        icon: "sap-icon://customize",
+                                        text: "{i18n>variants}",
+                                        press: () => { }
+                                    })
+                            ]
+                        })
+                    }
+
+                    function _setViewButtons() {
+
+                        if (MainView.sF || MainView.sF === undefined)
+                            MainView.sF = new sap.m.SearchField({
+                                width: "18.8rem",
+                                liveChange: (evt) => {
+                                    MainView.onSearchList(evt, MainView.listResult, {});
+                                }
+                            }).addStyleClass("sapUiSmallMarginEnd");
+
+                        if (MainView.btRefresh || MainView.btRefresh === undefined)
+                            MainView.btRefresh = new sap.m.Button({
+                                icon: "sap-icon://synchronize",
+                                tooltip: "{i18n>refresh}",
+                                type: sap.m.ButtonType.Transparent,
+                                press: MainView.refresh,
+                            }).addStyleClass("sapUiSmallMarginEnd");
+
+                        if (MainView.btNew || MainView.btNew === undefined)
+                            MainView.btNew = (MainView.context.find(c => c.create)) ? new sap.m.Button({
+                                icon: "sap-icon://add-document",
+                                text: "{i18n>new}",
+                                press: MainView.new,
+                            }).addStyleClass("sapUiSmallMarginEnd") : null;
+
+                        if (MainView.btSort || MainView.btSort === undefined)
+                            MainView.btSort = new sap.m.Button(
+                                {
+                                    icon: "sap-icon://sort",
+                                    type: "Transparent",
+                                    tooltip: "ordenar",
+                                    press: (oEvent) => {
+                                        //let v = this.textArea.getValue();
+                                        MainView.sortTable(oEvent);
+                                    }
+                                }).addStyleClass("sapUiSmallMarginEnd");
+
+                        MainView.panelContent = [
+                            MainView.sF,
+                            MainView.btRefresh,
+                            // MainView.btSort,
+                            MainView.btNew
+                        ];
+                    }
+
                 }
             },
             appendComponent(items) {
@@ -1318,7 +1545,8 @@ sap.ui.define(
                         tileContent: {
                             unit: line[MainView.listMode.mappingTile.tileContent.unit] || MainView.listMode.mappingTile.tileContent.unit || null,
                             footer: line[MainView.listMode.mappingTile.tileContent.footer] || MainView.listMode.mappingTile.tileContent.footer,
-                            content: (MainView.listMode.mappingTile.tileContent.content) ? [new MainView.listMode.mappingTile.tileContent.content.type(MainView.listMode.mappingTile.tileContent.content.params(line))] : null
+                            content: (MainView.listMode.mappingTile.tileContent.content) ?
+                                [new MainView.listMode.mappingTile.tileContent.content.type(MainView.listMode.mappingTile.tileContent.content.params(line))] : null
                         }
                     }
 
@@ -1365,7 +1593,7 @@ sap.ui.define(
                 return true;
 
             },
-            _sortTable() {
+            sortTable() {
 
                 var vsd1 = new sap.m.ViewSettingsDialog("vsd1", {
                     confirm: function (oEvent) {
@@ -1502,67 +1730,13 @@ sap.ui.define(
                         MainView.title = foreignKeys.getData().values[MainView.title] || MainView.title || null;
                         MainView.subtitle = foreignKeys.getData().values[MainView.subtitle] || MainView.subtitle || null;
                         if (foreignKeys.getData().values && foreignKeys.getData().values.that && foreignKeys.getData().values.that.sectionsItems)
-                            (foreignKeys.getData().values.that.sectionsItems.foreignKeys.find(l => l.edit === true && l.idapp === MainView.IDAPP && l.parent === MainView.parent)) ? MainView.edit = true : null;
+                            (foreignKeys.getData().values.that.sectionsItems.foreignKeys
+                                .find(l => l.edit === true && l.idapp === MainView.IDAPP && l.parent === MainView.parent)) ? MainView.edit = true : null;
                     }
 
                 } else {
                     MainView.title = MainView.getView().getModel("i18n").getResourceBundle().getText("title");
                 }
-            },
-            async checkContext(that) {
-
-                return new Promise((r) => r());;
-
-                /*
-                 em testes ...obter todos os dados logo na inicialização,
-                 mas ainda o appm precisa ser evoluido e mesclado com o /doc do addson                 
-                */
-
-
-                if (that.fieldcat || that.service) return new Promise((r) => r());;
-
-                const valueHelp = true;
-                const addson = new sap.ui.model.json.JSONModel();
-                //Object.keys(window["sap-ui-config"]["resourceroots"])[0]
-                const body = {
-                    method: "GET",
-                    actionName: that.collection + ".create",
-                    params: {
-                        pageSize: 100
-                    },
-                    m: sap.ui.getCore().getModel("userInfo").getData().currentMandt,
-                    a: Object.keys(window["sap-ui-config"]["resourceroots"])[0]//idapp
-                }
-
-                return addson.loadData("doc", body, true, "POST")
-
-                    .then(async (data) => {
-
-                        let fieldcat = addson.getData();
-
-                        for (const key in fieldcat) {
-                            if (!MainView.context.find(c => c.field === key))
-                                MainView.context.push({ field: key, type: fieldcat[key].type, visible: false })
-                        }
-
-                        await new ScreenElements(MainView).getStruc(MainView.context, valueHelp).then((data) => {
-                            MainView.fieldcat = JSON.parse(data);
-                            for (let el of MainView.context) {
-
-                                let r = MainView.fieldcat.find(f => f.FIELD === el.field);
-                                if (r)
-                                    el.text = r.DESCR || r.SCRTEXT_S || r.SCRTEXT_M || r.SCRTEXT_L;
-
-                            }
-                            return MainView.context;
-                        })
-
-                    }).catch((err) => {
-                        console.log(err);
-
-                    });
-
-
             },
             obligatoryCheck: function () {
 
@@ -1595,14 +1769,18 @@ sap.ui.define(
                     let check = true;
 
                     if (obl) {
+
                         for (const field of obl) {
-                            if (!data[field.FIELD]) {
+
+                            if (!data[field.REFKIND || field.FIELD]) {
                                 setError(field.idUi5);
                                 check = false;
                             } else {
                                 setNone(field.idUi5);
                             }
+
                         }
+
                     }
                     return check;
                 }
@@ -1633,11 +1811,12 @@ sap.ui.define(
                     return MainView.fieldcat.filter(f => f.obligatory === true && !f.key && (!f.foreignKey || f.foreignKey === undefined));
                 }
             },
-            initContext: function () {
+            initContext: function (that) {
                 /**
                 * catálogo de campos 
                 */
-                promises = [Promise.resolve(new ScreenElements(MainView)
+                that.Screen = new ScreenElements(MainView);
+                promises = [Promise.resolve(that.Screen
                     .getStruc(MainView.context, true).then((data) => {
                         if (!data) { console.error("ERR_GET_STRUCT_FAILED"); return }
                         MainView.fieldcat = JSON.parse(data);
@@ -1646,14 +1825,15 @@ sap.ui.define(
                             let r = MainView.fieldcat.find(f => f.FIELD === el.field);
                             if (!r) {
                                 r = MainView.fieldcat.find(f => f.FIELD === el.field.split('.')[1]);
-
                             }
                             if (r) {
                                 el.text = r.DESCR || r.SCRTEXT_S || r.SCRTEXT_M || r.SCRTEXT_L;
                                 Object.assign(r, el);
                                 Object.assign(el, r);
+                                _setForeignKeyDependency(el, MainView.fieldcat)
                             }
                         }
+                        that.fieldcat = MainView.fieldcat;
                     }))]
                 Promise.all(promises);
                 /**
@@ -1717,7 +1897,28 @@ sap.ui.define(
                 */
                 MainView.navIfOne = (jQuery.sap.getUriParameters().get("nIO") === "1") ? true : false;
 
-            }
+                function _setForeignKeyDependency(field, fieldcat) {
+                    /**
+                    * used in 'selectScreen' mode
+                    * ref: add.base.ui5js.lib.BaseController
+                    * ref: refreshForeignKeyDependency
+                    */
+                    if (!field.FOREIGNKEY || MainView.mode !== 'selectScreen') return;
 
+                    switch (field.REFTYPE) {
+                        case "MC":
+                            let fc = fieldcat.find(c => c.field === field.FOREIGNKEY);
+                            if (fc && !fc.selectionFinish)
+                                fc.selectionFinish = (oEvent) => {
+                                    that.refreshForeignKeyDependency(oEvent, that)
+                                }
+                            break;
+
+                        default:
+
+                            break;
+                    }
+                }
+            }
         });
     });

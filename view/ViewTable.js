@@ -3,20 +3,75 @@ sap.ui.define([
     "../ui/ScreenElements",
     "../ui/ScreenFactory",
     "sap/ui/richtexteditor/RichTextEditor",
-    "sap/uxap/ObjectPageLayout"
+    "sap/uxap/ObjectPageLayout",
+    "sap/ui/table/Table",
 ], function (Object, ScreenElements, ScreenFactory) {
     "use strict";
 
     let MainView = {};
-    let View = {};
-    return Object.extend("add.ui5js.ui.View", {
+    let ViewTable = {};
+    let promises = [];
+    return Object.extend("add.ui5js.ui.ViewTable", {
 
         constructor: function (params) {
 
-            sap.ui.core.BusyIndicator.show();
-
             MainView = params.that;
-            View = this;
+            ViewTable = this;
+
+            ViewTable.context = [];
+
+            ViewTable.Screen = new ScreenElements(ViewTable);
+
+            for (const key in params.DATA[0]) {
+                ViewTable.context.push({ field: key })
+            }
+
+            ViewTable.table = new sap.ui.table.Table(MainView.propTable);
+
+            ViewTable.table.bindRows('/');
+
+            promises = [Promise.resolve(ViewTable.Screen
+                .getStruc(ViewTable.context, true).then((data) => {
+                    if (!data) { console.error("ERR_GET_STRUCT_FAILED"); return }
+
+                    ViewTable.fieldcat = JSON.parse(data);
+
+                    var oControl, oColumn;
+
+                    ViewTable.fieldcat.forEach(struc => {
+
+                        let label = struc.SCRTEXT_S || struc.SCRTEXT_M || struc.SCRTEXT_L || struc.SCRTEXT_S;
+
+                        oControl = new sap.m.Text({ text: '{' + struc.FIELD + '}', wrapping: false });
+
+                        oColumn = new sap.ui.table.Column(
+                            {
+                                label: new sap.m.Text({ text: label }),
+                                template: oControl,
+                                tooltip: struc.FIELD,
+                                autoResizable: true,
+                                sortProperty: struc.FIELD,
+                                filterProperty: struc.FIELD,
+                                // width: "120px"
+                            });
+
+                        oColumn.setCreationTemplate(new sap.m.Input({ value: '{' + struc.FIELD + '}' }));
+
+                        ViewTable.table.addColumn(oColumn);
+
+                        /*    ViewTable.table.addColumn(new sap.ui.table.Column({
+                               label: struc.SCRTEXT_M || struc.SCRTEXT_M || struc.SCRTEXT_L || struc.SCRTEXT_S,
+                               //tooltip: (struc.SCRTEXT_L) ? struc.SCRTEXT_L : (struc.SCRTEXT_S),
+                               sortProperty: struc.FIELDNAME,
+                               filterProperty: struc.FIELDNAME,
+                               autoResizable: true,
+                               visible: (struc.VISIBLE == "X") ? true : false,
+                               // template: this.formatter.checkTypeFieldAndCreate(this.that, struc, this.that.models.IDAPP + 'LIST>', null, 'L')
+                           })) */
+                    });
+
+                }))]
+            Promise.all(promises);
             /*******************************************
              * EXIT
              * ao selecionar a linha da sap.,
@@ -64,74 +119,6 @@ sap.ui.define([
             this.sections = [{ mainContent: this.mainContent, otherContent: this.otherContent }]
 
             this.setId(params.id);
-            if (!this.delete)
-                this.delete = params.delete;
-
-            if (!this.save)
-                this.save = params.save;
-            /***********************************************
-             * 
-             * ativar desativar
-             * 
-             ***********************************************/
-            View.activeButton = new sap.m.Switch({
-                state: false,
-                tooltip: (params["ACTIVE"]) ? MainView.i18n("active") : MainView.i18n("deactivate"),
-                type: sap.m.SwitchType.Default,
-                change: function (oEvent) {
-                    let values = MainView.getView().getModel(MainView.IDAPP + "PARAM").getData();
-                    let selectValue = View.activeButton.getState();
-                    let inpConf = new sap.m.Input();
-                    MainView.dialogActive = new sap.m.Dialog({
-                        contentWidth: "50%",
-                        stretch: sap.ui.Device.system.phone,
-                        title: "{i18n>statusConfirm}",
-                        type: "Message",
-                        content: [
-                            new sap.m.Panel({
-                                //allowWrapping: true,
-                                content: [
-                                    new sap.ui.layout.VerticalLayout({
-                                        width: "100%",
-                                        content: [
-                                            new sap.m.Label({
-                                                text: "{i18n>write} '" + values[MainView.titleField] + "' {i18n>toConfirm}"
-                                            }),
-                                            inpConf]
-                                    })]
-                            })],
-
-                        beginButton: new sap.m.Button({
-                            text: "{i18n>confirm}",
-                            press: async function () {
-
-                                if (MainView.doubleCheckOnActive || MainView.doubleCheckOnActive === true)
-                                    if (inpConf.getValue() != values[MainView.titleField]) return;
-
-                                values["ACTIVE"] = selectValue;
-                                MainView.dialogActive.close();
-                                MainView.dialogActive.destroy();
-                                View.save();
-                            }
-                        }),
-                        endButton: new sap.m.Button({
-                            text: "{i18n>cancel}",
-                            press: function (e) {
-                                MainView.getView().setBusy(false);
-                                var state = View.activeButton.getState();
-                                View.activeButton.setState((state) ? false : true);
-                                View.activeButton.setTooltip((state) ? MainView.i18n("deactivate") : MainView.i18n("active"));
-                                MainView.dialogActive.close();
-                                MainView.dialogActive.destroy();
-                            }
-                        })
-                    })
-
-                    MainView.getView().addContent(MainView.dialogActive);
-
-                    MainView.dialogActive.open();
-                }
-            })
 
             if (MainView.upButton || MainView.upButton === undefined)
                 this.upButton = new sap.m.Button({
@@ -146,8 +133,8 @@ sap.ui.define([
                         window.open("?" + urlParams.toString());
                         return;
 
-                        if (!View.messageDialog)
-                            View.messageDialog = new sap.m.Dialog({
+                        if (!ViewTable.messageDialog)
+                            ViewTable.messageDialog = new sap.m.Dialog({
                                 verticalScrolling: false,
                                 horizontalScrolling: false,
                                 showHeader: false,
@@ -167,7 +154,7 @@ sap.ui.define([
                                 leftButton: new sap.m.Button({
                                     text: "Ok",
                                     press: function () {
-                                        View.messageDialog.close()
+                                        ViewTable.messageDialog.close()
                                     }
                                 })
 
@@ -175,7 +162,7 @@ sap.ui.define([
 
                         MainView.mainContent.back();
 
-                        View.messageDialog.open();
+                        ViewTable.messageDialog.open();
 
                     }
                 })
@@ -183,37 +170,16 @@ sap.ui.define([
             let buttons = [];
 
             if (MainView.edit === true || MainView.edit === undefined) {
-                buttons = [
-                    new sap.m.Button({
-                        icon: "sap-icon://delete",
-                        text: "{i18n>delete}",
-                        type: sap.m.ButtonType.Transparent,//type: "Reject",
-                        press: () => {
 
-                            View.delete();
-                            return;
 
-                            this.delete(this.getId());
-                        }
-                    }),
-                    this.activeButton,
-                    new sap.m.Button({
-                        icon: "sap-icon://save",
-                        type: sap.m.ButtonType.Transparent,
-                        text: "{i18n>save}",
-                        press: async (oEvent) => {
-
-                            View.save();
-                            return;
-
-                            await this.save(params);
-                        }
-                    })
-
-                ];
             }
 
-            View.sections = [];
+            ViewTable.sections = [];
+
+            ViewTable.headerToolbar = new sap.m.Toolbar({
+                design: "Transparent",
+                content: []
+            })
 
             if (this.component && (this.component.embedded === undefined || this.component.embedded === true)) {
                 /***************************************************
@@ -223,7 +189,7 @@ sap.ui.define([
                  **************************************************/
                 if (!MainView.infoSections) MainView.infoSections = [];
 
-                View.sections[0] = this.getContainer(0);
+                ViewTable.sections[0] = this.getContainer(0);
 
                 let secs = MainView.context.find(c => c.section);
 
@@ -232,7 +198,7 @@ sap.ui.define([
                     if (!(secs instanceof Array)) secs = [secs];
 
                     for (const sec of secs) {
-                        View.sections[sec.section.index || View.sections.length] = this.getContainer(sec.section.index, sec);
+                        ViewTable.sections[sec.section.index || ViewTable.sections.length] = this.getContainer(sec.section.index, sec);
                     }
                 }
             }
@@ -244,33 +210,22 @@ sap.ui.define([
                    Type: sap.uxap.ObjectPageSection
                    Esse parametro tem prioridade
                  *********************************************************/
-                View.sections = View.sections.concat(MainView.sectionsItems.items);
+                ViewTable.sections = ViewTable.sections.concat(MainView.sectionsItems.items);
             }
 
             this.title = new sap.m.Label({
-                text: "{i18n>title} / " + params[MainView.titleField] || MainView.titleField || null
+                text: params[MainView.title] || MainView.title || null
             });
 
             this.avatar = new sap.m.Avatar({
-                src: params.LOGO || params.ICON || MainView.icon || params.imageURI,
+                src: MainView.icon,
                 displaySize: sap.m.AvatarSize.XS,
                 //backgroundColor: sap.m.AvatarColor.Accent1,
-                tooltip: MainView.IDAPP + " / " + MainView.collection + " ID: " + params.id
+                tooltip: MainView.IDAPP
             });
 
             this.avatar.ondblclick = () => {
-                /*           debugger;
-                          let urlParams = new URLSearchParams(window.location.search);
-                          urlParams.set('app', MainView.IDAPP);
-                          urlParams.set('id', params.id);
-                          urlParams.set('tb', "0"); //"turn-off toolbar"
-                          urlParams.set('nIO', "1"); // "turn-on navIfOne"
-          
-                          const el = document.createElement('textarea');
-          
-                          el.value  urlParams.toString()
-          
-                          window.clipboardData.setData("Text", urlParams.toString()); */
+
             }
 
             this.Bar = new sap.m.Bar({
@@ -293,21 +248,23 @@ sap.ui.define([
                      * carregar demais sections ou componentes
                      ********************************************/
                     if (MainView.onNavigateSection)
-                        if (!MainView.onNavigateSection(oEvent, MainView, View)) return;
+                        if (!MainView.onNavigateSection(oEvent, MainView, ViewTable)) return;
 
                     _navigate(oEvent);
                 },
-                sections: View.sections
+                sections: ViewTable.sections
             });
             /*********************************************
              * construir elementos de tela
              ********************************************/
-            new ScreenElements(MainView).set(MainView.context, View).then(() => {
-                View.Page.setBusy(false);
-                MainView.getView().setBusy(false);
-            });
+            /*         new ScreenElements(MainView).set(MainView.context, View).then(() => {
+                        ViewTable.Page.setBusy(false);
+                        MainView.getView().setBusy(false);
+                    }); */
 
             sap.ui.core.BusyIndicator.hide();
+
+            MainView.getView().setBusy(false);
 
             return this;
 
@@ -321,12 +278,8 @@ sap.ui.define([
                  * se sim, deve ser reconstruído para cada utilização
                  */
                 let instances = sap.ui.getCore()
-                    .getModel("foreignKey" + MainView.rootComponent);
-
-                if (!instances) return;
-
-
-                instances = instances.getData().filter(l => l.idapp === oEvent.getSource().getSelectedSection().split('--_')[1]).length || 0;
+                    .getModel("foreignKey" + MainView.rootComponent)
+                    .getData().filter(l => l.idapp === oEvent.getSource().getSelectedSection().split('--_')[1]).length;
 
                 /**
                 * armazenta o atual componente para o caso de haver mudança
@@ -407,6 +360,7 @@ sap.ui.define([
 
             this.nivel = sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].saves.length;
         },
+
         removeBtEvents() {
             try {
                 let i = sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].saves.length;
@@ -416,6 +370,7 @@ sap.ui.define([
                 console.error("removeBtEvents " + erro)
             }
         },
+
         getId() {
             return this.id;
         },
@@ -428,7 +383,7 @@ sap.ui.define([
 
             let index = (section) ? (section.index || 0) : 0;
 
-            View.sections[index].getSubSections()[0].getBlocks()[0].getContent()[0].addContent(content);
+            ViewTable.sections[index].getSubSections()[0].getBlocks()[0].getContent()[0].addContent(content);
 
         },
 
@@ -436,7 +391,7 @@ sap.ui.define([
 
             let index = (section) ? (section.index || 0) : 0;
 
-            View.sections[index].getSubSections()[0].getBlocks()[0].getContent()[1].addContent(content);
+            ViewTable.sections[index].getSubSections()[0].getBlocks()[0].getContent()[1].addContent(content);
 
         },
 
@@ -444,6 +399,7 @@ sap.ui.define([
 
             this.Page.getObjectPageHeader().setObjectTitle(data.header)
         },
+
         getContainer(indexSection, sec) {
 
             let infoSection = {}
@@ -459,21 +415,17 @@ sap.ui.define([
                 mode: sap.uxap.ObjectPageSubSectionMode.Expanded,
                 validateFieldGroup: () => { },
                 blocks: new sap.m.Panel({
+                    //headerToolbar: ViewTable.headerToolbar,
                     content:
-                        [new sap.ui.layout.form.SimpleForm({
-                            width: '100%',
-                            editable: true,
-                            layout: "ResponsiveGridLayout",
-                            columnsM: 1,
-                            columnsL: 1,
-                            columnsXL: 1
-                        }), new sap.m.Panel()
+                        [
+                            ViewTable.table,
+                            new sap.m.Panel({
+                                content: []
+                            })
                         ]
                 })
-                // moreBlocks: new sap.m.Label({ text: "Anbother block" })
+
             })]
-
-
 
             return new sap.uxap.ObjectPageSection({
                 showTitle: false,

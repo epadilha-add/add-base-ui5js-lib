@@ -19,9 +19,9 @@ sap.ui.define([
                 MainView = that;
             },
 
-            getStruc: function (param, valuesHelp) {
+            getStruc: function (param, valuesHelp, parameter) {
 
-                if (MainView.fieldcat) return new Promise(p => p(MainView.fieldcat));
+                if (MainView.fieldcat && !parameter) return new Promise(p => p(MainView.fieldcat));
 
                 let listFields = [];
 
@@ -53,7 +53,8 @@ sap.ui.define([
                     COLLECTION: 'P0600',
                     PROJECTION: ['CAMPO', 'P600A'],
                     FILTER: { "$or": listFields },
-                    VH: valuesHelp //values help
+                    VH: valuesHelp, //values help
+                    ...parameter
                 };
 
                 let hostM;
@@ -145,9 +146,6 @@ sap.ui.define([
             },
             set: async function (param, Screen) {
 
-                Screen.Page.setBusy(true);
-
-                let STRUC = [];
                 let valueHelp = true;
                 let modelName = null;
 
@@ -169,15 +167,21 @@ sap.ui.define([
 
                                 if (fld === element.FIELD) {
 
+                                    /*   if (field.key && field.visible)
+                                          element.FIELDNAME = element.FIELDNAME + '.DESCR'; */
+
                                     element = { ...element, ...field };
 
-                                    if (element.VALUES) {
-                                        var oModel = new JSONModel(element.VALUES);
+                                    if (element.VALUES || field.RFFLD) {
+                                        var oModel = new JSONModel(element.VALUES || []);
+                                        oModel.setSizeLimit(500);
                                         modelName = MainView.IDAPP + field.field || element.FIELD;
                                         Screen.setModel(oModel, modelName + "PARAM");
 
                                     } else {
+
                                         modelName = MainView.IDAPP + "PARAM";
+
                                     }
 
                                     if (field.modelPath) {
@@ -238,8 +242,6 @@ sap.ui.define([
             },
             createElementbyType: function (struc, that, modelName, caller, Screen) {
                 'user strict';
-
-                // return [new sap.m.Input()];
 
                 var chnd;
                 var res = [];
@@ -457,20 +459,17 @@ sap.ui.define([
 
                                 var oItemTemplate = new sap.ui.core.Item({
                                     key: '{' + modelName + 'PARAM>' + struc.RFFLD + '}',
-                                    text: '{' + modelName + 'PARAM>' + struc.RFFLD + '}:{' + modelName + 'PARAM>DESCR}',
+                                    //text: '{' + modelName + 'PARAM>' + struc.RFFLD + '}:{' + modelName + 'PARAM>DESCR}',
+                                    text: '{' + modelName + 'PARAM>DESCR}',
                                 });
 
-                                try {
-                                    chnd = eval('that.handleSelectionChange' + struc.FIELDNAME);
-                                } catch { }
-
                                 res.push(new sap.m.MultiComboBox({
-                                    //id: struc.FIELDNAME,
-
                                     required: struc.OBLIGTORY,
                                     placeholder: placeholder,
                                     tooltip: tooltip,
-                                    selectionChange: function (oEvent) { that.screen.elements.__proto__.onSubmitMC(oEvent, that, (chnd) ? chnd : function (oEvent) { }) },
+                                    selectionChange: struc.selectionChange || function () { },
+                                    selectionFinish: struc.selectionFinish || function () { },
+                                    ...struc.propInclude,
                                     items: {
                                         path: modelName + 'PARAM>/',// + struc.FIELDNAME,//  struc.SECTION.substring(5, 10),
                                         sorter: '{' + struc.FIELDNAME + '}',
@@ -510,7 +509,7 @@ sap.ui.define([
                             case 'CB':
 
                                 res.push(new sap.m.CheckBox({
-                                    //id: struc.FIELDNAME, 
+                                    ...struc.propInclude,
                                     selected: '{' + modelName + '>/' + struc.FIELDNAME + '}'
                                 }));
 
@@ -623,8 +622,6 @@ sap.ui.define([
 
                 res[0].setLabelFor(res[1].getId().toString());
 
-
-
                 res[1].REFTYPE = struc.REFTYPE;
 
                 if (struc.CINFO) {
@@ -648,7 +645,7 @@ sap.ui.define([
                     /*         res[0].addEventDelegate({
                                 onmouseover: () => {
                                     this.timeout = window.setTimeout(function (oEvent) {
-        
+                 
                                         if (!this['rp' + res[0].getId()])
                                             this['rp' + res[0].getId()] =
                                                 new sap.m.ResponsivePopover("ResponsivePopover" + res[0].getId(), {
@@ -660,7 +657,7 @@ sap.ui.define([
                                                         content: "<div>" + struc.CINFO + "</div>"
                                                     })
                                                 })
-        
+                 
                                         this['rp' + res[0].getId()].openBy(res[0]);
                                     }, 1700)
                                 },
