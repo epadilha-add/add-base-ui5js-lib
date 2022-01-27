@@ -201,6 +201,7 @@ sap.ui.define(
                 }
             },
             logInfo(params) {
+                return;
                 console.table({ COLLECTION: MainView.collection })
                 console.log("PARAMETERS:")
                 console.table(params.params)
@@ -228,33 +229,31 @@ sap.ui.define(
                 let l = { ...lines };
 
                 for (const field of MainView.context) {
-                    /*                if (!lines[field.field])
-                                       lines[field.field] = "";
-               
-                                   key = field.field.split(".")[0];
-               
-                                   if (field.type === 'boolean' || (typeof lines[key] === 'boolean' || lines[field.field] === 'X' || lines[key] === true || lines[key] === false)) {
-                                       lines[field.field] = (lines[field.field]) ? true : false;
-                                       l[field.field] = lines[field.field];
-                                       lines[field.field + 'b'] = (lines[field.field]) ? "true" : "false"; continue;
-                                   } */
+
                     key = field.field.split(".")[0];
+
+                    " D ==>temporário até saniarmos os dados"
+                    if (field.REFKIND && field.REFKIND !== "D")
+                        lines[key] = lines[field.REFKIND];
+
+                    if (field.type === 'boolean' || (typeof lines[key] === 'boolean' || lines[field.field] === 'X')) {
+                        lines[field.field] = (lines[field.field]) ? true : false;
+                        l[field.field] = lines[field.field];
+                        /* lines[field.field + 'b'] = (lines[field.field]) ? "true" : "false"; continue; */
+                    }
+
                     if (lines[key] instanceof Object && lines[key].id) {
                         for (const k in lines[key]) {
-                            if (lines[key + '.' + k]) continue;
-                            lines[key + '.' + k] = (lines[key][k] === true || lines[key][k] === false) ? (lines[key][k] === true) ? 'true' : 'false' : lines[key][k];
+                            lines[key + '.' + k] = lines[key][k];
                         }
                         lines[key] = lines[key].id;
+
+                        delete lines[key].id;
                     }
                 }
 
-
-                //lines = { ...lines, ...l };
-
                 for (var k in lines) {
-                    //if (lines.hasOwnProperty(k)) {
                     lines["str__" + k.split('.')[0]] = String(lines[k]);
-                    //}
                 }
 
                 return lines;
@@ -417,22 +416,31 @@ sap.ui.define(
                 let values = MainView.getView().getModel(MainView.IDAPP + "PARAM").getData();
                 let vlas = {};
 
-                for (const key in values) {
-
-                    if (!MainView.context.find(l => l == key || l.field) && key != "ID") {
-
-                        continue;
-
-                    } else if (key === "ID") {
-
-                        vlas.id = values[key]; continue;
-                    }
-
-                    try {
-                        vlas[key] = values[key];
-                    } catch {
-                    }
+                for (const field of MainView.context) {
+                    if (field.field.split('.')[1] || values[field.field] === undefined) continue;
+                    vlas[field.REFKIND || field.field] = values[field.field];
                 }
+
+                vlas.id = values.ID;
+
+                debugger;
+
+                /*         for (const key in values) {
+        
+                            if (!MainView.context.find(l => l == key || l.field) && key != "ID") {
+        
+                                continue;
+        
+                            } else if (key === "ID") {
+        
+                                vlas.id = values[key]; continue;
+                            }
+        
+                            try {
+                                vlas[key] = values[key];
+                            } catch {
+                            }
+                        } */
 
                 /**
                  * transferindo valores default
@@ -990,9 +998,9 @@ sap.ui.define(
 
                             tile.addStyleClass("sapUiTinyMarginBegin sapUiTinyMarginTop tileLayout");
 
-                            tile.attachPress((MainView.attachPress) ?
+                            tile.bodyPress((MainView.bodyPress) ?
 
-                                (oEvent) => { MainView.attachPress(oEvent) } :
+                                (oEvent) => { MainView.bodyPress(oEvent) } :
 
                                 (oEvent) => {
 
@@ -1808,6 +1816,7 @@ sap.ui.define(
                 }
 
                 function getOblig() {
+                    if (!MainView.fieldcat) return null;
                     return MainView.fieldcat.filter(f => f.obligatory === true && !f.key && (!f.foreignKey || f.foreignKey === undefined));
                 }
             },

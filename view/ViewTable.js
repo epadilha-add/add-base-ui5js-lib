@@ -49,9 +49,10 @@ sap.ui.define([
                                 label: new sap.m.Text({ text: label }),
                                 template: oControl,
                                 tooltip: struc.FIELD,
-                                autoResizable: true,
+
                                 sortProperty: struc.FIELD,
                                 filterProperty: struc.FIELD,
+                                ...MainView.propColumn
                                 // width: "120px"
                             });
 
