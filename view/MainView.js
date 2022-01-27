@@ -417,6 +417,7 @@ sap.ui.define(
                 let vlas = {};
 
                 for (const field of MainView.context) {
+                    if (field.REFKIND == 'D') field.REFKIND = null;//TODO: Eliminar após saneamento
                     if (field.field.split('.')[1] || values[field.field] === undefined) continue;
                     vlas[field.REFKIND || field.field] = values[field.field];
                 }
