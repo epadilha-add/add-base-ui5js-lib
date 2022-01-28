@@ -1,3 +1,5 @@
+
+
 sap.ui.define(
     [
         "../BaseController",
@@ -107,6 +109,7 @@ sap.ui.define(
                     "actionName": (MainView.service) ? MainView.collection + "." + MainView.service : MainView.collection + ".list",
                     "params": {
                         "pageSize": (MainView.pageSize) ? MainView.pageSize : 100,
+                        "query": { ...MainView.query }
                     }, ...MainView.callParams
 
                 }
@@ -128,8 +131,9 @@ sap.ui.define(
                     delete query.parent;
 
                     //params.params = {};
-                    params.params.query = {};
-                    params.params.query = query;
+                    if (!params.params.query)
+                        params.params.query = {};
+                    Object.assign(params.params.query, query);
 
                 } else if (MainView.foreignKeys) {
 
@@ -141,7 +145,9 @@ sap.ui.define(
                     delete pars.content;
                     delete pars.context;
                     delete pars.parent;
-                    params.params = { query: pars };
+                    if (!params.params.query)
+                        params.params.query = {};
+                    params.params.query = pars;
                 }
 
                 MainView.logInfo(params);
@@ -424,7 +430,7 @@ sap.ui.define(
 
                 vlas.id = values.ID;
 
-                debugger;
+
 
                 /*         for (const key in values) {
         
@@ -999,9 +1005,9 @@ sap.ui.define(
 
                             tile.addStyleClass("sapUiTinyMarginBegin sapUiTinyMarginTop tileLayout");
 
-                            tile.bodyPress((MainView.bodyPress) ?
+                            tile.attachPress((MainView.attachPress) ?
 
-                                (oEvent) => { MainView.bodyPress(oEvent) } :
+                                (oEvent) => { MainView.attachPress(oEvent) } :
 
                                 (oEvent) => {
 
@@ -1226,17 +1232,17 @@ sap.ui.define(
 
                     let sections = [];
 
-                    if (!MainView.sectionsHeader || MainView.sectionsHeader.length === 0)
-                        sections = [
-                            new sap.uxap.ObjectPageSection({
-                                showTitle: false,
-                                title: "{i18n>title}",
-                                tooltip: MainView.IDAPP,
-                                subSections: new sap.uxap.ObjectPageSubSection({
-                                    blocks: MainView.getContent()
-                                })
+                    // if (!MainView.sectionsHeader || MainView.sectionsHeader.length === 0)
+                    sections = [
+                        new sap.uxap.ObjectPageSection({
+                            showTitle: false,
+                            title: "{i18n>title}",
+                            tooltip: MainView.IDAPP,
+                            subSections: new sap.uxap.ObjectPageSubSection({
+                                blocks: MainView.getContent()
                             })
-                        ]
+                        })
+                    ]
 
                     if (MainView.sectionsHeader && MainView.sectionsHeader instanceof Array && MainView.sectionsHeader.length > 0) {
                         /*

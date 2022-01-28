@@ -146,37 +146,6 @@ sap.ui.define([
                         window.open("?" + urlParams.toString());
                         return;
 
-                        if (!View.messageDialog)
-                            View.messageDialog = new sap.m.Dialog({
-                                verticalScrolling: false,
-                                horizontalScrolling: false,
-                                showHeader: false,
-                                contentHeight: "100%",
-                                contentWidth: "100%",
-                                //type: sap.m.DialogType.Message,
-                                content: new sap.m.Page({
-                                    showHeader: false,
-                                    enableScrolling: false,
-                                    content: new sap.ui.core.HTML({
-                                        preferDOM: true,
-                                        sanitizeContent: false,
-                                        content: "<iframe height='100%' width='100%' src='/?" + urlParams.toString() + "'</iframe>"
-                                    })
-                                }),
-
-                                leftButton: new sap.m.Button({
-                                    text: "Ok",
-                                    press: function () {
-                                        View.messageDialog.close()
-                                    }
-                                })
-
-                            });
-
-                        MainView.mainContent.back();
-
-                        View.messageDialog.open();
-
                     }
                 })
 
@@ -282,13 +251,14 @@ sap.ui.define([
             this.Page = new sap.uxap.ObjectPageLayout({
                 useIconTabBar: true,
                 isChildPage: false,
-                busyIndicatorDelay: 300,
+                busyIndicatorDelay: 10,
                 showTitleInHeaderContent: false,
                 alwaysShowContentHeader: false,
                 showFooter: true,
                 headerTitle: null,
                 headerContent: [this.Bar],
                 navigate: (oEvent) => {
+
                     /*********************************************
                      * carregar demais sections ou componentes
                      ********************************************/
@@ -296,6 +266,7 @@ sap.ui.define([
                         if (!MainView.onNavigateSection(oEvent, MainView, View)) return;
 
                     _navigate(oEvent);
+
                 },
                 sections: View.sections
             });
@@ -343,6 +314,8 @@ sap.ui.define([
                 MainView.rootParent = oEvent.getSource().getSelectedSection().split('--_')[0];
 
                 if (MainView.id !== params.id || !MainView[appId] || instances > 1) {
+
+
                     /**
                     * o componente só é reconstruído se:
                     *  - mudar o o registro ( MainView.id !== params.id )
@@ -350,6 +323,7 @@ sap.ui.define([
                     *  - ou existir o mesmo componente mais de uma vez no mesmo app (instances > 1)
                     */
                     let sec = oEvent.getSource().getSections().find(s => s.getId() === oEvent.getSource().getSelectedSection());
+                    sec.setBusy(true);
                     sec.getSubSections()[0].destroyBlocks()
                     /**
                      * embora destruído acima, o componente será recriado com o mesmo Id
@@ -365,6 +339,10 @@ sap.ui.define([
                     *  esse falg está sendo considerado em MainView / pressToNav, 
                     */
                     MainView[appId] = true;
+
+                    setTimeout(() => {
+                        sec.setBusy(false);
+                    }, 1500)
 
                 }
                 MainView.id = params.id;
