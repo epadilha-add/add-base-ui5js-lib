@@ -1495,6 +1495,7 @@ sap.ui.define(
                                     new sap.uxap.ObjectPageSection(MainView.IDAPP + '--_' + key.idapp, {
                                         showTitle: false,
                                         title: key.title,
+                                        tooltip: key.idapp,
                                         subSections: new sap.uxap.ObjectPageSubSection({
                                             blocks: key.content || null
                                         })

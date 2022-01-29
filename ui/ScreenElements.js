@@ -79,7 +79,7 @@ sap.ui.define([
 
                 //  Screen.body.setBusy(true);
 
-                return await this.getStruc(param, valueHelp).then((response) => {
+                return await this.getStruc(param, valueHelp, true).then((response) => {
 
                     if (typeof response === 'string')
                         response = JSON.parse(response);

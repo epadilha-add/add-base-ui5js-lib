@@ -434,9 +434,11 @@ sap.ui.define([
             if (!sec) sec = 0;
 
             let subSec = [new sap.uxap.ObjectPageSubSection({
+                tooltip: MainView.IDAPP,
                 mode: sap.uxap.ObjectPageSubSectionMode.Expanded,
                 validateFieldGroup: () => { },
                 blocks: new sap.m.Panel({
+                    tooltip: MainView.IDAPP,
                     content:
                         [new sap.ui.layout.form.SimpleForm({
                             width: '100%',
