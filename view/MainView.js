@@ -14,7 +14,7 @@ sap.ui.define(
         "use strict";
 
         let dialog = {};
-        let table = {};
+        // let table = {};
         let MainView = {};
         let componentHistory = "add.modification.history";
         let promises = [];
@@ -158,7 +158,7 @@ sap.ui.define(
 
                     MainView.getView().setBusy(false);
 
-                    if (resp)
+                    if (resp && typeof resp === 'string')
                         rows = JSON.parse(resp);
 
                     if (MainView.afterList)
@@ -190,7 +190,7 @@ sap.ui.define(
                     }
 
                 }).catch((e) => {
-                    table.setBusy(false);
+                    MainView.table.setBusy(false);
                     MainView.getView().setBusy(false);
                     throw e;
                 })
@@ -207,7 +207,13 @@ sap.ui.define(
                 }
             },
             logInfo(params) {
-                return;
+                console.profile();
+                console.profileEnd();
+                if (console.clear) {
+                    console.clear();
+                }
+                if (console.profiles?.length === 0) return;
+
                 console.table({ COLLECTION: MainView.collection })
                 console.log("PARAMETERS:")
                 console.table(params.params)
@@ -223,8 +229,8 @@ sap.ui.define(
                 if (MainView.mode === 'selectScreen') {
                     MainView.getView().setModel(model, "mainModel");
                 } else if (!MainView.listMode || MainView.listMode.mode !== 'tile') {
-                    table.setModel(model, "mainModel");
-                    table.setBusy(false);
+                    MainView.table.setModel(model, "mainModel");
+                    MainView.table.setBusy(false);
                 } else {
                     MainView.getView().setModel(model, "mainModel" + MainView.IDAPP);
                 }
@@ -302,12 +308,9 @@ sap.ui.define(
                 this.logInfo(params);
 
                 if (MainView.beforeCreating instanceof Function)
-                    if (!MainView.beforeCreating(vals, MainView)) return;
+                    if (!MainView.beforeCreating(vals, MainView)) return false;
 
                 return await MainView.callService.postSync("add", params).then((resp) => {
-
-                    if (MainView.afterCreating instanceof Function)
-                        MainView.afterCreating(resp, MainView);
 
                     MainView.getView().setBusy(false);
 
@@ -429,26 +432,6 @@ sap.ui.define(
                 }
 
                 vlas.id = values.ID;
-
-
-
-                /*         for (const key in values) {
-        
-                            if (!MainView.context.find(l => l == key || l.field) && key != "ID") {
-        
-                                continue;
-        
-                            } else if (key === "ID") {
-        
-                                vlas.id = values[key]; continue;
-                            }
-        
-                            try {
-                                vlas[key] = values[key];
-                            } catch {
-                            }
-                        } */
-
                 /**
                  * transferindo valores default
                  */
@@ -550,6 +533,11 @@ sap.ui.define(
                             throw new TypeError("ERR_TIMEOUT");
                         }
 
+                        if (MainView.service === 'list') {
+                            debugger;
+                            res.DATA = res.rows;
+                        }
+
                         if (res && res.DATA.length === 0) {
                             MainView.headerToolbar.setBlocked(false);
                             MainView.selectScreen.setBusy(false);
@@ -568,6 +556,9 @@ sap.ui.define(
                         } else {
                             res.DATA = [];
                         }
+
+
+
 
                         MainView.navToViewTable(res);
                         MainView.selectScreen.setBusy(false);
@@ -589,9 +580,10 @@ sap.ui.define(
 
                         switch (field.REFTYPE) {
                             case 'LB':
-                                selectScreen[field.field] = sap.ui.getCore().byId(field.idUi5).getSelectedKey();
-                                if (selectScreen[field.field].length === 0)
-                                    selectScreen[field.field] = '';
+                                selectScreen[field.REFKIND || field.field] = sap.ui.getCore().byId(field.idUi5).getSelectedKey();
+                                if (selectScreen[field.REFKIND || field.field].length === 0)
+                                    selectScreen[field.REFKIND || field.field] = '';
+                                break;
                             case 'MC':
                                 selectScreen[field.REFKIND || field.field] = {
                                     $in: sap.ui.getCore().byId(field.idUi5).getSelectedKeys()
@@ -687,7 +679,7 @@ sap.ui.define(
                         and: false
                     });
 
-                    table.getBinding("items").filter(InputFilter);
+                    MainView.table.getBinding("items").filter(InputFilter);
 
                 } else if (MainView.listMode || MainView.listMode.mode === 'tile') {
 
@@ -795,25 +787,26 @@ sap.ui.define(
                         return types[field.DATATYPE] || types.OTHERS;
                     };
 
-                    table = new sap.m.Table({
+                    MainView.table = new sap.m.Table({
                         //contextualWidth: "Auto",
                         //alternateRowColors: true,
                         //backgroundDesign: sap.m.BackgroundDesign.Transparent,
                         //sticky: new sap.m.Sticky.ColumnHeaders,
-                        popinLayout: "GridSmall",
-                        inset: false,
-                        autoPopinMode: true,
+                        popinLayout: MainView.popinLayout || "GridSmall",
+                        inset: MainView.inset || false,
+                        autoPopinMode: MainView.autoPopinMode || true,
                         contextualWidth: "Auto",
-                        growing: true,
-                        growingThreshold: 8,
+                        growing: MainView.growing || true,
+                        growingThreshold: MainView.growingThreshold || 8,
                         busy: true,
-                        fixedLayout: "Strict",
+                        fixedLayout: MainView.fixedLayout || "Strict",
                         busyIndicatorDelay: 20,
                         busyIndicatorSize: sap.ui.core.BusyIndicatorSize.Medium,
+
                         growingStarted: (e) => {
                             // alert("nothing here")
                         },
-
+                        ...MainView.propTable,
                         dependents: new sap.m.plugins.ColumnResizer(),
 
                         headerToolbar: (MainView.panelContent) ? new sap.m.Toolbar({
@@ -840,8 +833,7 @@ sap.ui.define(
                             */
                             if (field.visible === false ||
                                 field.field === "id" ||
-                                field.field === "ACTIVE" ||
-                                field.foreignKey === true) continue;
+                                field.field === "ACTIVE") continue;
 
                             let txt = field.SCRTEXT_S || field.SCRTEXT_M || field.SCRTEXT_L || field.DESCR || field.FIELDNAME;
 
@@ -946,9 +938,9 @@ sap.ui.define(
 
                         }
 
-                        columns.forEach(c => table.addColumn(c));
+                        columns.forEach(c => MainView.table.addColumn(c));
 
-                        table.bindAggregation("items", {
+                        MainView.table.bindAggregation("items", {
                             path: "mainModel>/results",
 
                             template: new sap.m.ColumnListItem({
@@ -969,7 +961,7 @@ sap.ui.define(
                             })
 
                         });
-                        container.addContent(table);
+                        container.addContent(MainView.table);
                         container.setBusy(false);
                     });
 
@@ -1119,22 +1111,32 @@ sap.ui.define(
                             try {
 
                                 vals = await MainView.create(vals);
-
-                                //vals.id = id;
-
+                                /**
+                                 * verificar se houve exit custom bloqueando a creação
+                                 */
+                                if (vals == false) { MainView.getView().setBusy(false); return; }
+                                /**
+                                 * verificar se houve a criação foi realizada com sucesso
+                                 */
                                 if (!vals.id) throw "errorCreate";
+                                /**
+                                 * todos os registros são criados desativados por padrão
+                                 */
+                                vals.ACTIVE = MainView.defaultACTIVE || false;
 
-                                vals.ACTIVE = false;
-
+                                MainView.pressToNav(vals);
                                 MainView.navToView(vals);
 
                             } catch (error) {
                                 throw new TypeError(error); return;
                             }
 
-                            table.getModel("mainModel").getData().results.unshift(vals);
+                            MainView.table.getModel("mainModel").getData().results.unshift(vals);
 
-                            table.getModel("mainModel").refresh();
+                            if (MainView.afterCreating instanceof Function)
+                                MainView.afterCreating(vals, MainView);
+
+                            MainView.table.getModel("mainModel").refresh();
                         }
                     }),
                     endButton: new sap.m.Button({
@@ -1373,7 +1375,7 @@ sap.ui.define(
             },
             changeMainModel: async (data) => {
 
-                var oModel = table.getModel("mainModel");
+                var oModel = MainView.table.getModel("mainModel");
                 let res = JSON.parse(data);
                 if (!res.id) throw "errorCreate";
                 oModel.getData().results = oModel.getData().results.map((line) => {
@@ -1388,6 +1390,8 @@ sap.ui.define(
                 });
 
                 oModel.refresh(true);
+
+                return oModel;
             },
             pressToNav: function (values) {
 
@@ -1702,8 +1706,8 @@ sap.ui.define(
                             ]
                         }));
 
-                        // apply sorters & filters to the table binding
-                        table.getBinding("items").sort(aTableSorters);
+                        // apply sorters & filters to the MainView.table binding
+                        MainView.table.getBinding("items").sort(aTableSorters);
                     }
                 })
             },
@@ -1734,8 +1738,13 @@ sap.ui.define(
                         MainView.foreignKeys = undefined;
 
                         if (MainView.context.find(c => c.foreignKey === true))
-                            //-> BUG mesmo prevendo chave estrangeira, não foi encontrado
-                            // o filtro..analisar
+                            /*-> BUG mesmo prevendo chave estrangeira, não foi encontrado
+                            * o filtro..analisar
+
+                            * somente para casos especiais como tax.cust.process.activities.reversal
+                            * onde o mesmo não foi instanciado como componente, mas sim como 
+                            * MainView.sectionsHeader
+                            */
                             debugger;
                     }
 
@@ -1844,6 +1853,7 @@ sap.ui.define(
                                 r = MainView.fieldcat.find(f => f.FIELD === el.field.split('.')[1]);
                             }
                             if (r) {
+                                if (r.REFKIND === "D") r.REFKIND = null;
                                 el.text = r.DESCR || r.SCRTEXT_S || r.SCRTEXT_M || r.SCRTEXT_L;
                                 Object.assign(r, el);
                                 Object.assign(el, r);
@@ -1921,16 +1931,20 @@ sap.ui.define(
                     * ref: refreshForeignKeyDependency
                     */
                     if (!field.FOREIGNKEY || MainView.mode !== 'selectScreen') return;
-
-                    switch (field.REFTYPE) {
+                    let fc = fieldcat.find(c => c.field === field.FOREIGNKEY);
+                    switch (fc?.REFTYPE) {
                         case "MC":
-                            let fc = fieldcat.find(c => c.field === field.FOREIGNKEY);
                             if (fc && !fc.selectionFinish)
                                 fc.selectionFinish = (oEvent) => {
                                     that.refreshForeignKeyDependency(oEvent, that)
                                 }
                             break;
-
+                        case "LB":
+                            if (fc && !fc.change)
+                                fc.change = (oEvent) => {
+                                    that.refreshForeignKeyDependency(oEvent, that)
+                                }
+                            break;
                         default:
 
                             break;

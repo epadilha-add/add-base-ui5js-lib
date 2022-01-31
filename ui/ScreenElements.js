@@ -90,10 +90,19 @@ sap.ui.define([
 
                         param.forEach((field) => { //==>keep sequence
                             let fld = field.field.split('.');
-                            fld = (fld[1]) ? fld[1] : fld[0];
+
+                            if (field.foreignKey)
+                                fld = fld[0];
+                            else
+                                fld = (fld[1]) ? fld[1] : fld[0];
+
                             response.find((element) => {
 
                                 if (fld === element.FIELD) {
+
+                                    // element = { ...element, ...field };
+
+                                    element.VALUES = field?.VALUES;
 
                                     if (element.VALUES) {
                                         var oModel = new JSONModel(element.VALUES.filter(e => e.ACTIVE || e.ACTIVE === undefined));
@@ -112,7 +121,7 @@ sap.ui.define([
                                     element.FIELDNAME = element.FIELD;
 
                                     if (field.create && !field.foreignKey && field.key === true)
-                                        element.REFTYPE = ''; //input
+                                        element.REFTYPE = ''; //input 
 
                                     STRUC.push(element);
                                     try {
@@ -167,9 +176,6 @@ sap.ui.define([
 
                                 if (fld === element.FIELD) {
 
-                                    /*   if (field.key && field.visible)
-                                          element.FIELDNAME = element.FIELDNAME + '.DESCR'; */
-
                                     element = { ...element, ...field };
 
                                     if (element.VALUES || field.RFFLD) {
@@ -212,10 +218,10 @@ sap.ui.define([
                                                     switch (element.REFTYPE) {
                                                         case 'RT':
                                                         case 'CE':
-                                                            Screen.addOtherContent(obj, field.section);
+                                                            Screen.addOtherContent(obj, field.section || field.subSection);
                                                             break;
                                                         default:
-                                                            Screen.addContent(obj, field.section);
+                                                            Screen.addContent(obj, field.section || field.subSection);
                                                             break;
                                                     }
 
@@ -311,6 +317,8 @@ sap.ui.define([
 
                                 let prop = (struc.prop) ? (struc.prop) : {
                                     selectedKey: '{' + that.IDAPP + 'PARAM>/' + struc.FIELDNAME.split('.')[0] + '}',
+                                    change: struc.change || function () { },
+                                    selectionChange: struc.selectionChange || function () { },
                                     items: {
                                         path: modelName + 'PARAM>/',
                                         template: oItemTemplate

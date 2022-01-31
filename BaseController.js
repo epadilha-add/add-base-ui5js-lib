@@ -149,7 +149,7 @@ sap.ui.define([
         async refreshForeignKeyDependency(oEvent, This) {
             /**
              * used in 'selectScreen' mode
-             * ref:  add.tax.operation.extractor.controller.MainView
+             * ref:  add.tax.operation.process.controller.MainView
              * ref: _setForeignKeyDependency
              */
             let fields = This.fieldcat.filter(c => c.FOREIGNKEY);
@@ -174,6 +174,7 @@ sap.ui.define([
                 switch (field.REFTYPE) {
                     case 'LB':
                         params.params[field.REFKIND || field.field] = sap.ui.getCore().byId(field.idUi5).getSelectedKey();
+                        break;
                     case 'MC':
                         params.params[field.REFKIND || field.field] = {
                             $in: sap.ui.getCore().byId(field.idUi5).getSelectedKeys()
