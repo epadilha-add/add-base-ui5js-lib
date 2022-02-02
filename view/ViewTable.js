@@ -17,6 +17,7 @@ sap.ui.define([
 
             MainView = params.that;
             ViewTable = this;
+            MainView.data = params.DATA;
 
             ViewTable.context = [];
 
@@ -26,7 +27,12 @@ sap.ui.define([
                 ViewTable.context.push({ field: key })
             }
 
-            ViewTable.table = new sap.ui.table.Table(MainView.propTable);
+            ViewTable.table = new sap.ui.table.Table({
+                title: "Total : " + '{total}',
+                ...MainView.propTable
+            });
+
+            MainView.getView().getController()?.table(MainView)?.toolBar()?.setToolBar(ViewTable.table);
 
             ViewTable.table.bindRows('/');
 
@@ -41,6 +47,7 @@ sap.ui.define([
                     ViewTable.fieldcat.forEach(struc => {
 
                         let label = struc.SCRTEXT_S || struc.SCRTEXT_M || struc.SCRTEXT_L || struc.SCRTEXT_S;
+                        let toolt = struc.SCRTEXT_L || struc.SCRTEXT_M || struc.SCRTEXT_S || struc.SCRTEXT_S;
 
                         oControl = new sap.m.Text({ text: '{' + struc.FIELD + '}', wrapping: false });
 
@@ -55,20 +62,33 @@ sap.ui.define([
                                 ...MainView.propColumn
                                 // width: "120px"
                             });
+                        /*                         debugger;
+                                                switch (struc.DATATYPE) {
+                                                    case 'DATS':
+                                                        oColumn.setCreationTemplate(new sap.m.Label({
+                                                            tooltip: toolt,
+                                                            wrapping: false,
+                                                            text: {
+                                                                path: '{' + struc.FIELD + '}',
+                                                                type: 'sap.ui.model.type.Date',
+                                                                formatOptions: {
+                                                                    style: 'short',
+                                                                    source: {
+                                                                        pattern: 'dd/mm/yyyy'
+                                                                    }
+                                                                }
+                                                            }
+                                                        }));
+                                                        break;
+                        
+                                                    default: */
+                        oColumn.setCreationTemplate(new sap.m.Input({ value: '{' + struc.REFKIND || struc.FIELD + '}' }));
+                        // break;
+                        //}
 
-                        oColumn.setCreationTemplate(new sap.m.Input({ value: '{' + struc.FIELD + '}' }));
 
                         ViewTable.table.addColumn(oColumn);
 
-                        /*    ViewTable.table.addColumn(new sap.ui.table.Column({
-                               label: struc.SCRTEXT_M || struc.SCRTEXT_M || struc.SCRTEXT_L || struc.SCRTEXT_S,
-                               //tooltip: (struc.SCRTEXT_L) ? struc.SCRTEXT_L : (struc.SCRTEXT_S),
-                               sortProperty: struc.FIELDNAME,
-                               filterProperty: struc.FIELDNAME,
-                               autoResizable: true,
-                               visible: (struc.VISIBLE == "X") ? true : false,
-                               // template: this.formatter.checkTypeFieldAndCreate(this.that, struc, this.that.models.IDAPP + 'LIST>', null, 'L')
-                           })) */
                     });
 
                 }))]

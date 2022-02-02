@@ -90,7 +90,7 @@ sap.ui.define([
 
                         param.forEach((field) => { //==>keep sequence
                             let fld = field.field.split('.');
-
+                            debugger;
                             if (field.foreignKey)
                                 fld = fld[0];
                             else

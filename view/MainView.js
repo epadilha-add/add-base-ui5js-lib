@@ -26,7 +26,6 @@ sap.ui.define(
                 sap.ui.core.BusyIndicator.hide();
 
                 MainView = Object.assign(this, that);
-
                 /**
                  * inicialização do contexto
                  */
@@ -409,13 +408,10 @@ sap.ui.define(
                         })
                     })
 
-
-
                     MainView.getView().addContent(MainView.dialogDelete);
                 }
 
                 MainView.dialogDelete.open();
-
 
             },
             save: async function () {
@@ -534,7 +530,6 @@ sap.ui.define(
                         }
 
                         if (MainView.service === 'list') {
-                            debugger;
                             res.DATA = res.rows;
                         }
 
@@ -556,9 +551,6 @@ sap.ui.define(
                         } else {
                             res.DATA = [];
                         }
-
-
-
 
                         MainView.navToViewTable(res);
                         MainView.selectScreen.setBusy(false);
@@ -606,8 +598,8 @@ sap.ui.define(
                                 }).format(sap.ui.getCore().byId(field.idUi5).getTo());
 
                                 selectScreen[field.field] = {
-                                    $gte: from,
-                                    $lte: to
+                                    $gte: parseInt(from),
+                                    $lte: parseInt(to)
                                 }
 
                                 break;
