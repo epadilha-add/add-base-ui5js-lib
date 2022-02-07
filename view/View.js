@@ -74,64 +74,67 @@ sap.ui.define([
              * ativar desativar
              * 
              ***********************************************/
-            View.activeButton = new sap.m.Switch({
-                state: false,
-                tooltip: (params["ACTIVE"]) ? MainView.i18n("active") : MainView.i18n("deactivate"),
-                type: sap.m.SwitchType.Default,
-                change: function (oEvent) {
-                    let values = MainView.getView().getModel(MainView.IDAPP + "PARAM").getData();
-                    let selectValue = View.activeButton.getState();
-                    let inpConf = new sap.m.Input();
-                    MainView.dialogActive = new sap.m.Dialog({
-                        contentWidth: "50%",
-                        stretch: sap.ui.Device.system.phone,
-                        title: "{i18n>statusConfirm}",
-                        type: "Message",
-                        content: [
-                            new sap.m.Panel({
-                                //allowWrapping: true,
-                                content: [
-                                    new sap.ui.layout.VerticalLayout({
-                                        width: "100%",
-                                        content: [
-                                            new sap.m.Label({
-                                                text: "{i18n>write} '" + values[MainView.titleField] + "' {i18n>toConfirm}"
-                                            }),
-                                            inpConf]
-                                    })]
-                            })],
+            if (MainView.activeButton === undefined || MainView.activeButton === true)
+                View.activeButton = new sap.m.Switch({
+                    state: false,
+                    tooltip: (params["ACTIVE"]) ? MainView.i18n("active") : MainView.i18n("deactivate"),
+                    type: sap.m.SwitchType.Default,
+                    change: function (oEvent) {
+                        let values = MainView.getView().getModel(MainView.IDAPP + "PARAM").getData();
+                        let selectValue = View.activeButton.getState();
+                        let inpConf = new sap.m.Input();
+                        MainView.dialogActive = new sap.m.Dialog({
+                            contentWidth: "50%",
+                            stretch: sap.ui.Device.system.phone,
+                            title: "{i18n>statusConfirm}",
+                            type: "Message",
+                            content: [
+                                new sap.m.Panel({
+                                    //allowWrapping: true,
+                                    content: [
+                                        new sap.ui.layout.VerticalLayout({
+                                            width: "100%",
+                                            content: [
+                                                new sap.m.Label({
+                                                    text: "{i18n>write} '" + values[MainView.titleField] + "' {i18n>toConfirm}"
+                                                }),
+                                                inpConf]
+                                        })]
+                                })],
 
-                        beginButton: new sap.m.Button({
-                            text: "{i18n>confirm}",
-                            press: async function () {
+                            beginButton: new sap.m.Button({
+                                text: "{i18n>confirm}",
+                                press: async function () {
 
-                                if (MainView.doubleCheckOnActive || MainView.doubleCheckOnActive === true)
-                                    if (inpConf.getValue() != values[MainView.titleField]) return;
-
-                                values["ACTIVE"] = selectValue;
-                                MainView.dialogActive.close();
-                                MainView.dialogActive.destroy();
-                                View.save();
-                            }
-                        }),
-                        endButton: new sap.m.Button({
-                            text: "{i18n>cancel}",
-                            press: function (e) {
-                                MainView.getView().setBusy(false);
-                                var state = View.activeButton.getState();
-                                View.activeButton.setState((state) ? false : true);
-                                View.activeButton.setTooltip((state) ? MainView.i18n("deactivate") : MainView.i18n("active"));
-                                MainView.dialogActive.close();
-                                MainView.dialogActive.destroy();
-                            }
+                                    if (MainView.doubleCheckOnActive || MainView.doubleCheckOnActive === true)
+                                        if (inpConf.getValue() != values[MainView.titleField]) return;
+                                    MainView.getView().setBusy(true);
+                                    values["ACTIVE"] = selectValue;
+                                    MainView.dialogActive.close();
+                                    MainView.dialogActive.destroy();
+                                    View.save();
+                                }
+                            }),
+                            endButton: new sap.m.Button({
+                                text: "{i18n>cancel}",
+                                press: function (e) {
+                                    MainView.getView().setBusy(false);
+                                    var state = View.activeButton.getState();
+                                    View.activeButton.setState((state) ? false : true);
+                                    View.activeButton.setTooltip((state) ? MainView.i18n("deactivate") : MainView.i18n("active"));
+                                    MainView.dialogActive.close();
+                                    MainView.dialogActive.destroy();
+                                }
+                            })
                         })
-                    })
 
-                    MainView.getView().addContent(MainView.dialogActive);
+                        MainView.getView().addContent(MainView.dialogActive);
 
-                    MainView.dialogActive.open();
-                }
-            })
+                        MainView.dialogActive.open();
+                    }
+                })
+            else
+                params.ACTIVE = true;
 
             if (MainView.upButton || MainView.upButton === undefined)
                 this.upButton = new sap.m.Button({
@@ -340,9 +343,9 @@ sap.ui.define([
                     */
                     MainView[appId] = true;
 
-                    setTimeout(() => {
-                        sec.setBusy(false);
-                    }, 1500)
+                    //setTimeout(() => {
+                    sec.setBusy(false);
+                    //}, 1500)
 
                 }
                 MainView.id = params.id;
@@ -360,6 +363,7 @@ sap.ui.define([
                         sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].saves.splice(0, 1);
                     } catch (error) {
                     }
+                MainView.getView().setBusy(false);
             })
         },
 
@@ -371,6 +375,7 @@ sap.ui.define([
                         sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].deletes.splice(0, 1);
                     } catch (error) {
                     }
+                MainView.getView().setBusy(false);
             });
 
         },

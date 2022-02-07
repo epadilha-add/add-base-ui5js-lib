@@ -72,14 +72,14 @@ sap.ui.define([
                 return callService.postSync('add/ui', req, null, null, null, null, hostM);
 
             },
-            getElementScreenByName: async function (param, Screen) {
+            getElementScreenByName: async function (param, Screen, parameter) {
 
                 let STRUC = [];
                 let valueHelp = true;
 
                 //  Screen.body.setBusy(true);
 
-                return await this.getStruc(param, valueHelp, true).then((response) => {
+                return await this.getStruc(param, valueHelp, parameter || true).then((response) => {
 
                     if (typeof response === 'string')
                         response = JSON.parse(response);
@@ -90,7 +90,7 @@ sap.ui.define([
 
                         param.forEach((field) => { //==>keep sequence
                             let fld = field.field.split('.');
-                            debugger;
+
                             if (field.foreignKey)
                                 fld = fld[0];
                             else
@@ -100,9 +100,8 @@ sap.ui.define([
 
                                 if (fld === element.FIELD) {
 
-                                    // element = { ...element, ...field };
-
-                                    element.VALUES = field?.VALUES;
+                                    if (!parameter || !parameter?.params || !parameter?.params[element.FIELD])
+                                        element.VALUES = field?.VALUES;
 
                                     if (element.VALUES) {
                                         var oModel = new JSONModel(element.VALUES.filter(e => e.ACTIVE || e.ACTIVE === undefined));
@@ -466,7 +465,7 @@ sap.ui.define([
                             case 'MC':
 
                                 var oItemTemplate = new sap.ui.core.Item({
-                                    key: '{' + modelName + 'PARAM>' + struc.RFFLD + '}',
+                                    key: '{' + modelName + 'PARAM>' + 'id' + '}',
                                     //text: '{' + modelName + 'PARAM>' + struc.RFFLD + '}:{' + modelName + 'PARAM>DESCR}',
                                     text: '{' + modelName + 'PARAM>DESCR}',
                                 });

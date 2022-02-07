@@ -288,14 +288,14 @@ sap.ui.define(
                 for (const key of MainView.context) {
 
                     if (key.create || key.foreignKey === true)
-                        vals[key.field.split(".")[0]] = data[key.field.split(".")[0]];
+                        vals[key.field.REFKIND || key.field.split(".")[0]] = data[key.field.split(".")[0]];
 
                     /**
                     * para o caso de existir valores padrões enviado do construtor
                     * REF: add.tax.cust.variants.variants.controller.MainView
                     */
                     if (key.value)
-                        vals[key.field.split(".")[0]] = key.value;
+                        vals[key.field.REFKIND || key.field.split(".")[0]] = key.value;
                 }
 
                 const params = {
@@ -306,12 +306,17 @@ sap.ui.define(
 
                 this.logInfo(params);
 
-                if (MainView.beforeCreating instanceof Function)
-                    if (!MainView.beforeCreating(vals, MainView)) return false;
+                if (MainView.beforeCreating instanceof Function) {
+                    params.params = await MainView.beforeCreating(params.params, MainView)
+                    if (params.params === false) return false;
+                }
 
-                return await MainView.callService.postSync("add", params).then((resp) => {
+                return await MainView.callService.postSync("add", params).then(async (resp) => {
 
                     MainView.getView().setBusy(false);
+
+                    if (MainView.afterCreating instanceof Function)
+                        resp = await MainView.afterCreating(resp, MainView);
 
                     if (!resp) throw "errorCreate";
 
@@ -319,7 +324,7 @@ sap.ui.define(
 
                     MainView.changeMainModel(resp);
 
-                    return MainView.normalize(JSON.parse(resp));
+                    return MainView.normalize((typeof resp === 'string') ? JSON.parse(resp) : resp);
                 })
             },
             delete: async function (corporationId) {
@@ -457,10 +462,10 @@ sap.ui.define(
                 if (MainView.beforeSaving instanceof Function)
                     if (!MainView.beforeSaving(vlas, MainView)) return false;
 
-                return await MainView.callService.postSync("add", params).then((resp) => {
+                return await MainView.callService.postSync("add", params).then(async (resp) => {
 
                     if (MainView.afterSaving instanceof Function)
-                        resp = MainView.afterSaving(resp, MainView);
+                        resp = await MainView.afterSaving(resp, MainView);
 
                     MainView.getView().setBusy(false);
 
@@ -494,124 +499,6 @@ sap.ui.define(
 
                 MainView.message("successRefresh");
             },
-            execute: async function (oEvent) {
-
-                let selectScreen = _getSelectScreenValues();
-
-                if (MainView.obligatoryCheck().checkByData(selectScreen) === false) return;
-
-                MainView.selectScreen.setBusy(true);
-
-                MainView.headerToolbar.setBlocked(true);
-
-                for (const key in selectScreen) {
-                    if (!selectScreen[key] || selectScreen[key] === null)
-                        delete selectScreen[key];
-                }
-
-                let params = {
-                    "method": "POST",
-                    //"timeout": 500000,
-                    "actionName": MainView.collection + "." + MainView.service || ".list",
-                    "params": {
-                        "pageSize": MainView.pageSize || 100,
-                        "query": selectScreen
-                    }, ...MainView.callParams
-
-                }
-
-                await MainView.callService.postSync("add", params)
-                    .then((res) => {
-
-                        if (res) {
-                            res = JSON.parse(res);
-                        } else {
-                            throw new TypeError("ERR_TIMEOUT");
-                        }
-
-                        if (MainView.service === 'list') {
-                            res.DATA = res.rows;
-                        }
-
-                        if (res && res.DATA.length === 0) {
-                            MainView.headerToolbar.setBlocked(false);
-                            MainView.selectScreen.setBusy(false);
-                            MainView.message("dataNotFound");
-                            return;
-                        }
-
-                        if (MainView.afterExecute)
-                            res = MainView.afterExecute(res);
-
-                        if (res.DATA instanceof Array) {
-                            res.DATA = res.DATA.map((lines) => {
-                                return MainView.normalize(lines);
-                            })
-
-                        } else {
-                            res.DATA = [];
-                        }
-
-                        MainView.navToViewTable(res);
-                        MainView.selectScreen.setBusy(false);
-                        MainView.headerToolbar.setBlocked(false);
-
-                    }).catch((e) => {
-                        MainView.headerToolbar.setBlocked(false);
-                        MainView.selectScreen.setBusy(false);
-                        throw e;
-                    })
-
-                function _getSelectScreenValues() {
-
-                    let selectScreen = {};
-                    /**
-                     * parameters prepare - screenSelect
-                     */
-                    for (const field of MainView.fieldcat) {
-
-                        switch (field.REFTYPE) {
-                            case 'LB':
-                                selectScreen[field.REFKIND || field.field] = sap.ui.getCore().byId(field.idUi5).getSelectedKey();
-                                if (selectScreen[field.REFKIND || field.field].length === 0)
-                                    selectScreen[field.REFKIND || field.field] = '';
-                                break;
-                            case 'MC':
-                                selectScreen[field.REFKIND || field.field] = {
-                                    $in: sap.ui.getCore().byId(field.idUi5).getSelectedKeys()
-                                }
-                                if (selectScreen[field.REFKIND || field.field].$in.length === 0)
-                                    selectScreen[field.REFKIND || field.field] = '';
-                                break;
-                            case 'DR':
-
-                                if (!sap.ui.getCore().byId(field.idUi5).getValue()) {
-                                    selectScreen[field.field] = ''; continue;
-                                }
-
-                                let from = sap.ui.core.format.DateFormat.getDateInstance({
-                                    pattern: "YYYYMMdd"
-                                }).format(sap.ui.getCore().byId(field.idUi5).getFrom());
-
-                                let to = sap.ui.core.format.DateFormat.getDateInstance({
-                                    pattern: "YYYYMMdd"
-                                }).format(sap.ui.getCore().byId(field.idUi5).getTo());
-
-                                selectScreen[field.field] = {
-                                    $gte: parseInt(from),
-                                    $lte: parseInt(to)
-                                }
-
-                                break;
-                            default:
-                                selectScreen[field.field] = sap.ui.getCore().byId(field.idUi5).getValue();
-                                break;
-                        }
-                    }
-                    return selectScreen;
-                }
-
-            },
             setModel: function (oModel, nameModel) {
 
                 MainView.getView().setModel(oModel, nameModel);
@@ -633,14 +520,18 @@ sap.ui.define(
                     MainView.View.avatar.setSrc(View.LOGO || View.ICON || View.that.icon || View.imageURI);
                 }
 
-                MainView.View.activeButton.setState((View.ACTIVE) ? true : false);
-                MainView.View.activeButton.setTooltip((View.ACTIVE) ? MainView.i18n("active") : MainView.i18n("deactivate"))
-
                 let values = {};
                 for (const key in View) {
                     if (!(View[key] instanceof Object))
                         // values[MainView.IDAPP + key.toUpperCase()] = View[key];
                         values[key.toUpperCase()] = View[key];
+                }
+
+                if (MainView.activeButton === undefined || MainView.activeButton === true) {
+                    MainView.View.activeButton.setState((View.ACTIVE) ? true : false);
+                    MainView.View.activeButton.setTooltip((View.ACTIVE) ? MainView.i18n("active") : MainView.i18n("deactivate"))
+                } else {
+                    values.ACTIVE = true;
                 }
 
                 var oModel = new sap.ui.model.json.JSONModel(values);
@@ -715,31 +606,7 @@ sap.ui.define(
 
                 if (MainView.mode === 'selectScreen') {
 
-                    MainView.selectScreen = new sap.m.Panel({
-                        headerText: null,//new sap.m.Label({ text: MainView.title }),
-                        headerToolbar: MainView.headerToolbar,
-                        content: new sap.ui.layout.form.SimpleForm({
-                            width: '90%',
-                            editable: true,
-                            layout: "ResponsiveGridLayout",
-                            columnsM: 2,
-                            columnsL: 2,
-                            columnsXL: 2
-                        })
-                    }
-                    );
-
-                    MainView.selectScreen.setBusyIndicatorDelay(50);
-                    MainView.selectScreen.setBusy(true);
-
-                    Promise.all(promises).then((data) => {
-
-                        new ScreenElements(MainView).set(MainView.context, MainView);
-
-                        MainView.selectScreen.setBusy(false);
-                    })
-
-                    return MainView.selectScreen;
+                    return MainView.sc.getContent(promises);
 
                 } else if (!MainView.listMode || MainView.listMode.mode === 'table') {
 
@@ -801,8 +668,8 @@ sap.ui.define(
                         ...MainView.propTable,
                         dependents: new sap.m.plugins.ColumnResizer(),
 
-                        headerToolbar: (MainView.panelContent) ? new sap.m.Toolbar({
-                            content: MainView.panelContent
+                        headerToolbar: (MainView.toolBarContent) ? new sap.m.Toolbar({
+                            content: MainView.toolBarContent
                         }) : null,
                         //mode: "SingleSelect",
                         // selectionMode: "MultiToggle",
@@ -863,51 +730,52 @@ sap.ui.define(
 
                         const actCol = MainView.context.find(e => e.field === "ACTIVE");
 
-                        if ((actCol && actCol.visible === true) || !actCol) {
+                        if (MainView.activeButton === undefined || MainView.activeButton === true)
+                            if ((actCol && actCol.visible === true) || !actCol) {
 
-                            columns.push(new sap.m.Column({
-                                demandPopin: true,
-                                minScreenWidth: "800px",
-                                popinDisplay: "Inline",
-                                header: [
-                                    //width: "8em",
-                                    new sap.m.Text({ text: "{i18n>status}" }).addStyleClass("labelColumnsTable")
-                                ]
-                            }));
+                                columns.push(new sap.m.Column({
+                                    demandPopin: true,
+                                    minScreenWidth: "800px",
+                                    popinDisplay: "Inline",
+                                    header: [
+                                        //width: "8em",
+                                        new sap.m.Text({ text: "{i18n>status}" }).addStyleClass("labelColumnsTable")
+                                    ]
+                                }));
 
-                            cells.push(new sap.m.ObjectStatus({
-                                tooltip: {
-                                    parts: ["mainModel>ACTIVE", "mainModel>CHANAM", "mainModel>ERNAM"],
-                                    formatter: (data, CHANAM, ERNAM) => {
+                                cells.push(new sap.m.ObjectStatus({
+                                    tooltip: {
+                                        parts: ["mainModel>ACTIVE", "mainModel>CHANAM", "mainModel>ERNAM"],
+                                        formatter: (data, CHANAM, ERNAM) => {
 
-                                        return (data) ? (CHANAM) ? "Modificado por: " + CHANAM || '' : "Modificado por: " + CHANAM || '' : "Criado por: " + ERNAM;
-                                    }
-                                },
-                                text: {
-                                    path: 'mainModel>CHADAT',
-                                    type: 'sap.ui.model.type.Date',
-                                    formatOptions: {
-                                        source: {
-                                            pattern: 'yyyyMMddTHHmmss'
-                                        },
-                                        pattern: 'dd/MM/yyyy HH:mm:ss'
-
+                                            return (data) ? (CHANAM) ? "Modificado por: " + CHANAM || '' : "Modificado por: " + CHANAM || '' : "Criado por: " + ERNAM;
+                                        }
                                     },
-                                    formatter: (data) => {
+                                    text: {
+                                        path: 'mainModel>CHADAT',
+                                        type: 'sap.ui.model.type.Date',
+                                        formatOptions: {
+                                            source: {
+                                                pattern: 'yyyyMMddTHHmmss'
+                                            },
+                                            pattern: 'dd/MM/yyyy HH:mm:ss'
 
-                                        return (data) ? 'em: ' + data : "";
-                                    }
-                                },
-                                icon: {
-                                    parts: ["mainModel>ACTIVE"],
-                                    type: "Success",
-                                    formatter: (data) => {
+                                        },
+                                        formatter: (data) => {
 
-                                        return (data) ? "sap-icon://overlay" : "sap-icon://circle-task";
+                                            return (data) ? 'em: ' + data : "";
+                                        }
+                                    },
+                                    icon: {
+                                        parts: ["mainModel>ACTIVE"],
+                                        type: "Success",
+                                        formatter: (data) => {
+
+                                            return (data) ? "sap-icon://overlay" : "sap-icon://circle-task";
+                                        }
                                     }
-                                }
-                            }).addStyleClass("labelColumnsTable"))
-                        }
+                                }).addStyleClass("labelColumnsTable"))
+                            }
 
                         const idCol = MainView.context.find(e => e.field === "id");
 
@@ -972,8 +840,8 @@ sap.ui.define(
                     } else {
                         MainView.tilePanel.removeAllContent();
                     }
-                    (MainView.panelContent) ? MainView.tilePanel.addContent(new sap.m.Toolbar({
-                        content: MainView.panelContent
+                    (MainView.toolBarContent) ? MainView.tilePanel.addContent(new sap.m.Toolbar({
+                        content: MainView.toolBarContent
                     })) : null;
 
                     MainView.list().then(() => {
@@ -1022,6 +890,15 @@ sap.ui.define(
                 MainView.getView().setBusy(true);
 
                 var inputs = [];
+                let params = {}
+
+                for (const fk of MainView.context) {
+
+                    if (!fk.FOREIGNKEY) continue;
+
+                    params[fk.FOREIGNKEYNAME || fk.FOREIGNKEY] = { $in: [MainView.foreignKeys[0][fk.FOREIGNKEY]] };
+                }
+
 
                 for (const key of MainView.context) {
 
@@ -1029,11 +906,11 @@ sap.ui.define(
 
                     if (MainView.foreignKeys && MainView.foreignKeys.find(f => f[key.field.split('.')[0]])) continue;
 
-                    let screenField = await new ScreenElements(MainView).getElementScreenByName([key], MainView);
+                    let screenField = await new ScreenElements(MainView).getElementScreenByName([key], MainView, { params });
 
                     if (!screenField || screenField.length === 0) continue;
 
-                    screenField[1].field = key.field;
+                    screenField[1].field = key.REFKIND || key.field;
 
                     inputs = inputs.concat(screenField);
                 }
@@ -1064,6 +941,7 @@ sap.ui.define(
                             oEvent.getSource().setEnabled(false);
 
                             let vals = {};
+                            let keys = {};
 
                             //--> obter valores dos campos de criação
                             for (const input of inputs) {
@@ -1084,11 +962,34 @@ sap.ui.define(
                                 }
                             }
 
+
                             // valida se todos os campos de contexto de criação estão preenchidos
                             for (const field of MainView.context) {
-                                if (vals && field.create && !vals[field.field.split('.')[0]]) {
+                                if (field.create) {
+                                    keys[field.REFKIND || field.field.split('.')[0]] = vals[field.REFKIND || field.field.split('.')[0]];
+                                }
+                                if (vals && field.create && !vals[field.REFKIND || field.field.split('.')[0]]) {
                                     vals = null;
                                     throw new TypeError("Err " + field.field + " empty")
+                                }
+                            }
+
+                            //duplicidades
+                            if (MainView.checkDuplicateBeforeCreate === undefined || MainView.checkDuplicateBeforeCreate === true) {
+                                for (const l of MainView.listResult) {
+                                    let match = {};
+                                    for (const key in keys) {
+                                        match[key] = l[key];
+                                    }
+                                    if (JSON.stringify(match) === JSON.stringify(keys)) {
+                                        vals = null;
+                                        break;
+                                    }
+                                }
+                                if (!vals) {
+                                    MainView.message('alreadyData');
+                                    oEvent.getSource().setEnabled(true);
+                                    return;
                                 }
                             }
 
@@ -1148,34 +1049,13 @@ sap.ui.define(
 
                 dialog.open();
             },
-            navToViewTable: function (result) {
-
-                result.that = MainView;
-
-                var oModel = new sap.ui.model.json.JSONModel(result.DATA);
-
-                MainView.getView().setModel(oModel);
-
-                if (!MainView.View || !MainView.View.Page) {
-                    MainView.View = new add.ui5js.ui.ViewTable(result, () => MainView.mainContent.back());
-                    MainView.mainContent.addPage(MainView.View.Page);
-                } else {
-                    MainView.obligatoryCheck().setNoneAll();
-                    // MainView.View.setId(View.id);
-                    // MainView.View.setBtEvents(View.id);
-                    MainView.View.title.setText(MainView.title);
-                    MainView.View.avatar.setSrc(MainView.icon);
-                }
-
-                MainView.mainContent.to(MainView.View.Page);
-            },
             getMainLayout: function () {
 
                 return _objectPageLayout();
 
                 function _objectPageLayout() {
 
-                    MainView.panelContent = [];
+                    MainView.toolBarContent = [];
 
                     MainView.avatar = new sap.m.Avatar(
                         {
@@ -1199,7 +1079,7 @@ sap.ui.define(
                     switch (MainView.mode) {
                         case 'selectScreen':
 
-                            _setScreenSelectButton();
+                            MainView.sc = new add.ui5js.ui.ViewTable(MainView);
 
                             break;
 
@@ -1209,7 +1089,7 @@ sap.ui.define(
 
                             if ((MainView.foreignKeys && MainView.foreignKeys.length > 0 || MainView.showHeader === false) &&
                                 (!MainView.sectionsHeader || MainView.sectionsHeader.length === 0)) {
-                                return MainView.getContent(MainView.panelContent);
+                                return MainView.getContent(MainView.toolBarContent);
                             }
 
 
@@ -1226,7 +1106,7 @@ sap.ui.define(
 
                     let sections = [];
 
-                    // if (!MainView.sectionsHeader || MainView.sectionsHeader.length === 0)
+
                     sections = [
                         new sap.uxap.ObjectPageSection({
                             showTitle: false,
@@ -1259,43 +1139,7 @@ sap.ui.define(
                         sections: sections
                     })
 
-                    function _setScreenSelectButton() {
 
-                        MainView.headerToolbar = new sap.m.Toolbar({
-                            design: "Transparent",
-                            content: [
-                                /*  MainView.avatar,
-                                 new sap.m.Label({ text: MainView.title }), */
-                                new sap.m.Button(
-                                    {
-                                        icon: "sap-icon://process",
-                                        text: "{i18n>execute}",
-                                        press: MainView.execute
-                                    }).addStyleClass("sapUiSmallMarginEnd"),
-                                new sap.m.Button(
-                                    {
-                                        blocked: true,
-                                        icon: "sap-icon://date-time",
-                                        text: "{i18n>plan}",
-                                        press: () => { }
-                                    }).addStyleClass("sapUiSmallMarginEnd"),
-                                new sap.m.Button(
-                                    {
-                                        blocked: true,
-                                        icon: "sap-icon://save",
-                                        text: "{i18n>save}",
-                                        press: () => { }
-                                    }),
-                                new sap.m.Button(
-                                    {
-                                        blocked: true,
-                                        icon: "sap-icon://customize",
-                                        text: "{i18n>variants}",
-                                        press: () => { }
-                                    })
-                            ]
-                        })
-                    }
 
                     function _setViewButtons() {
 
@@ -1334,12 +1178,17 @@ sap.ui.define(
                                     }
                                 }).addStyleClass("sapUiSmallMarginEnd");
 
-                        MainView.panelContent = [
+                        MainView.toolBarContent = [
                             MainView.sF,
                             MainView.btRefresh,
                             // MainView.btSort,
                             MainView.btNew
                         ];
+
+                        if (MainView.appendOthersViewButtons) {
+                            // outros botões podem ser ineridos a partir do controller
+                            MainView.appendOthersViewButtons(MainView.toolBarContent, MainView);
+                        }
                     }
 
                 }
@@ -1368,7 +1217,7 @@ sap.ui.define(
             changeMainModel: async (data) => {
 
                 var oModel = MainView.table.getModel("mainModel");
-                let res = JSON.parse(data);
+                let res = (typeof data === 'string') ? JSON.parse(data) : data;
                 if (!res.id) throw "errorCreate";
                 oModel.getData().results = oModel.getData().results.map((line) => {
                     if (line.id === res.id) {
@@ -1396,6 +1245,7 @@ sap.ui.define(
                         let keys = [];
                         let vals = {};
                         let selectedLine = {};
+                        let screens = [];
                         for (const key of MainView.sectionsItems.foreignKeys) {
 
                             //-> obtem model para conferência. 
@@ -1479,6 +1329,24 @@ sap.ui.define(
                                 ), "foreignKey" + MainView.rootComponent);
                             }
 
+                            screens.push(key);
+                        }
+
+                        screens.forEach((key) => {
+
+                            if (key.external) {
+                                /**
+                                 * para o caso de algum componente ser utilizado diretamente no controller,
+                                 * "sem utiizar" o método "appendComponent", e o mesmo tenha a necessidade de 
+                                 * relacionamento com o parent, as mesmas informações devem ser passadas para o 
+                                 * appendComponent mas com o parâmetro external = true
+                                 * dessa forma os models irão se propagar normalmente, e a relação entre
+                                 * parent e component ocorrerá normalmente
+                                 * REF: add.tax.cust.process.ativities
+                                 */
+                                return;
+                            };
+
                             //-verifica se a tela ui5 do componente já foi inserida com aba
                             //-> não existindo, iniciar array
                             if (!MainView.sectionsItems.items) MainView.sectionsItems.items = [];
@@ -1530,15 +1398,7 @@ sap.ui.define(
                                 }
                             }
 
-                            /*  MainView.sectionsItems.items[key.index || 0].getSubSections()[0].addBlock(
-                                 MainView.Screen.create({
-                                     name: key.idapp,
-                                     key: key.idapp,
-                                     idapp: MainView.IDAPP
-                                 })
-                             ) */
-
-                        }
+                        })
                     }
                 }
             },
@@ -1709,7 +1569,7 @@ sap.ui.define(
 
                 if (foreignKeys) {
 
-                    let keys = foreignKeys.getData().filter(l => l.idapp === MainView.IDAPP && l.parent === this.getView().getId().split('-')[0]);
+                    let keys = foreignKeys.getData().filter(l => l.idapp === MainView.IDAPP && (l.parent === this.getView().getId().split('-')[0] || this.getView().getId().split('-')[0] === 'undefined'));
 
                     if (keys && keys.length > 0) {
 

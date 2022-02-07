@@ -15,23 +15,25 @@ sap.ui.define([], function () {
 
             return new Promise((resolve, reject) => {
 
-                that.models.model('variant').setModel(new sap.ui.model.json.JSONModel({ "name": "" }).setSizeLimit(1000));
+                let oModel = new sap.ui.model.json.JSONModel({ "name": "" });
+                oModel.setSizeLimit(1000);
+                that.getView().setModel(oModel, that.IDAPP + 'variant');
 
                 _oDialog = new sap.m.Dialog({
-                    title: that.models.getI18n("saveLocalVariant"),
+                    title: that.i18n("saveLocalVariant"),
                     content: new sap.m.VBox({
                         items: [
-                            new sap.m.Label({ text: that.models.getI18n("variantName") }),
+                            new sap.m.Label({ text: that.i18n("variantName") }),
                             new sap.m.Input({
-                                value: "{" + that.models.IDAPP + "variant>/name}"
+                                value: "{" + that.IDAPP + "variant>/name}"
                             })
                         ]
                     }),
                     beginButton: new sap.m.Button({
                         type: sap.m.ButtonType.Emphasized,
-                        text: that.models.getI18n("save"),
+                        text: that.i18n("save"),
                         press: function () {
-                            var variant = that.models.model('variant').getModel('variant').oData;
+                            var variant = that.getView().getModel(that.IDAPP + 'variant')?.oData;
                             let obj = {
                                 "view": view,
                                 "type": type,
@@ -43,11 +45,7 @@ sap.ui.define([], function () {
                             That._saveLocalVariants(obj, that)
                                 .then(persisted => {
 
-                                    that.toolbar.mAggregations.content.find((bt) => {
-                                        if (bt.mProperties.text + " " == that.models.getI18n("variants")) {
-                                            return bt;
-                                        }
-                                    }).setVisible(true);
+                                    that.headerToolbar.getContent()[4].setVisible(true);
 
                                     resolve(persisted);
                                 })
@@ -59,7 +57,7 @@ sap.ui.define([], function () {
                         }.bind(that)
                     }),
                     endButton: new sap.m.Button({
-                        text: that.models.getI18n("cancel"),
+                        text: that.i18n("cancel"),
                         press: function () {
                             resolve(false);
                             _oDialog.close();
@@ -68,7 +66,7 @@ sap.ui.define([], function () {
                     })
                 });
                 _oDialog.addStyleClass("sapUiContentPadding")
-                that.that.getView().addDependent(_oDialog);
+                that.getView().addDependent(_oDialog);
                 _oDialog.open();
             });
         },
@@ -82,7 +80,7 @@ sap.ui.define([], function () {
                 That._listLocalVariants(view, type, that)
                     .then(data => {
 
-                        that.models.model('variants').setModel(data);
+                        that.getView().setModel(new sap.ui.model.json.JSONModel(data), that.IDAPP + 'variants');
 
                         var oTable = new sap.m.Table({
                             mode: sap.m.ListMode.SingleSelectMaster,
@@ -91,44 +89,39 @@ sap.ui.define([], function () {
                                 var item = e.getSource().getSelectedItem();
                                 var idx = item.getBindingContextPath();
                                 idx = idx.replaceAll('/', '');
-                                var variants = that.models.model('variants').getModel().oData;
+                                var variants = that.getView().getModel(that.IDAPP + 'variants')?.oData;
+                                that.setSelectScreen(variants[idx].content);
                                 resolve(variants[idx].content);
                                 _oDialog.close();
                                 _oDialog.destroy();
                             }
                         })
-                        oTable.addColumn(new sap.m.Column({ header: new sap.m.Label({ text: "Name" }) }));
-                        oTable.addColumn(new sap.m.Column({ header: new sap.m.Label({ text: "Date" }) }));
+                        oTable.addColumn(new sap.m.Column({ header: new sap.m.Label({ text: "{i18n>nameModel}" }) }));
+                        oTable.addColumn(new sap.m.Column({ header: new sap.m.Label({ text: "{i18n>dateCreateModel}" }) }));
                         oTable.addColumn(new sap.m.Column({ header: new sap.m.Label({ text: "" }) }));
 
                         var colItems = new sap.m.ColumnListItem({ type: "Active" });
-                        colItems.addCell(new sap.m.Text({ text: "{" + that.models.IDAPP + "variants>name}", width: "200px" }));
-                        colItems.addCell(new sap.m.Text({ text: "{" + that.models.IDAPP + "variants>dateView}", width: "200px" }));
+                        colItems.addCell(new sap.m.Text({ text: "{" + that.IDAPP + "variants>name}", width: "200px" }));
+                        colItems.addCell(new sap.m.Text({ text: "{" + that.IDAPP + "variants>dateView}", width: "200px" }));
                         colItems.addCell(new sap.ui.core.Icon({
                             src: "sap-icon://delete",
                             width: "30px",
                             press: function (e) {
                                 let idx = e.getSource().getId().split("-")[2];
 
-                                let itens = that.models.model('variants').getModel().oData;
+                                let itens = that.getView().getModel(that.IDAPP + 'variants').oData;
 
                                 That._deleteVariant(itens[idx].key, that)
                                     .then(deleted => {
                                         if (deleted) {
                                             const newitens = itens.filter((elem, i) => i !== parseInt(idx));
 
-
                                             if (newitens.length === 0) {
-                                                that.toolbar.mAggregations.content.find((bt) => {
-                                                    if (bt.mProperties.text + " " == that.models.getI18n("variants")) {
-                                                        _oDialog.close();
-                                                        return bt;
-                                                    }
-                                                }).setVisible(false);
+                                                that.headerToolbar.getContent()[4].setVisible(false);
                                             }
 
-                                            that.models.model('variants').setModel(newitens);
-                                            ;
+                                            that.getView().setModel(new sap.ui.model.json.JSONModel(newitens), that.IDAPP + 'variants');
+
                                         }
                                     })
                                     .catch(err => {
@@ -136,17 +129,18 @@ sap.ui.define([], function () {
                                     });
                             }
                         }));
-                        oTable.bindAggregation("items", that.models.IDAPP + "variants>/", colItems);
+                        oTable.bindAggregation("items", that.IDAPP + "variants>/", colItems);
 
                         _oDialog = new sap.m.Dialog({
-                            title: that.models.getI18n("selectVariant"),
+                            icon: "sap-icon://customize",
+                            title: that.i18n("selectVariant"),
                             content: new sap.m.VBox({
                                 items: [
                                     oTable
                                 ]
                             }),
                             endButton: new sap.m.Button({
-                                text: that.models.getI18n("cancel"),
+                                text: that.i18n("cancel"),
                                 press: function () {
                                     resolve(null)
                                     _oDialog.close();
@@ -155,7 +149,7 @@ sap.ui.define([], function () {
                             })
                         });
                         //that.oVariantDialog.addStyleClass("sapUiContentPadding")
-                        that.that.getView().addDependent(_oDialog);
+                        that.getView().addDependent(_oDialog);
                         _oDialog.open();
                     })
                     .catch(err => {
@@ -203,7 +197,7 @@ sap.ui.define([], function () {
 
         _saveLocalVariants: function (data, that) {
             return new Promise((resolve, reject) => {
-                let idb = window.indexedDB.open(that.models.IDAPP + 'addLocalData', 1);
+                let idb = window.indexedDB.open(that.IDAPP + 'addLocalData', 1);
 
                 idb.onupgradeneeded = e => {
                     let conn = e.target.result
@@ -234,7 +228,7 @@ sap.ui.define([], function () {
         _listLocalVariants: function (view, type, that) {
             let That = this;
             return new Promise((resolve, reject) => {
-                let idb = window.indexedDB.open(that.models.IDAPP + 'addLocalData', 1);
+                let idb = window.indexedDB.open(that.IDAPP + 'addLocalData', 1);
 
                 idb.onupgradeneeded = e => {
                     let conn = e.target.result
@@ -284,7 +278,7 @@ sap.ui.define([], function () {
         },
         _deleteVariant: function (idx, that) {
             return new Promise((resolve, reject) => {
-                let idb = window.indexedDB.open(that.models.IDAPP + 'addLocalData', 1);
+                let idb = window.indexedDB.open(that.IDAPP + 'addLocalData', 1);
 
                 idb.onupgradeneeded = e => {
                     let conn = e.target.result
@@ -328,7 +322,7 @@ sap.ui.define([], function () {
                         let desc = (item.SCRTEXT_M) ? item.SCRTEXT_M : (item.SCRTEXT_S) ? item.SCRTEXT_S : item.SCRTEXT_L;
                         item.index = i;
                         item.visible = (item.VISIBLE == "X") ? true : false;
-                        item.description = (desc) ? item.FIELDNAME.split(that.models.IDAPP).pop() + " - " + desc : item.FIELDNAME.split(that.models.IDAPP).pop();
+                        item.description = (desc) ? item.FIELDNAME.split(that.IDAPP).pop() + " - " + desc : item.FIELDNAME.split(that.IDAPP).pop();
                         return item;
                     })
 
@@ -343,19 +337,19 @@ sap.ui.define([], function () {
                          */
                     });
                     oPanel.bindAggregation("items", {
-                        path: "" + that.models.IDAPP + "tablestruct>/",
+                        path: "" + that.IDAPP + "tablestruct>/",
                         template: new sap.m.P13nItem({
-                            columnKey: "{" + that.models.IDAPP + "tablestruct>FIELDNAME}",
-                            text: "{" + that.models.IDAPP + "tablestruct>description}",
+                            columnKey: "{" + that.IDAPP + "tablestruct>FIELDNAME}",
+                            text: "{" + that.IDAPP + "tablestruct>description}",
                         })
                     })
 
                     oPanel.bindAggregation("columnsItems", {
-                        path: "" + that.models.IDAPP + "tablestruct>/",
+                        path: "" + that.IDAPP + "tablestruct>/",
                         template: new sap.m.P13nColumnsItem({
-                            columnKey: "{" + that.models.IDAPP + "tablestruct>FIELDNAME}",
-                            index: "{" + that.models.IDAPP + "tablestruct>index}",
-                            visible: "{" + that.models.IDAPP + "tablestruct>visible}"
+                            columnKey: "{" + that.IDAPP + "tablestruct>FIELDNAME}",
+                            index: "{" + that.IDAPP + "tablestruct>index}",
+                            visible: "{" + that.IDAPP + "tablestruct>visible}"
                         })
                     })
 
@@ -365,7 +359,7 @@ sap.ui.define([], function () {
                         reset: function () { alert("olá") },
                         ok: function (e) {
 
-                            var struc = e.getSource().getModel(that.models.IDAPP + 'tablestruct').getProperty('/');
+                            var struc = e.getSource().getModel(that.IDAPP + 'tablestruct').getProperty('/');
 
                             var strucClone = [...struc];
 
@@ -401,9 +395,9 @@ sap.ui.define([], function () {
                         }
                     });
 
-                    this._oDialog.setModel(oModel, that.models.IDAPP + "tablestruct")
+                    this._oDialog.setModel(oModel, that.IDAPP + "tablestruct")
                     this._oDialog.setContentWidth("500px")
-                    that.that.getView().addDependent(this._oDialog);
+                    that.getView().addDependent(this._oDialog);
                     this._oDialog.open();
                 });
             }
@@ -432,16 +426,16 @@ sap.ui.define([], function () {
                             new sap.m.Column({ header: new sap.m.Label({ text: "DESCRição" }) })
                         ],
                         items: {
-                            path: that.models.IDAPP + 'filterstruct>/',
+                            path: that.IDAPP + 'filterstruct>/',
                             sorter: new sap.ui.model.Sorter({
                                 path: 'sectionName',
                                 group: true
                             }),
                             template: new sap.m.ColumnListItem({
-                                selected: "{" + that.models.IDAPP + "filterstruct>selected}",
+                                selected: "{" + that.IDAPP + "filterstruct>selected}",
                                 cells: [
-                                    new sap.m.Text({ text: "{" + that.models.IDAPP + "filterstruct>FIELDNAME}", width: "100px" }),
-                                    new sap.m.Text({ text: "{" + that.models.IDAPP + "filterstruct>SELTEXT_L}", width: "300px" })
+                                    new sap.m.Text({ text: "{" + that.IDAPP + "filterstruct>FIELDNAME}", width: "100px" }),
+                                    new sap.m.Text({ text: "{" + that.IDAPP + "filterstruct>SELTEXT_L}", width: "300px" })
                                 ]
                             })
                         }
