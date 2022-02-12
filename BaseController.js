@@ -7,6 +7,7 @@ sap.ui.define([
 
     return Controller.extend("add.base.ui5js.lib.BaseController", {
         callService: callService,
+
         loadingConnfig: async function (idapp, that) {
             /***********************************************
              * 
@@ -267,6 +268,45 @@ sap.ui.define([
         i18n(txt) {
             return this.getView().getModel("i18n").getResourceBundle().getText(txt);
         },
+
+        async execFn(name) {
+
+            if (this[name]) return this[name];
+
+            return await this.buildFn(name);
+        },
+        async buildFn(name) {
+
+            return await this.callService.postSync("add",
+                {
+                    actionName: "TAXPEXIT.list",
+                    params: { fields: ["SOURCE", "ACTIVE"], query: { NEXIT: name } }
+                }).then((resp) => {
+                    if (resp) {
+                        if (typeof resp === 'string')
+                            resp = JSON.parse(resp);
+
+                        if (resp.rows[0]?.ACTIVE) {
+                            var func = new Function(
+                                "return " + (this.isBase64.test(resp.rows[0].SOURCE) ? window.atob(resp.rows[0].SOURCE) : resp.rows[0].SOURCE)
+                            )();
+                            return func
+                        } else {
+                            if (resp.rows[0]?.ACTIVE === false) {
+                                return () => console.warn("EXIT_DISABLE", name);
+                            } else {
+                                return () => console.warn("NOT_IMPLEMENTED", name);
+                            }
+                        }
+                    } else {
+                        return () => { console.log(name, 'NOT_IMPLEMENTED') }
+                    }
+                }).catch((error) => {
+                    console.error(name, error);
+                    throw error;
+                })
+        },
+
         selectMandt(mandts) {
 
             sap.ui.core.BusyIndicator.hide();
@@ -275,7 +315,7 @@ sap.ui.define([
                 var aFilters = [],
                     sSearchValue = oEvent.getParameter("value"),
                     itemsBinding = oEvent.getParameter("itemsBinding");
-                debugger;
+
                 // create the local filter to apply
                 if (sSearchValue !== undefined && sSearchValue.length > 0) {
                     aFilters.push(new sap.ui.model.Filter("mandt", sap.ui.model.FilterOperator.Contains, sSearchValue));
@@ -321,6 +361,11 @@ sap.ui.define([
 
             popUp.open();
 
-        }
+        },
+        ICON_ACTIVE: 'sap-icon://message-success',
+        ICON_ERROR: 'sap-icon://message-error',
+        ICON_STATUS: 'sap-icon://multiselect-all',
+        Model: sap.ui.model.json.JSONModel,
+        isBase64: /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/
     })
 });

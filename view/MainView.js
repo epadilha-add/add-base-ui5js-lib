@@ -165,9 +165,19 @@ sap.ui.define(
 
                     if (rows.rows) rows = rows.rows;
 
+                    const fnAfterList = MainView.context.filter(c => c.afterList) || [];
+
                     if (rows instanceof Array) {
+
+
                         data = {
                             results: rows.map((lines) => {
+                                for (const fld of fnAfterList) {
+                                    /**
+                                     * função implementada no contexto
+                                     */
+                                    lines[fld.FIELD] = fld.afterList(lines[fld.FIELD]);
+                                }
                                 return MainView.normalize(lines);
                             })
                         };
@@ -419,7 +429,7 @@ sap.ui.define(
                 MainView.dialogDelete.open();
 
             },
-            save: async function () {
+            save: async function (backIfSave, checkObligatoryFields) {
 
                 MainView.getView().setBusy(true);
 
@@ -429,7 +439,7 @@ sap.ui.define(
                 for (const field of MainView.context) {
                     if (field.REFKIND == 'D') field.REFKIND = null;//TODO: Eliminar após saneamento
                     if (field.field.split('.')[1] || values[field.field] === undefined) continue;
-                    vlas[field.REFKIND || field.field] = values[field.field];
+                    vlas[field.REFKIND || field.field] = (field.beforeSaving) ? field.beforeSaving(values[field.field]) : values[field.field];
                 }
 
                 vlas.id = values.ID;
@@ -456,11 +466,12 @@ sap.ui.define(
 
                 MainView.logInfo(params);
 
-                if (!MainView.obligatoryCheck().checkByData(vlas)) return false;
+                if (checkObligatoryFields || checkObligatoryFields === undefined)
+                    if (!MainView.obligatoryCheck().checkByData(vlas)) return false;
 
 
                 if (MainView.beforeSaving instanceof Function)
-                    if (!MainView.beforeSaving(vlas, MainView)) return false;
+                    if (!await MainView.beforeSaving(vlas, MainView)) return false;
 
                 return await MainView.callService.postSync("add", params).then(async (resp) => {
 
@@ -474,7 +485,9 @@ sap.ui.define(
                     MainView.changeMainModel(resp);
 
                     MainView.message("successUpdate");
-                    MainView.mainContent.back();
+
+                    if (backIfSave || backIfSave === undefined)
+                        MainView.mainContent.back();
 
                     return true;
 
@@ -518,6 +531,8 @@ sap.ui.define(
                     MainView.View.setBtEvents(View.id);
                     MainView.View.title.setText(View[MainView.titleField]);
                     MainView.View.avatar.setSrc(View.LOGO || View.ICON || View.that.icon || View.imageURI);
+                    if (MainView.getView().getController().afterSelectLine)
+                        if (!MainView.getView().getController().afterSelectLine(View, MainView, MainView.View)) return;
                 }
 
                 let values = {};
@@ -649,6 +664,7 @@ sap.ui.define(
                     MainView.table = new sap.m.Table({
                         //contextualWidth: "Auto",
                         //alternateRowColors: true,
+                        //mode: sap.m.ListMode.MultiSelect,
                         //backgroundDesign: sap.m.BackgroundDesign.Transparent,
                         //sticky: new sap.m.Sticky.ColumnHeaders,
                         popinLayout: MainView.popinLayout || "GridSmall",
@@ -695,26 +711,30 @@ sap.ui.define(
                                 field.field === "ACTIVE") continue;
 
                             let txt = field.SCRTEXT_S || field.SCRTEXT_M || field.SCRTEXT_L || field.DESCR || field.FIELDNAME;
+                            let col = new sap.m.Text({ tooltip: field.SCRTEXT_L + " : " + field.field, text: txt }).addStyleClass("labelColumnsTable");
+                            if (!field.columnObject) {
+                                if (!field.ISICON && field.DATATYPE !== 'BOOL') {
+                                    cells.push(new sap.m.Text({
+                                        //width: "35%",
+                                        text: datatype(field),
+                                        wrapping: false,
+                                    }).addStyleClass("labelColumnsTableBold"));
+                                } else {
+                                    cells.push(new sap.m.ObjectStatus({
+                                        icon: {
+                                            parts: ["mainModel>" + field.field],
+                                            formatter: (data) => {
 
-                            if (!field.ISICON) {
-                                cells.push(new sap.m.Text({
-                                    //width: "35%",
-                                    text: datatype(field),
-                                    wrapping: false,
-                                }).addStyleClass("labelColumnsTableBold"));
-                            } else {
-                                cells.push(new sap.m.ObjectStatus({
-                                    icon: {
-                                        parts: ["mainModel>" + field.field],
-                                        formatter: (data) => {
-
-                                            return data;
+                                                return (data) ? MainView.ICON_ACTIVE : "";
+                                            }
                                         }
-                                    }
-                                }).addStyleClass("labelColumnsTable"))
+                                    }).addStyleClass("labelColumnsTable"))
+                                }
+                            } else {
+                                cells.push(field.columnObject.addStyleClass("labelColumnsTable"));
                             }
 
-                            let col = new sap.m.Text({ tooltip: field.SCRTEXT_L + " : " + field.field, text: txt }).addStyleClass("labelColumnsTable");
+
 
                             //armazena id para mudar o texto posterior
                             field.byIdText = col.getId();
@@ -771,7 +791,7 @@ sap.ui.define(
                                         type: "Success",
                                         formatter: (data) => {
 
-                                            return (data) ? "sap-icon://overlay" : "sap-icon://circle-task";
+                                            return (data) ? MainView.ICON_ACTIVE : "";
                                         }
                                     }
                                 }).addStyleClass("labelColumnsTable"))
@@ -1021,6 +1041,7 @@ sap.ui.define(
                                 MainView.navToView(vals);
 
                             } catch (error) {
+                                MainView.getView().setBusy(false);
                                 throw new TypeError(error); return;
                             }
 
@@ -1185,9 +1206,9 @@ sap.ui.define(
                             MainView.btNew
                         ];
 
-                        if (MainView.appendOthersViewButtons) {
-                            // outros botões podem ser ineridos a partir do controller
-                            MainView.appendOthersViewButtons(MainView.toolBarContent, MainView);
+                        if (MainView.getView().getController().moreButtonsMainView) {
+                            // outros botões podem ser ineridos a partir do controller  retornar Array
+                            MainView.toolBarContent = MainView.getView().getController().moreButtonsMainView(MainView.toolBarContent, MainView);
                         }
                     }
 
@@ -1332,7 +1353,7 @@ sap.ui.define(
                             screens.push(key);
                         }
 
-                        screens.forEach((key) => {
+                        for (const key of screens) { //screen.foreach não termos o mesmo resultado
 
                             if (key.external) {
                                 /**
@@ -1398,7 +1419,7 @@ sap.ui.define(
                                 }
                             }
 
-                        })
+                        }
                     }
                 }
             },
@@ -1592,7 +1613,7 @@ sap.ui.define(
                         if (MainView.context.find(c => c.foreignKey === true))
                             /*-> BUG mesmo prevendo chave estrangeira, não foi encontrado
                             * o filtro..analisar
-
+            
                             * somente para casos especiais como tax.cust.process.activities.reversal
                             * onde o mesmo não foi instanciado como componente, mas sim como 
                             * MainView.sectionsHeader

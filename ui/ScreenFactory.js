@@ -20,7 +20,7 @@ sap.ui.define([
                 * 
                  *************************************************************************/
                 let s = null;
-                let lSc = null;
+                let lSc = null; 
 
                 s = Screens.find(e => e.name === screen.key);
 

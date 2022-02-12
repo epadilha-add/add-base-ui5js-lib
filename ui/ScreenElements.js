@@ -6,9 +6,8 @@ sap.ui.define([
     "../commons/AddModels",
     "../callService",
     "sap/ui/richtexteditor/RichTextEditor",
-    "sap/ui/codeeditor/CodeEditor",
     "sap/ui/core/Fragment"],
-    function (Object, Log, JSONModel, AddModels, callService, RichTextEditor, CodeEditor, Fragment) {
+    function (Object, Log, JSONModel, AddModels, callService, RichTextEditor, Fragment) {
         'use strict';
         let MainView = {};
         return Object.extend("ScreenElements", {
@@ -264,10 +263,18 @@ sap.ui.define([
 
                 res.push(oLabel);
 
-
                 var decimals = 0;
                 var maxInt = 0;
                 var vType = null;
+
+               if(struc.customField){
+                /**
+                 * aqui podemos implementar um tipo no controller
+                 **/
+                    struc.customField(struc, that, modelName, caller, Screen);
+
+                    return [];
+               }
 
                 switch (struc.DATATYPE) {
 
@@ -558,64 +565,22 @@ sap.ui.define([
 
                                 let tabs = {};
 
-                                MainView.ceP = new CodeEditor({
-                                    height: "500px",
+                                MainView.ceP = new sap.ui.codeeditor.CodeEditor({
+                                    height: "600px",
                                     type: "javascript",
                                     colorTheme: "chrome"
                                 }).bindProperty("value", modelName + '>/SOURCE');
 
-                                MainView.ceP.addStyleClass("sapMPanelContentSource")
-
-                                MainView.ceE = new CodeEditor({
-                                    height: "500px",
-                                    type: "javascript",
-                                    colorTheme: "chrome"
-                                }).bindProperty("value", modelName + '>/MOK');
-
-                                MainView.ceE.setVisible(false);
-
-                                MainView.ceS = new CodeEditor({
-                                    height: "500px",
-                                    type: "javascript",
-                                    colorTheme: "chrome"
-                                });
-
-                                MainView.ceS.setVisible(false);
-
-                                MainView.ceD = new CodeEditor({
-                                    height: "500px",
-                                    type: "javascript",
-                                    colorTheme: "chrome"
-                                });
-
-                                MainView.ceD.setVisible(false);
-
-                             /*    if (MainView.codeeditor().liveChange)
-                                    ce.attachLiveChange(MainView.codeeditor().liveChange) */;
-
-                                if (MainView.codeeditor().tabs && MainView.codeeditor().tabs.length > 0) {
-                                    tabs = MainView.codeeditor().tabs.map((editor) => {
-                                        return new sap.m.IconTabFilter({
-                                            icon: editor.icon,
-                                            text: editor.title,
-                                            key: editor.key
-                                        });
-                                    })
-                                    MainView.View.addOtherContent(new sap.m.IconTabHeader({
-                                        select: (oEvent) => {
-                                            MainView.codeeditor().onSelectTab(oEvent, MainView)
-                                        },
-                                        items: tabs
-                                    }))
-                                }
-
+                                let fcat = MainView.fieldcat.find(f => f.field === struc.FIELDNAME);
+                                if (fcat)
+                                    (caller === 1) ? fcat.idUi5New = MainView.ceP.getId() : fcat.idUi5 = MainView.ceP.getId();
+   
                                 MainView.View.addOtherContent(MainView.ceP);
-                                MainView.View.addOtherContent(MainView.ceE);
-                                MainView.View.addOtherContent(MainView.ceS);
-                                MainView.View.addOtherContent(MainView.ceD);
+                  
 
-                                return [];
-
+                                return [];                              
+                           
+                                    break;
                             default:
 
                                 Log.info(struc.FIELDNAME, "type (MI,MC,TP,..) no defined");
@@ -649,29 +614,7 @@ sap.ui.define([
 
                         this['rp' + res[0].getId()].openBy(res[0]);
                     }
-                    /*         res[0].addEventDelegate({
-                                onmouseover: () => {
-                                    this.timeout = window.setTimeout(function (oEvent) {
-                 
-                                        if (!this['rp' + res[0].getId()])
-                                            this['rp' + res[0].getId()] =
-                                                new sap.m.ResponsivePopover("ResponsivePopover" + res[0].getId(), {
-                                                    contentWidth: '40%', contentHeight: '40%',
-                                                    showHeader: false,
-                                                    content: new sap.ui.core.HTML({
-                                                        preferDOM: true,
-                                                        sanitizeContent: false,
-                                                        content: "<div>" + struc.CINFO + "</div>"
-                                                    })
-                                                })
-                 
-                                        this['rp' + res[0].getId()].openBy(res[0]);
-                                    }, 1700)
-                                },
-                                onmouseout: () => {
-                                    if (this.timeout) window.clearTimeout(this.timeout)
-                                }
-                            }) */
+      
                 }
 
                 /**

@@ -34,6 +34,14 @@ sap.ui.define([], function () {
                         text: that.i18n("save"),
                         press: function () {
                             var variant = that.getView().getModel(that.IDAPP + 'variant')?.oData;
+
+                            if (content.prop) delete content.prop;
+
+                            content = (content instanceof Array) ? content.map(c => {
+                                delete c.prop
+                                return c;
+                            }) : content;
+
                             let obj = {
                                 "view": view,
                                 "type": type,
@@ -248,6 +256,7 @@ sap.ui.define([], function () {
 
                         let request = store.getAll();
                         request.onsuccess = e => {
+
                             let itens = request.result.map((item, i) => {
                                 item.key = keys[i];
                                 item.dateView = That.DateHelper.datefullToText(item.date);
@@ -257,6 +266,7 @@ sap.ui.define([], function () {
                             let sorted = filtered.slice().sort(function (a, b) {
                                 return new Date(b.date) - new Date(a.date);
                             });
+
                             resolve(sorted);
                         }
 
@@ -322,7 +332,7 @@ sap.ui.define([], function () {
                         let desc = (item.SCRTEXT_M) ? item.SCRTEXT_M : (item.SCRTEXT_S) ? item.SCRTEXT_S : item.SCRTEXT_L;
                         item.index = i;
                         item.visible = (item.VISIBLE == "X") ? true : false;
-                        item.description = (desc) ? item.FIELDNAME.split(that.IDAPP).pop() + " - " + desc : item.FIELDNAME.split(that.IDAPP).pop();
+                        item.description = (desc) ? item.FIELD.split(that.IDAPP).pop() + " - " + desc : item.FIELD.split(that.IDAPP).pop();
                         return item;
                     })
 
@@ -339,7 +349,7 @@ sap.ui.define([], function () {
                     oPanel.bindAggregation("items", {
                         path: "" + that.IDAPP + "tablestruct>/",
                         template: new sap.m.P13nItem({
-                            columnKey: "{" + that.IDAPP + "tablestruct>FIELDNAME}",
+                            columnKey: "{" + that.IDAPP + "tablestruct>FIELD}",
                             text: "{" + that.IDAPP + "tablestruct>description}",
                         })
                     })
@@ -347,7 +357,7 @@ sap.ui.define([], function () {
                     oPanel.bindAggregation("columnsItems", {
                         path: "" + that.IDAPP + "tablestruct>/",
                         template: new sap.m.P13nColumnsItem({
-                            columnKey: "{" + that.IDAPP + "tablestruct>FIELDNAME}",
+                            columnKey: "{" + that.IDAPP + "tablestruct>FIELD}",
                             index: "{" + that.IDAPP + "tablestruct>index}",
                             visible: "{" + that.IDAPP + "tablestruct>visible}"
                         })
@@ -375,7 +385,8 @@ sap.ui.define([], function () {
 
                             var strucSMapped = strucSorted.map((item, i) => {
                                 item.VISIBLE = (item.visible) ? "X" : "";
-                                item.COL_POS = (i + 1)
+                                if (!item.COL_POS)
+                                    item.COL_POS = (i + 1);
                                 delete item.description
                                 delete item.index
                                 delete item.visible
@@ -416,14 +427,14 @@ sap.ui.define([], function () {
                         return el;
                     });
 
-                    that.models.model('filterstruct').setModel(new sap.ui.model.json.JSONModel(filterstruct));
+                    that.getView().setModel(new sap.ui.model.json.JSONModel(filterstruct));
 
                     var oTable = new sap.m.Table({
                         mode: sap.m.ListMode.MultiSelect,
                         fixedLayout: false,
                         columns: [
                             new sap.m.Column({ header: new sap.m.Label({ text: "Nome" }) }),
-                            new sap.m.Column({ header: new sap.m.Label({ text: "DESCRição" }) })
+                            new sap.m.Column({ header: new sap.m.Label({ text: "Descrição" }) })
                         ],
                         items: {
                             path: that.IDAPP + 'filterstruct>/',
@@ -434,7 +445,7 @@ sap.ui.define([], function () {
                             template: new sap.m.ColumnListItem({
                                 selected: "{" + that.IDAPP + "filterstruct>selected}",
                                 cells: [
-                                    new sap.m.Text({ text: "{" + that.IDAPP + "filterstruct>FIELDNAME}", width: "100px" }),
+                                    new sap.m.Text({ text: "{" + that.IDAPP + "filterstruct>FIELD}", width: "100px" }),
                                     new sap.m.Text({ text: "{" + that.IDAPP + "filterstruct>SELTEXT_L}", width: "300px" })
                                 ]
                             })
@@ -451,7 +462,8 @@ sap.ui.define([], function () {
                         endButton: new sap.m.Button({
                             text: "Ok",
                             press: function () {
-                                var struct = that.models.model('filterstruct').getModel().oData; //that.getView().getModel("filterstruct").oData;
+                                debugger;
+                                var struct = that.getView().getModel().oData; //that.getView().getModel("filterstruct").oData;
 
                                 var strucClone = [...struct];
 

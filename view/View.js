@@ -22,8 +22,8 @@ sap.ui.define([
              * ao selecionar a linha da sap.,
              * 
              *******************************************/
-            if (MainView.onSelectLine)
-                if (!MainView.onSelectLine(params, MainView)) return;
+            if (MainView.getView().getController().beforeSelectLine)
+                if (!MainView.getView().getController().beforeSelectLine(params, MainView, View)) return;
 
             this.setBtEvents();
 
@@ -137,12 +137,13 @@ sap.ui.define([
                 params.ACTIVE = true;
 
             if (MainView.upButton || MainView.upButton === undefined)
-                this.upButton = new sap.m.Button({
+                this.upButton = new sap.m.Button( {
                     icon: 'sap-icon://slim-arrow-up', tooltip: '{i18n>openWindow}', visible: true, press: (oEvent) => {
 
                         let urlParams = new URLSearchParams(window.location.search);
                         urlParams.set('app', MainView.IDAPP);
-                        urlParams.set('id', params.id);
+                        if (params.id)
+                            urlParams.set('id', params.id);
                         urlParams.set('tb', "0"); //"turn-off toolbar"
                         urlParams.set('nIO', "1"); // "turn-on navIfOne"
 
@@ -185,6 +186,11 @@ sap.ui.define([
                 ];
             }
 
+            if (MainView.getView().getController().moreButtonsView) {
+                //retornar Array
+                buttons = MainView.getView().getController().moreButtonsView(buttons, params, MainView, View);
+            }
+
             View.sections = [];
 
             if (this.component && (this.component.embedded === undefined || this.component.embedded === true)) {
@@ -195,16 +201,21 @@ sap.ui.define([
                  **************************************************/
                 if (!MainView.infoSections) MainView.infoSections = [];
 
-                View.sections[0] = this.getContainer(0);
+                let secs = MainView.context.find(c => c?.section?.index === 0 || !c.section);
 
-                let secs = MainView.context.find(c => c.section);
+                if (secs)
+                    View.sections[0] = this.getContainer(0);
+
+                secs = null;
+
+                secs = MainView.context.find(c => c?.section?.index > 0);
 
                 if (secs) {
 
                     if (!(secs instanceof Array)) secs = [secs];
 
                     for (const sec of secs) {
-                        View.sections[sec.section.index || View.sections.length] = this.getContainer(sec.section.index, sec);
+                        View.sections[sec.section.index || View.sections.length - 1] = this.getContainer(sec.section.index, sec);
                     }
                 }
             }
@@ -230,22 +241,12 @@ sap.ui.define([
                 tooltip: MainView.IDAPP + " / " + MainView.collection + " ID: " + params.id
             });
 
-            this.avatar.ondblclick = () => {
-                /*           debugger;
-                          let urlParams = new URLSearchParams(window.location.search);
-                          urlParams.set('app', MainView.IDAPP);
-                          urlParams.set('id', params.id);
-                          urlParams.set('tb', "0"); //"turn-off toolbar"
-                          urlParams.set('nIO', "1"); // "turn-on navIfOne"
-          
-                          const el = document.createElement('textarea');
-          
-                          el.value  urlParams.toString()
-          
-                          window.clipboardData.setData("Text", urlParams.toString()); */
+            this.avatar.ondblclick = (oEvent) => {
+                if (MainView.getView().getController().ondblclickAvatarView)
+                    MainView.getView().getController().ondblclickAvatarView(oEvent, params, MainView, View);
             }
 
-            this.Bar = new sap.m.Bar({
+            View.Bar = new sap.m.Bar({
                 contentLeft: [MainView.btBack, this.avatar, this.title],
                 contentMiddle: [this.upButton],
                 contentRight: buttons
@@ -259,7 +260,7 @@ sap.ui.define([
                 alwaysShowContentHeader: false,
                 showFooter: true,
                 headerTitle: null,
-                headerContent: [this.Bar],
+                headerContent: [View.Bar],
                 navigate: (oEvent) => {
 
                     /*********************************************
@@ -273,15 +274,23 @@ sap.ui.define([
                 },
                 sections: View.sections
             });
+
+            if (MainView.getView().getController().beforeRenderingView)
+                MainView.getView().getController().beforeRenderingView(params, MainView, View);
             /*********************************************
              * construir elementos de tela
              ********************************************/
             new ScreenElements(MainView).set(MainView.context, View).then(() => {
                 View.Page.setBusy(false);
                 MainView.getView().setBusy(false);
+                if (MainView.getView().getController().afterRenderingView)
+                    MainView.getView().getController().afterRenderingView(params, MainView, View);
             });
 
             sap.ui.core.BusyIndicator.hide();
+
+            if (MainView.getView().getController().afterSelectLine)
+                MainView.getView().getController().afterSelectLine(params, MainView, View);
 
             return this;
 
@@ -390,6 +399,7 @@ sap.ui.define([
 
             this.nivel = sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].saves.length;
         },
+
         removeBtEvents() {
             try {
                 let i = sap.ui.getCore().byId(MainView.rootApp)[MainView.rootComponent].saves.length;
@@ -399,6 +409,7 @@ sap.ui.define([
                 console.error("removeBtEvents " + erro)
             }
         },
+
         getId() {
             return this.id;
         },
@@ -427,6 +438,7 @@ sap.ui.define([
 
             this.Page.getObjectPageHeader().setObjectTitle(data.header)
         },
+
         getContainer(indexSection, sec) {
 
             let infoSection = {}
@@ -462,7 +474,7 @@ sap.ui.define([
 
             return new sap.uxap.ObjectPageSection({
                 showTitle: false,
-                title: (sec === 0) ? "{i18n>basicData}" : infoSection.title || sec.SCRTEXT_S || "{i18n>basicData}",
+                title: infoSection.title || ((sec === 0) ? "{i18n>basicData}" : infoSection.title || sec.SCRTEXT_S || "{i18n>basicData}"),
                 tooltip: infoSection.tooltip || sec.SCRTEXT_L,
                 subSections: subSec
             })
