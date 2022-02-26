@@ -322,6 +322,11 @@ sap.ui.define([], function () {
                                 params.params.DESCR = dscr;
                                 delete params.params.foreground;
 
+                                for (const fld of MainView.context.filter(c => (c.params === true || c.query === false || c.jobParams === true))) {
+                                    params.params[fld.FIELD] = params.params.query[fld.FIELD];
+                                    delete params.params.query[fld.FIELD];
+                                }
+
                                 MainView.callService
                                     .postSync("add", params)
                                     .then(resp => {
