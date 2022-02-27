@@ -243,6 +243,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
              * parameters prepare - screenSelect
              */
             for (const field of MainView.fieldcat) {
+
                 switch (field.REFTYPE) {
                     case "LB":
                         selectScreen[field.REFKIND || field.field] = sap.ui.getCore().byId(field.idUi5).getSelectedKey();

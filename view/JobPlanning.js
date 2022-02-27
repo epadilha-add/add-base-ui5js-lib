@@ -13,7 +13,7 @@ sap.ui.define([], function () {
                 let buttons = [
                     separator ? new sap.m.ToolbarSeparator() : null,
                     new sap.m.Button({
-                        tooltip: "{i18n>columnView}",
+                        tooltip: "{i18n>plan}",
                     })
                         .setIcon("sap-icon://date-time")
                         .setType("Transparent")
@@ -306,13 +306,18 @@ sap.ui.define([], function () {
 
                                 let dscr = descr.getValue();
 
-                                let filters = { ...MainView.selectScreenFilters };
-                                delete filters.MAXROWS;
-
                                 let params = externalParams || MainView.getParamsExecute();
 
                                 params.jobOpts = { repeat: { every: evry || 2000, limit: lmit || 1 } };
                                 params.params.query = MainView.getSelectScreenFilters(MainView);
+
+
+                                for (const key in params.params.query) {
+                                    if (!params.params.query[key] || params.params.query[key] === null) delete params.params.query[key];
+                                }
+
+                                delete params.params.query.MAXROWS;
+
                                 params.params.jobName = MainView.IDAPP;
                                 params.params.DESCR = dscr;
                                 delete params.params.foreground;
@@ -324,8 +329,8 @@ sap.ui.define([], function () {
                                         MainView.message("jobCreateSuccess");
                                         getPlans();
                                         /* } else {
-										MainView.message("jobCreateError");
-									}*/
+                                        MainView.message("jobCreateError");
+                                    }*/
                                     })
 
                                     .catch(error => {

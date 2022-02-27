@@ -6,12 +6,13 @@ sap.ui.define(
         "../commons/Helpers",
         "./ToolBarButtons",
         "../view/JobPlanning",
+        "../view/ComplementData",
         "../commons/FieldsCatalog",
         "sap/ui/richtexteditor/RichTextEditor",
         "sap/uxap/ObjectPageLayout",
         "sap/ui/table/Table",
     ],
-    function (Object, ScreenElements, ScreenFactory, Helpers, ToolBarButtons, Job, FieldsCatalog) {
+    function (Object, ScreenElements, ScreenFactory, Helpers, ToolBarButtons, Job, ComplementData, FieldsCatalog) {
         "use strict";
 
         let MainView = {};
@@ -112,6 +113,10 @@ sap.ui.define(
                 }
 
                 let params = externalQuery || MainView.getParamsExecute();
+
+                if (MainView.getView().getController().beforeExecute) {
+                    await MainView.getView().getController().beforeExecute(params, MainView)
+                }
 
                 await MainView.callService
                     .postSync("add", params)
@@ -217,6 +222,9 @@ sap.ui.define(
 
                         MainView.JobPlanning ? Job.get(MainView).forEach(bt => table.getToolbar().addContent(bt, true)) : [];
 
+                        if (MainView.complementData)
+                            table.getToolbar().addContent(_getComplementDataButton());
+
                         ToolBarButtons.get(MainView).forEach(bt => table.getToolbar().addContent(bt));
 
                         //TODO: aqui incluir botões comuns da table, como configuração de colunas
@@ -286,6 +294,10 @@ sap.ui.define(
                                         }
                                     },
                             });
+                        }
+
+                        function _getComplementDataButton() {
+                            return ComplementData.get(MainView);
                         }
                     }
                 }
@@ -426,21 +438,25 @@ sap.ui.define(
                 if (cat) cat.width = oEvent.getParameter("width");
             },
             columnMove: async function (oEvent) {
-                let catm = MainView.View.fieldcat.find(c => c.FIELD === oEvent.getParameter("column").getProperty("filterProperty"));
-                const currentPos = catm.COL_POS;
-                if (catm) catm.COL_POS = oEvent.getParameter("newPos");
+                const ctm = MainView.View.fieldcat.find(c => c.FIELD === oEvent.getParameter("column").getProperty("filterProperty"));
 
-                oEvent
-                    .getSource()
-                    .getColumns()
-                    .forEach(c => {
-                        let cat = MainView.View.fieldcat.find(ct => ct.FIELD === c.getProperty("filterProperty"));
-                        if (c.getIndex() > currentPos) {
-                            cat.COL_POS = (cat.COL_POS || c.getIndex()) + 1;
-                            /* } else {
-                                cat.COL_POS = c.getIndex(); */
-                        }
-                    });
+                if (ctm) ctm.COL_POS = oEvent.getParameter("newPos");
+
+                const currentPos = ctm.COL_POS;
+
+                for (const c of oEvent.getSource().getColumns()) {
+                    let cat = MainView.View.fieldcat.find(ct => ct.FIELD === c.getProperty("filterProperty") && ct.FIELD !== ctm.FIELD);
+
+                    if (!cat) continue;
+
+                    if (c.getIndex() >= currentPos) {
+                        cat.COL_POS = (cat.COL_POS || c.getIndex()) + 1;
+                    } else {
+                        cat.COL_POS = c.getIndex();
+                    }
+                };
+
+                MainView.View.fieldcat.sort((a, b) => a.COL_POS - b.COL_POS);
             },
             buildColumns: async function (ViewTable, MainView) {
                 //  await MainView.setFn("getFieldByType");
