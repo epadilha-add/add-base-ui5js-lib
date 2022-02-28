@@ -35,9 +35,9 @@ sap.ui.define([], function () {
                             content =
                                 content instanceof Array
                                     ? content.map(c => {
-                                          delete c.prop;
-                                          return c;
-                                      })
+                                        delete c.prop;
+                                        return c;
+                                    })
                                     : content;
 
                             let obj = {
@@ -198,6 +198,7 @@ sap.ui.define([], function () {
 
         _saveLocalVariants: function (data, that) {
             return new Promise((resolve, reject) => {
+
                 let idb = window.indexedDB.open(that.IDAPP + "addLocalData", 1);
 
                 idb.onupgradeneeded = e => {
@@ -223,6 +224,7 @@ sap.ui.define([], function () {
                 idb.onerror = e => {
                     reject(e.target.error);
                 };
+
             });
         },
 

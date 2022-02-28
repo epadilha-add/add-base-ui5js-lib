@@ -1,4 +1,5 @@
 sap.ui.define([
+    "sap/ui/base/Object",
     "sap/ui/layout/Splitter",
     "sap/ui/layout/SplitterLayoutData",
     "sap/ui/layout/HorizontalLayout",
@@ -16,22 +17,25 @@ sap.ui.define([
     "./ToolBarButtons",
     "sap/ui/codeeditor/CodeEditor",
     "../commons/FieldsCatalog"
-], function (Splitter, SplitterLayoutData, HorizontalLayout, VerticalLayout, Page, Button, CheckBox, Input, Text, VBox, FlexItemData, PDFViewer, FieldsCatalog) {
+], function (Object, Splitter, SplitterLayoutData, HorizontalLayout, VerticalLayout, Page, Button, CheckBox, Input, Text, VBox, FlexItemData, PDFViewer, FieldsCatalog) {
+    "use strict";
+    let oSplitter = {};
+    let This = {};
+    var MainView;
+    let pageSize = 50;
+    return Object.extend("add.ui.View.DocumentView", {
 
-    var oSplitter = {};
+        constructor: function (that, icon, topRight, lowerLeft, factory, title) {
+            "use strict"
 
-    return {
 
-        setIds(docs) {
-            this.ids = docs;
-            return this;
-        },
-        get(MainView) {
+            MainView = that;
+            this.topRight = topRight;
+            this.lowerLeft = lowerLeft;
 
-            let title = new sap.m.Label({
-                text: 'DADOS COMPLEMENTARES',
+            let tit = new sap.m.Label({
+                text: title || '{i18n>complementData}',
             });
-
             this.Page = new Page({
                 showHeader: false,
                 showSubHeader: true,
@@ -44,7 +48,7 @@ sap.ui.define([
                         press: () => {
                             MainView.mainContent.back();
                         },
-                    }), title],
+                    }), tit],
                     contentMiddle: [],
                     contentRight: [new sap.m.Button({
                         icon: 'sap-icon://decline',
@@ -58,15 +62,16 @@ sap.ui.define([
                 ]
             });
 
-            MainView.getView().addDependent(this.Page);
+            if (factory) {
+                MainView.getView().addDependent(this.Page);
+                MainView.mainContent.addPage(this.Page);
+            }
 
-            MainView.mainContent.addPage(this.Page);
-
-            MainView.ComplementData = this;
+            This = this;
 
             return new sap.m.Button({
-                tooltip: "{i18n>complementData}",
-                icon: "sap-icon://accounting-document-verification",
+                tooltip: "{i18n>documentView}",
+                icon: icon || "sap-icon://accounting-document-verification",
                 press: async (oEvent) => {
                     let bt = oEvent.getSource();
                     bt.setBlocked(true);
@@ -83,9 +88,9 @@ sap.ui.define([
                         ids.push(MainView.data[i].D0000 || MainView.data[i].id);
                     }
 
-                    await MainView.ComplementData.setIds(ids).getData(MainView, ids);
+                    await This.setIds(topRight ? [ids[0]] : ids).getData(MainView, topRight ? [ids[0]] : ids, topRight, lowerLeft, factory, title);
 
-                    MainView.mainContent.to(MainView.ComplementData.Page);
+                    MainView.mainContent.to(This.Page);
                     MainView.getView().setBusy(false);
                     bt.setBlocked(false);
 
@@ -93,8 +98,11 @@ sap.ui.define([
             });
 
         },
-
-        async getData(MainView, docs = this.ids) {
+        setIds(docs) {
+            this.ids = docs;
+            return this;
+        },
+        async getData(MainView, docs = this.ids, topRight, lowerLeft, factory, title) {
 
             if (!docs) return;
 
@@ -111,7 +119,7 @@ sap.ui.define([
                 .postSync("add", {
                     actionName: "TAXD0000.list",
                     params: {
-                        pageSize: 1,
+                        pageSize: pageSize,
                         query: {
                             id: { $in: docs }
                         },
@@ -129,15 +137,13 @@ sap.ui.define([
 
             MainView.d0000 = d0000;
 
-            if (d0000.length)
+            if (d0000.length && This.topRight)
                 dh = await MainView.callService
                     .postSync("add", {
                         actionName: "TAXDH.list",
                         params: {
-                            pageSize: 1,
-                            query: {
-                                D0000: d0000[0].id
-                            },
+                            pageSize: pageSize,
+                            query: { D0000: { $in: d0000.map(d => d.id) } },
                         },
                     })
                     .then((resp) => {
@@ -151,16 +157,21 @@ sap.ui.define([
 
                     })
 
-            if (dh)
-                d0000[0] = { ...dh[0], ...d0000[0] };
+            if (dh) {
+                d0000.map(d00 => {
+                    const h = dh.find(dh => dh.D0000 === d00.id);
+                    d00 = { ...h, ...d00 }
+                })
+            }
+
 
             if (d0000.length)
                 d0002 = await MainView.callService
                     .postSync("add", {
                         actionName: "TAXD0002.list",
                         params: {
-                            pageSize: 1,
-                            query: { D0000: d0000[0].id },
+                            pageSize: pageSize,
+                            query: { D0000: { $in: d0000.map(d => d.id) } },
                         },
                     })
                     .then((resp) => {
@@ -178,8 +189,10 @@ sap.ui.define([
                     .postSync("add", {
                         actionName: "TAXDATCH.list",
                         params: {
-                            pageSize: 1,
-                            query: { id: d0002[0].FILNR },
+                            pageSize: pageSize,
+                            query: {
+                                id: { $in: d0002.map(d => d.FILNR) }
+                            },
                         },
                     })
                     .then((resp) => {
@@ -198,8 +211,8 @@ sap.ui.define([
                     .postSync("add", {
                         actionName: "TAXDATCHB.find",
                         params: {
-                            pageSize: 1,
-                            query: { DATCH: datach[0].id },
+                            pageSize: pageSize,
+                            query: { DATCH: { $in: datach.map(d => d.id) } },
                             cache: false
                         },
                     })
@@ -214,47 +227,79 @@ sap.ui.define([
                     })
 
 
-            await MainView.treeSelectPart(d0002[0], MainView);
-
-
-            MainView.topRight = await this.getTable(dh || d0000, MainView, new SplitterLayoutData({
-                resizable: true,
-                size: "15%",
-                minSize: 100
-            }));
-
-            MainView.topLeft = await this.getTree(d0000, MainView, new SplitterLayoutData({
-                resizable: true,
-                size: "15%",
-                minSize: 200
-            }));
-
-            MainView.lowerLeft = "";// await this.getTable(dh, MainView);
-
             oSplitter = new Splitter({
-                contentAreas: [
-                    new Splitter({
-                        contentAreas: [MainView.topLeft/* , MainView.lowerLeft */],
-                        orientation: "Vertical",
-                        layoutData: new SplitterLayoutData({
-                            resizable: true,
-                            size: "30%",
-                            minSize: 200
-                        })
-                    })
-                    ,
-                    new Splitter({
-                        contentAreas: [MainView.topRight || [], MainView.lowerRight || []],
-                        orientation: "Vertical"
-                    })
-                ]
+                contentAreas: []
             });
 
             oSplitter.setLayoutData(new FlexItemData({
                 growFactor: 1
             }));
 
+            this.getTree(d0000, MainView, new SplitterLayoutData({
+                resizable: true,
+                size: "15%",
+                minSize: 200
+            })).then((topLeft) => {
+
+                This.topLeft = topLeft;
+                /* if (lowerLeft && This.lowerLeft) {
+                     oSplitter.addContentArea(new Splitter({
+                         contentAreas: [This.topLeft, This.lowerLeft],
+                         orientation: "Vertical",
+                         layoutData: new SplitterLayoutData({
+                             resizable: true,
+                             size: "30%",
+                             minSize: 200
+                         })
+                     }))
+                 } else { */
+                oSplitter.addContentArea(new Splitter({
+                    contentAreas: [This.topLeft],
+                    orientation: "Vertical",
+                    layoutData: new SplitterLayoutData({
+                        resizable: true,
+                        size: "30%",
+                        minSize: 200
+                    })
+                }))
+
+                //}
+
+                if (topRight) {
+                    this.getTable(dh || d0000, MainView, new SplitterLayoutData({
+                        resizable: true,
+                        size: "15%",
+                        minSize: 100
+                    })).then((topRight) => {
+
+                        This.topRight = topRight;
+
+                        MainView.treeSelectPart(d0002[0], MainView).then((lowerRight) => {
+                            This.lowerRight = lowerRight;
+                            oSplitter.addContentArea(
+                                new Splitter({
+                                    contentAreas: [This.topRight, This.lowerRight],
+                                    orientation: "Vertical"
+                                }));
+                        });
+                        oSplitter.setBusy(false);
+                    });
+                } else {
+                    MainView.treeSelectPart(d0002[0], MainView).then((lowerRight) => {
+                        This.lowerRight = lowerRight;
+                        oSplitter.addContentArea(
+                            new Splitter({
+                                contentAreas: [This.lowerRight],
+                                orientation: "Vertical"
+                            }));
+                    });
+                    oSplitter.setBusy(false);
+                }
+            });
+
             this.Page.destroyContent();
+
+            oSplitter.setBusy(true);
 
             this.Page.addContent(
                 new VBox({
@@ -264,6 +309,8 @@ sap.ui.define([
                     ]
                 })
             )
+
+            this.Page.getSubHeader().getContentLeft()[1].setText(MainView.i18n(title));
         },
         async getTable(rows, MainView, lay) {
 
@@ -348,7 +395,7 @@ sap.ui.define([
                         await MainView.gotToItem(rows, MainView);
 
                         oSplitter.getContentAreas()[1].getContentAreas()[0].destroy();
-                        oSplitter.getContentAreas()[1].insertContentArea(MainView.topRight, -1);
+                        oSplitter.getContentAreas()[1].insertContentArea(This.topRight, -1);
                     }
                 }) : new sap.m.Button({
                     icon: "sap-icon://response",
@@ -356,9 +403,9 @@ sap.ui.define([
                     text: 'ir para cabeçalho',
                     press: async (oEvent) => {
 
-                        MainView.topRight = await MainView.getTable(MainView.d0000, MainView);
+                        This.topRight = await MainView.getTable(MainView.d0000, MainView);
                         oSplitter.getContentAreas()[1].getContentAreas()[0].destroy();
-                        oSplitter.getContentAreas()[1].insertContentArea(MainView.topRight, -1);
+                        oSplitter.getContentAreas()[1].insertContentArea(This.topRight, -1);
                     }
                 })
 
@@ -388,7 +435,7 @@ sap.ui.define([
                 .postSync("add", {
                     actionName: "TAXDI.list",
                     params: {
-                        pageSize: 1,
+                        pageSize: pageSize,
                         query: { D0000: d0000.id },
                         cache: false
                     },
@@ -402,7 +449,7 @@ sap.ui.define([
                 }).catch(error => {
 
                 });
-            MainView.topRight = await MainView.getTable(taxdi, MainView, new SplitterLayoutData({
+            This.topRight = await MainView.getTable(taxdi, MainView, new SplitterLayoutData({
                 resizable: true,
                 size: "15%",
                 minSize: 100
@@ -417,7 +464,7 @@ sap.ui.define([
                 .postSync("add", {
                     actionName: "TAXDATCHB.find",
                     params: {
-                        pageSize: 1,
+                        pageSize: pageSize,
                         query: { DATCH: node.FILNR },
                         cache: false
                     },
@@ -461,26 +508,23 @@ sap.ui.define([
 
                     blob = MainView.b64toBlob(file[0].FILBIN, 'text/plain');
 
-                    MainView.lowerRight = new sap.ui.codeeditor.CodeEditor({
-                        height: "600px",
+                    let code = new sap.ui.codeeditor.CodeEditor({
+                        height: "100%",
                         type: 'xml',
                         editable: false,
                         colorTheme: "chrome",
                     })
 
-                    MainView.lowerRight.setValue(formatXml(await blob.text(), '   '));
-                    MainView.lowerRight.prettyPrint();
-                    MainView.lowerRight.prettyPrint();
-
-                    return;
-
+                    code.setValue(formatXml(await blob.text(), '   '));
+                    code.prettyPrint();
+                    return code;
                 default:
 
                     break;
             }
 
 
-            MainView.lowerRight = new sap.ui.core.HTML({
+            return new sap.ui.core.HTML({
                 preferDOM: true,
                 sanitizeContent: false,
                 content: "<iframe height='100%' width='100%' src=" + URL.createObjectURL(blob) + "></iframe>"
@@ -493,9 +537,9 @@ sap.ui.define([
                 .postSync("add", {
                     actionName: "TAXD0002.list",
                     params: {
-                        pageSize: 1,
+                        pageSize: pageSize,
                         query: {
-                            D0000: d0000[0].id
+                            D0000: { $in: d0000.map(d => d.id) }
                         },
                     },
                 })
@@ -514,7 +558,7 @@ sap.ui.define([
                 .postSync("add", {
                     actionName: "TAXD0003.list",
                     params: {
-                        pageSize: 1,
+                        pageSize: pageSize,
                         query: {
                             D0002: { $in: d0002.map(d2 => d2.id) }
                         },
@@ -530,61 +574,93 @@ sap.ui.define([
 
                 }) || [];
 
-            var oData = [
+            var oData = [];
+            let domins = [];
+            let tree = {};
+            let senders = [];
+            let subjes = [];
+            let sender = {};
+
+            domins = new Set(d0000.map(d0 => d0.DOMIN));
+            senders = new Set(d0000.map(d0 => d0.SENDE));
+
+            for (const domin of domins) {
+
+                tree =
                 {
-                    text: d0000[0].DOMIN,
+                    text: domin,
                     ref: "sap-icon://building",
                     state: "Success",
-                    nodes: [
-                        {
-                            text: d0000[0].RECEI,
-                            ref: d0000[0].ORIGE === 'EM' ? "sap-icon://email-read" : 'sap-icon://document',
-                            state: "Success",
-                            FILNR: d0000[0].FILNB,
-                            nodes: [
-                                {
-                                    text: d0000[0].SUBJE,
-                                    ref: "sap-icon://outdent",
-                                    FILNR: d0000[0].FILNB,
-                                    TYPE: '.HTM',
-                                    nodes: d0002.map(d2 => {
-
-                                        if (d0000[0].id !== d2.D0000) return;
-
-                                        let icon = d2.ICONA || MainView['ICON_' + d2.TYPE.split('.')[1]] || 'sap-icon://document';
-
-                                        return {
-                                            text: d2.NAME || ("FILE" + d2.TYPE),
-                                            ref: icon || "sap-icon://action",
-                                            FILNR: d2.FILNR,
-                                            TYPE: d2.TYPE,
-                                            nodes: d0003.map(d3 => {
-
-                                                if (d2.id !== d3.D0002) return;
-
-                                                let icon = d3.ICON || MainView['ICON_' + d3.TYPE.split('.')[1]] || 'sap-icon://document';
-
-                                                return {
-                                                    text: d2.NAME || ("FILE" + d3.TYPE),
-                                                    ref: icon || "sap-icon://action",
-                                                    FILNR: d3.FILNR,
-                                                    TYPE: d3.TYPE,
-                                                }
-
-                                            })
-                                        }
-
-                                    })
-                                }, d0000[0].LINK1 ? {
-                                    //text: d0000[0].LINK1,
-                                    icon: MainView.ICON_LINK1,
-                                    ref: MainView.ICON_LINK1,
-                                } : {}
-                            ]
-                        }
-                    ]
+                    nodes: []
                 }
-            ]
+
+                for (const send of senders) {
+
+                    sender =
+                    {
+                        text: send,
+                        state: "Success",
+                        nodes: []
+                    }
+
+                    for (const d0 of d0000.filter(d0 => d0.DOMIN === domin && d0.SENDE === send)) {
+
+                        sender.ref = d0.ORIGE === 'EM' ? "sap-icon://email-read" : 'sap-icon://document';
+                        sender.FILNR = d0.FILNB;
+                        sender.nodes.push(
+                            {
+
+                                text: MainView.dataFormat(String(d0.DTENV) + String(d0.HRENV)) + " : " + d0.SUBJE,
+                                ref: "sap-icon://outdent",
+                                FILNR: d0.FILNB,
+                                TYPE: '.HTM',
+                                nodes: d0002.filter(d2 => d0.id === d2.D0000).map(d2 => {
+
+                                    let name = (d2.NAME.length > 20)
+                                        ? (d2.NAME || ("FILE" + d2.TYPE)).substring(0, 10) + "..." + d2.TYPE
+                                        : (d2.NAME || ("FILE" + d2.TYPE));
+
+                                    let icon = d2.ICONA || MainView['ICON_' + d2.TYPE.split('.')[1]] || 'sap-icon://document';
+
+                                    return {
+                                        text: name,
+                                        tooltip: (d2.NAME || ("FILE" + d2.TYPE)),
+                                        ref: icon || "sap-icon://action",
+                                        FILNR: d2.FILNR,
+                                        TYPE: d2.TYPE,
+                                        nodes: d0003.filter(d3 => d2.id === d3.D0002).map(d3 => {
+
+                                            let icon = d3.ICON || MainView['ICON_' + d3.TYPE.split('.')[1]] || 'sap-icon://document';
+
+                                            let name = (d3?.NAME.length > 20)
+                                                ? (d3.NAME || ("FILE" + d3.TYPE)).substring(0, 10) + "..." + d3.TYPE
+                                                : (d3.NAME || ("FILE" + d3.TYPE));
+
+                                            return {
+                                                text: name,
+                                                ref: icon || "sap-icon://action",
+                                                FILNR: d3.FILNR,
+                                                TYPE: d3.TYPE,
+                                            }
+
+                                        })
+                                    }
+
+                                })
+                            }, d0.LINK1 ? {
+                                //text: d0000[0].LINK1,
+                                icon: MainView.ICON_LINK1,
+                                ref: MainView.ICON_LINK1,
+                            } : null
+                        )
+                    }
+                    tree.nodes.push(sender);
+                }
+
+                oData.push(tree);
+                sender = {};
+                tree = {};
+            }
 
             var oTree = new sap.m.Tree({
                 layoutData: lay
@@ -606,9 +682,12 @@ sap.ui.define([
                     let node = oEvent.getSource().getModel().getProperty(oEvent.getSource().getBindingContextPath());
 
                     if (!node.FILNR) return;
-                    await MainView.treeSelectPart(node, MainView)
-                    oSplitter.getContentAreas()[1].getContentAreas()[1].destroy();
-                    oSplitter.getContentAreas()[1].addContentArea(MainView.lowerRight);
+
+                    let content =
+                        oSplitter.getContentAreas()[1].getContentAreas()[1] ||
+                        oSplitter.getContentAreas()[1].getContentAreas()[0];
+                    content.destroy();
+                    oSplitter.getContentAreas()[1].addContentArea(await MainView.treeSelectPart(node, MainView));
                 },
                 //detailPress: handleControlEvent
             });
@@ -619,7 +698,7 @@ sap.ui.define([
 
             oTree.bindItems("/", oStandardTreeItem);
             var oBinding = oTree.getBinding("items");
-            oTree.expandToLevel(3);
+            oTree.expandToLevel(2);
 
             //oTree.onItemExpanderPressed(oTree.getItems()[1], true)  
 
@@ -630,10 +709,11 @@ sap.ui.define([
                 showHeader: false,
                 layoutData: new SplitterLayoutData({
                     resizable: true,
-                    size: "30%",
+                    //size: "30%",
                     minSize: 200
                 })
             });
         }
     }
+    )
 });

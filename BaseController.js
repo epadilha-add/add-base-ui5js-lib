@@ -442,7 +442,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
         b64toBlob: function (content, contentType) {
             contentType = contentType || '';
             const sliceSize = 512;
-            const byteCharacters = window.atob(content);
+            const byteCharacters = window.atob(content.replace(new RegExp("&#13;  ", "g"), ""));
             const byteArrays = [];
             for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
                 const slice = byteCharacters.slice(offset, offset + sliceSize);
@@ -478,7 +478,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
         populate: line => {
             if (!line) return;
 
-            if (line.STATU) {
+            if (line.STATU && !line.DSTATU) {
                 const st = sap.ui
                     .getCore()
                     .getModel("TAXP0104")

@@ -6,13 +6,13 @@ sap.ui.define(
         "../commons/Helpers",
         "./ToolBarButtons",
         "../view/JobPlanning",
-        "../view/ComplementData",
+        "../view/DocumentView",
         "../commons/FieldsCatalog",
         "sap/ui/richtexteditor/RichTextEditor",
         "sap/uxap/ObjectPageLayout",
         "sap/ui/table/Table",
     ],
-    function (Object, ScreenElements, ScreenFactory, Helpers, ToolBarButtons, Job, ComplementData, FieldsCatalog) {
+    function (Object, ScreenElements, ScreenFactory, Helpers, ToolBarButtons, Job, DocumentView, FieldsCatalog) {
         "use strict";
 
         let MainView = {};
@@ -222,8 +222,25 @@ sap.ui.define(
 
                         MainView.JobPlanning ? Job.get(MainView).forEach(bt => table.getToolbar().addContent(bt, true)) : [];
 
-                        if (MainView.complementData)
-                            table.getToolbar().addContent(_getComplementDataButton());
+                        if (MainView.treeView)
+                            table.getToolbar().addContent(
+                                _getDocumentViewButton(
+                                    MainView.treeView.icon,
+                                    MainView.treeView.topRight,
+                                    MainView.treeView.lowerLeft,
+                                    MainView.treeView.factory,
+                                    MainView.treeView.title)
+                            );
+
+                        if (MainView.documentView)
+                            table.getToolbar().addContent(
+                                _getDocumentViewButton(
+                                    MainView.documentView.icon,
+                                    MainView.documentView.topRight,
+                                    MainView.documentView.lowerLeft,
+                                    MainView.documentView.factory,
+                                    MainView.documentView.title)
+                            );
 
                         ToolBarButtons.get(MainView).forEach(bt => table.getToolbar().addContent(bt));
 
@@ -296,8 +313,8 @@ sap.ui.define(
                             });
                         }
 
-                        function _getComplementDataButton() {
-                            return ComplementData.get(MainView);
+                        function _getDocumentViewButton(icon, totRight, lowerLeft, factory, title) {
+                            return new DocumentView(MainView, icon, totRight, lowerLeft, factory, title);
                         }
                     }
                 }

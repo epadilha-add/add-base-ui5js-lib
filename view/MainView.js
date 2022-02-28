@@ -626,8 +626,8 @@ sap.ui.define(
 
                         headerToolbar: MainView.toolBarContent
                             ? new sap.m.Toolbar({
-                                  content: MainView.toolBarContent,
-                              })
+                                content: MainView.toolBarContent,
+                            })
                             : null,
                         //mode: "SingleSelect",
                         // selectionMode: "MultiToggle",
@@ -766,14 +766,14 @@ sap.ui.define(
 
                                 press: MainView.attachPress
                                     ? oEvent => {
-                                          MainView.attachPress(oEvent);
-                                      }
+                                        MainView.attachPress(oEvent);
+                                    }
                                     : oEvent => {
-                                          var oModel = oEvent.getSource().oBindingContexts;
-                                          var values = { ...oModel.mainModel.getObject() };
-                                          MainView.pressToNav(values);
-                                          MainView.navToView(values);
-                                      },
+                                        var oModel = oEvent.getSource().oBindingContexts;
+                                        var values = { ...oModel.mainModel.getObject() };
+                                        MainView.pressToNav(values);
+                                        MainView.navToView(values);
+                                    },
 
                                 cells: cells,
                             }),
@@ -797,10 +797,10 @@ sap.ui.define(
                     }
                     MainView.toolBarContent
                         ? MainView.tilePanel.addContent(
-                              new sap.m.Toolbar({
-                                  content: MainView.toolBarContent,
-                              })
-                          )
+                            new sap.m.Toolbar({
+                                content: MainView.toolBarContent,
+                            })
+                        )
                         : null;
 
                     MainView.list().then(() => {
@@ -818,18 +818,18 @@ sap.ui.define(
                             tile.attachPress(
                                 MainView.attachPress
                                     ? oEvent => {
-                                          MainView.attachPress(oEvent);
-                                      }
+                                        MainView.attachPress(oEvent);
+                                    }
                                     : oEvent => {
-                                          var values = MainView.getView()
-                                              .getModel("mainModel" + MainView.IDAPP)
-                                              .getData()
-                                              .results.find(l => l.byId === oEvent.getSource().getId());
+                                        var values = MainView.getView()
+                                            .getModel("mainModel" + MainView.IDAPP)
+                                            .getData()
+                                            .results.find(l => l.byId === oEvent.getSource().getId());
 
-                                          MainView.pressToNav(values);
+                                        MainView.pressToNav(values);
 
-                                          MainView.navToView(values);
-                                      }
+                                        MainView.navToView(values);
+                                    }
                             );
 
                             line.byId = tile.getId();
@@ -954,6 +954,7 @@ sap.ui.define(
                             dialog.close();
 
                             try {
+
                                 vals = await MainView.create(vals);
                                 /**
                                  * verificar se houve exit custom bloqueando a creação
@@ -1100,10 +1101,10 @@ sap.ui.define(
                         if (MainView.btNew || MainView.btNew === undefined)
                             MainView.btNew = MainView.context.find(c => c.create)
                                 ? new sap.m.Button({
-                                      icon: "sap-icon://add-document",
-                                      text: "{i18n>new}",
-                                      press: MainView.new,
-                                  }).addStyleClass("sapUiSmallMarginEnd")
+                                    icon: "sap-icon://add-document",
+                                    text: "{i18n>new}",
+                                    press: MainView.new,
+                                }).addStyleClass("sapUiSmallMarginEnd")
                                 : null;
 
                         if (MainView.btSort || MainView.btSort === undefined)
