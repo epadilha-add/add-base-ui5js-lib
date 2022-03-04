@@ -3,8 +3,18 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
     var MainView;
 
     return {
-        get: function (that, TABLE, CATALOG, VARIANT_NAME) {
+        get: function (that, DATA, TABLE, CATALOG, VARIANT_NAME) {
             MainView = that;
+            this.TABLE = TABLE;
+            this.VARIANT_NAME = VARIANT_NAME
+            this.CATALOG = CATALOG;
+
+            MainView[VARIANT_NAME] = {
+                DATA: DATA,
+                TABLE: TABLE,
+                CATALOG: CATALOG,
+                VARIANT: VARIANT_NAME
+            }
 
             try {
                 let buttons = [
@@ -15,8 +25,6 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                     new sap.m.Button({ tooltip: "{i18n>saveConfig}" }).setIcon("sap-icon://save").setType("Transparent").attachPress(this.openDialogToSave),
                     new sap.m.Button({ tooltip: "{i18n>searchConfig}" }).setIcon("sap-icon://customize").setType("Transparent").attachPress(this.openDialogToList),
                 ];
-
-                if (MainView.getView) buttons.forEach(bt => MainView.getView().addDependent(bt));
 
                 return buttons;
             } catch (error) {
@@ -30,7 +38,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                 .then(data => {
                     if (data) {
                         MainView.getView().setModel(new sap.ui.model.json.JSONModel(data), VARIANT_NAME + "TAB_CONFIG");
-                        TABLE.destroyColumns();
+                        this.TABLE.destroyColumns();
                         data.filter(f => f.VISIBLE === "X" || f.VISIBLE === true).forEach(column => addColumn(column, MainView));
                     }
                 })
@@ -39,7 +47,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                 });
         },
         addColumn: function (field, MainView) {
-            let oControl = MainView.getColumnByType(field, MainView, TABLE.getBindingContextPath());
+            let oControl = MainView.getColumnByType(field, MainView, this.TABLE.getBindingContextPath());
 
             let label = field.SCRTEXT_S || field.SCRTEXT_M || field.SCRTEXT_L || field.DESCR;
             let oColumn = new sap.ui.table.Column({
@@ -57,21 +65,21 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
 
             field.idUi5Column = oColumn.getId();
 
-            oColumn.setCreationTemplate(new sap.m.Input({ value: "{" + TABLE.getBindingContextPath() + field.FIELD + "}" }));
+            oColumn.setCreationTemplate(new sap.m.Input({ value: "{" + this.TABLE.getBindingContextPath() + field.FIELD + "}" }));
 
-            ViewTable.table.addColumn(oColumn);
+            this.TABLE.addColumn(oColumn);
         },
         openDialogToSave: function () {
             let variante = MainView.getView().getModel(VARIANT_NAME + "TAB_CONFIG");
 
-            if (!variante || variante.getData() !== CATALOG) {
-                MainView.getView().setModel(new sap.ui.model.json.JSONModel(CATALOG), VARIANT_NAME + "TAB_CONFIG");
+            if (!variante || variante.getData() !== this.CATALOG) {
+                MainView.getView().setModel(new sap.ui.model.json.JSONModel(this.CATALOG), VARIANT_NAME + "TAB_CONFIG");
                 variante = MainView.getView().getModel(VARIANT_NAME + "TAB_CONFIG");
             }
             Helpers.openDialogToSave(MainView, VARIANT_NAME + "LIST", VARIANT_NAME, variante.oData);
         },
         editLayoutTable: function () {
-            var struct = CATALOG;
+            var struct = this.CATALOG;
 
             const addColumn = this.addColumn;
 
@@ -82,7 +90,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                             return a.COL_POS - a.COL_POS;
                         });
                         MainView.getView().setModel(new sap.ui.model.json.JSONModel(data), VARIANT_NAME + "TAB_CONFIG");
-                        TABLE.destroyColumns();
+                        this.TABLE.destroyColumns();
                         data.filter(f => f.VISIBLE === "X" || f.VISIBLE === true).forEach(column => addColumn(column, MainView));
                     }
                 })
@@ -92,7 +100,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
         },
 
         exportToExcel: function () {
-            var tStruc = CATALOG;
+            var tStruc = this.CATALOG;
             var aColumns = [];
             if (tStruc instanceof Array) {
                 tStruc.sort(function (a, b) {
@@ -150,7 +158,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                     separatorChar: ";",
                     charset: "utf-8",
                 }),
-                models: TABLE.getModel(table.getModel()),
+                models: this.TABLE.getModel(table.getModel()),
                 rows: {
                     path: "/",
                 },
@@ -174,7 +182,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
 
         async popUpLine() {
             if (MainView.data.length === 0) return;
-            let line = TABLE.getSelectedIndices();
+            let line = this.TABLE.getSelectedIndices();
 
             if (!line || line.length === 0) {
                 MainView.message("selectLine");
@@ -264,7 +272,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
             let vl = Object.keys(MainView.data[line]);
 
             for (const key of vl) {
-                let cat = CATALOG.find(c => c.FIELD === key);
+                let cat = this.this.CATALOG.find(c => c.FIELD === key);
                 if (cat) tab.push({ FIELD: cat.SCRTEXT_L, VALUE: MainView.data[line][key] });
             }
 

@@ -25,7 +25,7 @@ sap.ui.define([
     let pageSize = 50;
     return Object.extend("add.ui.View.DocumentView", {
 
-        constructor: function (that, icon, topRight, lowerLeft, factory, title) {
+        constructor: function (that, icon, topRight, lowerLeft, factory, title, prefix) {
             "use strict"
 
 
@@ -77,15 +77,29 @@ sap.ui.define([
                     bt.setBlocked(true);
                     MainView.getView().setBusy(true);
 
-                    let lines = MainView.View.table.getSelectedIndices();
+                    let lines = prefix ? MainView[prefix].View.table.getSelectedIndices() : MainView.View.table.getSelectedIndices();
                     if (!lines || lines.length === 0) {
-                        MainView.View.table.setSelectedIndex(0);
-                        lines = MainView.View.table.getSelectedIndices();
+
+                        if (prefix) {
+                            MainView[prefix].View.table.setSelectedIndex(0);
+                            lines = MainView[prefix].View.table.getSelectedIndices();
+                        } else {
+                            MainView.View.table.setSelectedIndex(0);
+                            lines = MainView.View.table.getSelectedIndices();
+                        }
+
                     }
 
                     let ids = [];
-                    for (const i of lines) {
-                        ids.push(MainView.data[i].D0000 || MainView.data[i].id);
+                    if (prefix) {
+                        for (const i of lines) {
+                            ids.push(MainView[prefix].data[i].D0000 || MainView[prefix].data[i].id);
+                        }
+
+                    } else {
+                        for (const i of lines) {
+                            ids.push(MainView.data[i].D0000 || MainView.data[i].id);
+                        }
                     }
 
                     await This.setIds(topRight ? [ids[0]] : ids).getData(MainView, topRight ? [ids[0]] : ids, topRight, lowerLeft, factory, title);

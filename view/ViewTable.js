@@ -320,7 +320,9 @@ sap.ui.define(
                 }
             },
             setModelTable(MainView, line) {
-                if (MainView.getView().getController().beforeUpdateModelTable) MainView.getView().getController().beforeUpdateModelTable(MainView, line);
+
+                if (MainView.getView().getController().beforeUpdateModelTable)
+                    MainView.getView().getController().beforeUpdateModelTable(MainView, line);
 
                 if (line >= 0) {
                     let path = MainView.View.table.getContextByIndex(line).sPath;
@@ -337,7 +339,12 @@ sap.ui.define(
                         MainView.View.table.setModel(new sap.ui.model.json.JSONModel(MainView.data), MainView.IDAPP + "tab");
                     }
                 }
-                if (MainView.getView().getController().afterUpdateModelTable) MainView.getView().getController().afterUpdateModelTable(MainView, line);
+
+                if (MainView.getView().getController().afterUpdateModelTable)
+                    MainView.getView().getController().afterUpdateModelTable(MainView, line);
+
+                MainView.getView().setModel(new MainView.Model({ value: MainView.data.length }), "TOTAL");
+
             },
             factory: function (params) {
                 ViewTable = this;
@@ -357,8 +364,22 @@ sap.ui.define(
                     ViewTable.context.push({ field: key, COL_POS: ViewTable.context.length });
                 }
 
+                MainView.getView().setModel(new MainView.Model({ value: params.DATA.length }), "TOTAL");
+
                 let footerContent = [];
-                if (MainView.getView().getController().getContentFooterTable) footerContent = MainView.getView().getController().getContentFooterTable(ViewTable, MainView);
+                if (MainView.getView().getController().getContentFooterTable) {
+                    footerContent = MainView.getView().getController().getContentFooterTable(ViewTable, MainView);
+                } else {
+
+                    const tot = new sap.m.ObjectStatus({
+                        state: "Information",
+                        text: "Total: {TOTAL>/value} "
+                    });
+
+                    MainView.getView().addDependent(tot);
+
+                    footerContent.push(tot);
+                }
 
                 ViewTable.table = new sap.ui.table.Table({
                     busy: true,
@@ -372,7 +393,8 @@ sap.ui.define(
                     footer: new sap.m.OverflowToolbar({ content: footerContent }),
                 });
 
-                if (MainView.getView().getController().setTableTitle) MainView.getView().getController()?.setTableTitle(MainView, ViewTable);
+                if (MainView.getView().getController().setTableTitle)
+                    MainView.getView().getController()?.setTableTitle(MainView, ViewTable);
 
                 MainView.tableParts(MainView).toolBar().setToolBar(ViewTable.table);
 
@@ -380,7 +402,8 @@ sap.ui.define(
 
                 ViewTable.table.bindRows(MainView.IDAPP + "tab>/");
 
-                if (MainView.getView().getController().setRowSettingsTemplateTable) MainView.getView().getController().setRowSettingsTemplateTable(ViewTable.table, MainView);
+                if (MainView.getView().getController().setRowSettingsTemplateTable)
+                    MainView.getView().getController().setRowSettingsTemplateTable(ViewTable.table, MainView);
 
                 ViewTable.table.setBusy(true);
                 this.buildColumns(ViewTable, MainView);
@@ -446,7 +469,8 @@ sap.ui.define(
                     ViewTable.table.attachBrowserEvent("click", MainView.getView().getController().doubleClickLineTable(ViewTable, MainView).onClick);
                 }
 
-                if (MainView.getView().getController().afterRenderingTable) MainView.getView().getController().afterRenderingTable(MainView, ViewTable);
+                if (MainView.getView().getController().afterRenderingTable)
+                    MainView.getView().getController().afterRenderingTable(MainView, ViewTable);
 
                 return this;
             },
@@ -851,7 +875,8 @@ sap.ui.define(
                         MainView.selectScreenFilters = await MainView.Helpers.getLastUsedVariant(MainView.IDAPP, "SC", MainView);
 
                         if (MainView.selectScreenFilters) {
-                            MainView.headerToolbar.getContent()[4].setVisible(true);
+                            MainView.headerToolbar.getContent()
+                                .find(b => b.mProperties.icon && b.getProperty("icon") === "sap-icon://customize").setVisible(true);
 
                             MainView.setSelectScreen(MainView.selectScreenFilters?.content);
                         }

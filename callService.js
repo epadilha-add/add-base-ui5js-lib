@@ -28,7 +28,7 @@ sap.ui.define([], function () {
             return await fetch(src, param || p, 50).then((response) => {
 
 
-                return response.text();
+                return response.ok ? response.text() : response.status;
             }).then((data) => {
 
                 let resp = {}

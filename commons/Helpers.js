@@ -50,7 +50,10 @@ sap.ui.define([], function () {
 
                             That._saveLocalVariants(obj, that)
                                 .then(persisted => {
-                                    that.headerToolbar.getContent()[4].setVisible(true);
+                                    that.headerToolbar
+                                        .getContent()
+                                        .find(b => b.mProperties.icon && b.getProperty("icon") === "sap-icon://customize")
+                                        .setVisible(true);
 
                                     resolve(persisted);
                                 })
@@ -120,7 +123,10 @@ sap.ui.define([], function () {
                                                 const newitens = itens.filter((elem, i) => i !== parseInt(idx));
 
                                                 if (newitens.length === 0) {
-                                                    that.headerToolbar.getContent()[4].setVisible(false);
+                                                    that.headerToolbar
+                                                        .getContent()
+                                                        .find(b => b.mProperties.icon && b.getProperty("icon") === "sap-icon://customize")
+                                                        .setVisible(false)
                                                 }
 
                                                 that.getView().setModel(new sap.ui.model.json.JSONModel(newitens), that.IDAPP + "variants");

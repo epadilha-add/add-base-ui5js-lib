@@ -514,7 +514,54 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
             }
             //return line;
         },
+        populateCode: (line, field) => {
+            if (!line) return;
 
+            if (!field) {
+                if (line.COMPANY) {
+                    line.CCOMPANY = line.COMPANY;
+                    const crm = sap.ui
+                        .getCore()
+                        .getModel("CRM0000")
+                        .getData()
+                        .find(s => s.id === line.COMPANY);
+                    if (crm) {
+                        line.COMPANY = crm.NAME1;
+                    }
+                }
+
+                if (line.PROCX) {
+                    line.CPROCX = line.PROCX;
+                    const procx = sap.ui
+                        .getCore()
+                        .getModel("TAXP0100")
+                        .getData()
+                        .find(s => s.id === line.PROCX);
+                    if (procx) {
+                        line.PROCX = procx.PROCX;
+                    }
+                }
+                return;
+            }
+
+            switch (field) {
+                case 'COMPANY':
+                    if (line.COMPANY) {
+                        const crm = sap.ui
+                            .getCore()
+                            .getModel("CRM0000")
+                            .getData()
+                            .find(s => s.id === line.COMPANY);
+                        if (crm) {
+                            line.COMPANY = crm.NAME1;
+                        }
+                    }
+                    return;
+
+                default:
+                    return;
+            }
+        },
         ICON_ACTIVE: "sap-icon://message-success",
         ICON_ERROR: "sap-icon://message-error",
         ICON_STATUS: "sap-icon://multiselect-all",

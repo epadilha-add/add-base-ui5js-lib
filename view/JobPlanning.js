@@ -311,12 +311,14 @@ sap.ui.define([], function () {
                                 params.jobOpts = { repeat: { every: evry || 2000, limit: lmit || 1 } };
                                 params.params.query = MainView.getSelectScreenFilters(MainView);
 
-
                                 for (const key in params.params.query) {
                                     if (!params.params.query[key] || params.params.query[key] === null) delete params.params.query[key];
                                 }
 
-                                delete params.params.query.MAXROWS;
+                                if (params.params.query.MAXROWS) {
+                                    params.params.pageSize = params.params.query.MAXROWS;
+                                    delete params.params.query.MAXROWS;
+                                }
 
                                 params.params.jobName = MainView.IDAPP;
                                 params.params.DESCR = dscr;

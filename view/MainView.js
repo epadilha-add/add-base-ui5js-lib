@@ -567,7 +567,9 @@ sap.ui.define(
                 MainView.selectScreen.getContent()[0].addContent(content);
             },
             getContent: function (buttons) {
-                if (MainView.mode === "selectScreen") {
+                if (MainView.mode === "others") {
+                    return MainView.sc.getContent(promises);
+                } else if (MainView.mode === "selectScreen") {
                     return MainView.sc.getContent(promises);
                 } else if (!MainView.listMode || MainView.listMode.mode === "table") {
                     return _list(buttons);
@@ -1028,6 +1030,10 @@ sap.ui.define(
                         }).addStyleClass("sapUiSmallMarginEnd");
 
                     switch (MainView.mode) {
+
+                        case "others":
+                            MainView.sc = new MainView.othersClass(MainView);
+                            break;
                         case "selectScreen":
                             MainView.sc = new add.ui5js.ui.ViewTable(MainView);
 

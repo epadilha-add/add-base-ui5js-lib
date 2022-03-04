@@ -3,54 +3,73 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
     var MainView;
 
     return {
-        get: function (that) {
+        get: function (that, prefix, table, fieldcat) {
             MainView = that;
 
             try {
                 let buttons = [
                     new sap.m.ToolbarSpacer(),
-                    new sap.m.Button({ tooltip: "{i18n>columnView}" }).setIcon("sap-icon://filter-facets").setType("Transparent").attachPress(this.popUpLine),
-                    new sap.m.Button({ tooltip: "{i18n>gridExport}" }).setIcon("sap-icon://excel-attachment").setType("Transparent").attachPress(this.exportToExcel),
-                    new sap.m.Button({ tooltip: "{i18n>editLayoutTable}" }).setIcon("sap-icon://key-user-settings").setType("Transparent").attachPress(this.editLayoutTable),
-                    new sap.m.Button({ tooltip: "{i18n>saveConfig}" }).setIcon("sap-icon://save").setType("Transparent").attachPress(this.openDialogToSave),
-                    new sap.m.Button({ tooltip: "{i18n>searchConfig}" }).setIcon("sap-icon://customize").setType("Transparent").attachPress(this.openDialogToList),
+                    new sap.m.Button({ tooltip: "{i18n>columnView}" })
+                        .setIcon("sap-icon://filter-facets").setType("Transparent")
+                        .attachPress(() => { this.popUpLine(prefix, table, fieldcat) }),
+                    new sap.m.Button({ tooltip: "{i18n>gridExport}" })
+                        .setIcon("sap-icon://excel-attachment").setType("Transparent")
+                        .attachPress(() => { this.exportToExcel(prefix, table, fieldcat) }),
+                    new sap.m.Button({ tooltip: "{i18n>editLayoutTable}" })
+                        .setIcon("sap-icon://key-user-settings").setType("Transparent")
+                        .attachPress(() => { this.editLayoutTable(prefix, table, fieldcat) }),
+                    new sap.m.Button({ tooltip: "{i18n>saveConfig}" })
+                        .setIcon("sap-icon://save").setType("Transparent")
+                        .attachPress(() => { this.openDialogToSave(prefix, table, fieldcat) }),
+                    new sap.m.Button({ tooltip: "{i18n>searchConfig}" })
+                        .setIcon("sap-icon://customize").setType("Transparent")
+                        .attachPress(() => { this.openDialogToList(prefix, table, fieldcat) }),
                 ];
 
-                buttons.forEach(bt => MainView.getView().addDependent(bt));
+                if (MainView.getView)
+                    buttons.forEach(bt => MainView.getView().addDependent(bt));
 
                 return buttons;
             } catch (error) {
                 console.log("ListButtonError: ", error);
             }
         },
-        openDialogToList: function () {
-            const addColumn = MainView.getView().getController().addColumnTable ? MainView.getView().getController().addColumnTable : MainView.View.addColumn;
 
-            Helpers.openDialogToList(MainView, MainView.IDAPP + "LIST", "LY")
+        openDialogToList: function (prefix = "", table = MainView.View.table, fieldcat = MainView.View.fieldcat) {
+            const addColumn = (MainView.getView && MainView.getView().getController().addColumnTable)
+                ? MainView.getView().getController().addColumnTable
+                : MainView.View.addColumn;
+
+            Helpers.openDialogToList(MainView, MainView.IDAPP + prefix + "LIST", "LY")
                 .then(data => {
                     if (data) {
-                        MainView.getView().setModel(new sap.ui.model.json.JSONModel(data), MainView.IDAPP + "TAB_CONFIG");
-                        MainView.View.table.destroyColumns();
-                        data.filter(f => f.VISIBLE === "X" || f.VISIBLE === true).forEach(column => addColumn(column, MainView.View, MainView));
+                        MainView.getView().setModel(new sap.ui.model.json.JSONModel(data), MainView.IDAPP + prefix + "TAB_CONFIG");
+                        table.destroyColumns();
+                        data.filter(f => f.VISIBLE === "X" || f.VISIBLE === true).forEach(column => addColumn(column, MainView.View, MainView, prefix, table));
                     }
                 })
                 .catch(err => {
                     console.log("Erro ao listar variante local: ", err);
                 });
         },
-        openDialogToSave: function () {
-            let variante = MainView.getView().getModel(MainView.IDAPP + "TAB_CONFIG");
 
-            if (!variante || variante.getData() !== MainView.View.fieldcat) {
-                MainView.getView().setModel(new sap.ui.model.json.JSONModel(MainView.View.fieldcat), MainView.IDAPP + "TAB_CONFIG");
-                variante = MainView.getView().getModel(MainView.IDAPP + "TAB_CONFIG");
+        openDialogToSave: function (prefix = "", table, fieldcat = MainView.View.fieldcat) {
+            let variante = MainView.getView().getModel(MainView.IDAPP + prefix + "TAB_CONFIG");
+
+            if (!variante || variante.getData() !== fieldcat) {
+                MainView.getView().setModel(new sap.ui.model.json.JSONModel(fieldcat), MainView.IDAPP + prefix + "TAB_CONFIG");
+                variante = MainView.getView().getModel(MainView.IDAPP + prefix + "TAB_CONFIG");
             }
-            Helpers.openDialogToSave(MainView, MainView.IDAPP + "LIST", "LY", variante.oData);
+            Helpers.openDialogToSave(MainView, MainView.IDAPP + prefix + "LIST", "LY", variante.oData);
         },
-        editLayoutTable: function () {
-            var struct = MainView.View.fieldcat;
 
-            const addColumn = MainView.getView().getController().addColumnTable ? MainView.getView().getController().addColumnTable : MainView.View.addColumn;
+        editLayoutTable: function (prefix = "", table = MainView.View.table, fieldcat = MainView.View.fieldcat) {
+            var struct = fieldcat;
+
+            const addColumn =
+                (MainView.getView && MainView.getView().getController().addColumnTable)
+                    ? MainView.getView().getController().addColumnTable
+                    : MainView.View.addColumn;
 
             Helpers.TableLayoutHelper.openDialog(MainView, struct)
                 .then(data => {
@@ -58,9 +77,9 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                         data.sort(function (a, b) {
                             return a.COL_POS - b.COL_POS;
                         });
-                        MainView.getView().setModel(new sap.ui.model.json.JSONModel(data), MainView.IDAPP + "TAB_CONFIG");
-                        MainView.View.table.destroyColumns();
-                        data.filter(f => f.VISIBLE === "X" || f.VISIBLE === true).forEach(column => addColumn(column, MainView.View, MainView));
+                        MainView.getView().setModel(new sap.ui.model.json.JSONModel(data), MainView.IDAPP + prefix + "TAB_CONFIG");
+                        table.destroyColumns();
+                        data.filter(f => f.VISIBLE === "X" || f.VISIBLE === true).forEach(column => addColumn(column, MainView.View, MainView, prefix, table));
                     }
                 })
                 .catch(err => {
@@ -68,7 +87,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                 });
         },
 
-        exportToExcel: function () {
+        exportToExcel: function (prefix = "", table = MainView.View.table, fieldcat = MainView.View.fieldcat) {
             var tStruc = MainView.View.fieldcat;
             var aColumns = [];
             if (tStruc instanceof Array) {
@@ -127,9 +146,9 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                     separatorChar: ";",
                     charset: "utf-8",
                 }),
-                models: MainView.View.table.getModel(MainView.IDAPP + "tab"),
+                models: table.getModel(MainView.IDAPP + prefix + "tab"),
                 rows: {
-                    path: "/",
+                    path: + prefix + ">/",
                 },
                 columns: aColumns,
             });
@@ -149,9 +168,9 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
             MainView._oPopover.openBy(oEvent.getSource());
         },
 
-        async popUpLine() {
-            if (MainView.data.length === 0) return;
-            let line = MainView.View.table.getSelectedIndices();
+        async popUpLine(prefix = null, table = MainView.View.table, fieldcat = MainView.View.fieldcat) {
+
+            let line = table.getSelectedIndices();
 
             if (!line || line.length === 0) {
                 line = 0;
@@ -161,7 +180,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                 line = line[line.length - 1];
             }
 
-            const tit = MainView.data[line].DOMIN + " : " + MainView.data[line].DSTATU + "  :  (" + MainView.data[line].id + ")";
+            const tit = "";//table.getModel().getData()[line].DOMIN + " : " + table.getModel().getData()[line].DSTATU + "  :  (" + table.getModel().getData()[line].id + ")";
 
             if (!MainView.tabLine) {
                 MainView.tabLine = new sap.ui.table.Table({
@@ -186,7 +205,10 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                         MainView.catalogPopLine = JSON.parse(data);
 
                         for (let field of MainView.catalogPopLine) {
-                            let oControl = new sap.m.Text({ text: "{" + field.FIELD + "}", wrapping: false });
+                            let oControl = new sap.m.Text(
+                                {
+                                    text: prefix ? "{" + prefix + ">" + field.FIELD + "}" : "{" + field.FIELD + "}", wrapping: false
+                                });
 
                             let label = field.SCRTEXT_S || field.SCRTEXT_M || field.SCRTEXT_L || field.DESCR;
                             let leng = parseInt(field.OUTPUTLEN) ? parseInt(field.OUTPUTLEN) + "rem" : "auto";
@@ -203,7 +225,10 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                                 // grouped: true
                             });
 
-                            oColumn.setCreationTemplate(new sap.m.Input({ value: "{" + field.FIELD + "}" }));
+                            oColumn.setCreationTemplate(new sap.m.Input(
+                                {
+                                    value: prefix ? "{" + prefix + ">" + field.FIELD + "}" : "{" + field.FIELD + "}"
+                                }));
 
                             MainView.tabLine.addColumn(oColumn);
                         }
@@ -231,24 +256,28 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                                 },
                             }),
                         });
-
-                        MainView.getView().addDependent(MainView.messageDialogLine);
+                        if (MainView.getView)
+                            MainView.getView().addDependent(MainView.messageDialogLine);
                     });
             }
 
             let tab = [];
-            let vl = Object.keys(MainView.data[line]);
+            let vl = Object.keys(table.getModel(prefix ? MainView.IDAPP + prefix + "tab" : MainView.IDAPP + "tab").getData()[line]);
 
             for (const key of vl) {
-                let cat = MainView.View.fieldcat.find(c => c.FIELD === key);
-                if (cat) tab.push({ FIELD: cat.SCRTEXT_L, VALUE: MainView.data[line][key] });
+                let cat = fieldcat.find(c => c.FIELD === key);
+                if (cat) tab.push({
+                    FIELD: cat.SCRTEXT_L, VALUE:
+                        table.getModel(prefix ? MainView.IDAPP + prefix + "tab" : MainView.IDAPP + "tab").getData()[line][key]
+                });
             }
 
             MainView.messageDialogLine.setTitle(tit);
 
-            MainView.tabLine.setModel(new MainView.Model(tab));
+            if (prefix) MainView.tabLine.setModel(new MainView.Model(tab), prefix);
+            else MainView.tabLine.setModel(new MainView.Model(tab));
 
-            MainView.tabLine.bindRows("/");
+            MainView.tabLine.bindRows(prefix ? prefix + ">/" : "/");
 
             MainView.messageDialogLine.open();
         },
