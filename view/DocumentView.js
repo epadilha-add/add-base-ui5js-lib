@@ -528,10 +528,9 @@ sap.ui.define([
                         editable: false,
                         colorTheme: "chrome",
                     })
-
                     code.setValue(formatXml(await blob.text(), '   '));
                     code.prettyPrint();
-                    return code;
+                    return new sap.m.Page({ content: code, title: node.NAME || node.DESCR || node.tooltip });
                 default:
 
                     break;
@@ -700,7 +699,8 @@ sap.ui.define([
                     let content =
                         oSplitter.getContentAreas()[1].getContentAreas()[1] ||
                         oSplitter.getContentAreas()[1].getContentAreas()[0];
-                    content.destroy();
+                    if (content)
+                        content.destroy();
                     oSplitter.getContentAreas()[1].addContentArea(await MainView.treeSelectPart(node, MainView));
                 },
                 //detailPress: handleControlEvent

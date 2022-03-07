@@ -507,7 +507,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
                     .getCore()
                     .getModel("TAXP0500")
                     .getData()
-                    .find(s => s.id === line.DOMIN);
+                    .find(s => (s.DOMIN === line.DOMIN) || (s.id === line.DOMIN));
                 if (domin) {
                     line.DDOMIN = domin.DESCR;
                 }
@@ -539,6 +539,16 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
                         .find(s => s.id === line.PROCX);
                     if (procx) {
                         line.PROCX = procx.PROCX;
+                    }
+                }
+                if (line.DOMIN) {
+                    const domin = sap.ui
+                        .getCore()
+                        .getModel("TAXP0500")
+                        .getData()
+                        .find(s => s.id === line.DOMIN);
+                    if (domin) {
+                        line.DDOMIN = domin.DESCR;
                     }
                 }
                 return;

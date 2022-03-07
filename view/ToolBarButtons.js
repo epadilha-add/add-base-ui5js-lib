@@ -233,33 +233,35 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                             MainView.tabLine.addColumn(oColumn);
                         }
 
-                        MainView.messageDialogLine = new sap.m.Dialog({
-                            title: tit,
-                            icon: "sap-icon://filter-facets",
-                            verticalScrolling: true,
-                            horizontalScrolling: true,
-                            showHeader: true,
-                            contentHeight: "45%",
-                            contentWidth: "80%",
-                            resizable: true,
-                            //type: sap.m.DialogType.Message,
-                            content: new sap.m.Page({
-                                showHeader: false,
-                                enableScrolling: false,
-                                content: [MainView.tabLine],
-                            }),
 
-                            leftButton: new sap.m.Button({
-                                text: "Ok",
-                                press: function () {
-                                    MainView.messageDialogLine.close();
-                                },
-                            }),
-                        });
                         if (MainView.getView)
                             MainView.getView().addDependent(MainView.messageDialogLine);
                     });
             }
+
+            MainView.messageDialogLine = new sap.m.Dialog({
+                title: tit,
+                icon: "sap-icon://filter-facets",
+                verticalScrolling: true,
+                horizontalScrolling: true,
+                showHeader: true,
+                contentHeight: "45%",
+                contentWidth: "80%",
+                resizable: true,
+                //type: sap.m.DialogType.Message,
+                content: new sap.m.Page({
+                    showHeader: false,
+                    enableScrolling: false,
+                    content: [MainView.tabLine],
+                }),
+
+                leftButton: new sap.m.Button({
+                    text: "Ok",
+                    press: function () {
+                        MainView.messageDialogLine.close();
+                    },
+                }),
+            });
 
             let tab = [];
             let vl = Object.keys(table.getModel(prefix ? MainView.IDAPP + prefix + "tab" : MainView.IDAPP + "tab").getData()[line]);

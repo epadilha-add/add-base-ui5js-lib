@@ -92,6 +92,9 @@ sap.ui.define(
 
                                     element.FIELDNAME = element.FIELD;
 
+                                    if (field.propInclude)
+                                        element.propInclude = field.propInclude;
+
                                     if (field.create && !field.foreignKey && field.key === true) element.REFTYPE = ""; //input
 
                                     STRUC.push(element);
