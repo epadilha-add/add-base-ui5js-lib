@@ -182,62 +182,59 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
 
             const tit = "";//table.getModel().getData()[line].DOMIN + " : " + table.getModel().getData()[line].DSTATU + "  :  (" + table.getModel().getData()[line].id + ")";
 
-            if (!MainView.tabLine) {
-                MainView.tabLine = new sap.ui.table.Table({
-                    width: "100%",
-                    //columnHeaderHeight: 20,
-                    //visibleRowCountMode: "Auto",
-                    enableGrouping: true,
-                    visibleRowCount: 10,
-                    selectionMode: sap.ui.table.SelectionMode.Single,
-                    enableColumnReordering: true,
-                    //fixedBottomRowCount: 1,
-                });
+            //  if (!MainView.tabLine) {
+            MainView.tabLine = new sap.ui.table.Table({
+                width: "100%",
+                //columnHeaderHeight: 20,
+                //visibleRowCountMode: "Auto",
+                enableGrouping: true,
+                visibleRowCount: 10,
+                selectionMode: sap.ui.table.SelectionMode.Single,
+                enableColumnReordering: true,
+                //fixedBottomRowCount: 1,
+            });
 
-                await new ScreenElements(MainView)
-                    .getStruc([{ field: "FIELD" }, { field: "VALUE" } /* , { field: "DATATYPE" }, { field: "SCRTEXT_S" }, { field: "REFCIND" } */], true, true)
-                    .then(data => {
-                        if (!data) {
-                            console.error("ERR_GET_STRUCT_FAILED");
-                            return;
-                        }
+            await new ScreenElements(MainView)
+                .getStruc([{ field: "FIELD" }, { field: "VALUE" } /* , { field: "DATATYPE" }, { field: "SCRTEXT_S" }, { field: "REFCIND" } */], true, true)
+                .then(data => {
+                    if (!data) {
+                        console.error("ERR_GET_STRUCT_FAILED");
+                        return;
+                    }
 
-                        MainView.catalogPopLine = JSON.parse(data);
+                    MainView.catalogPopLine = JSON.parse(data);
 
-                        for (let field of MainView.catalogPopLine) {
-                            let oControl = new sap.m.Text(
-                                {
-                                    text: prefix ? "{" + prefix + ">" + field.FIELD + "}" : "{" + field.FIELD + "}", wrapping: false
-                                });
-
-                            let label = field.SCRTEXT_S || field.SCRTEXT_M || field.SCRTEXT_L || field.DESCR;
-                            let leng = parseInt(field.OUTPUTLEN) ? parseInt(field.OUTPUTLEN) + "rem" : "auto";
-                            let oColumn = new sap.ui.table.Column({
-                                width: "35%",
-                                minWidth: 48,
-                                label: new sap.m.Label({ text: label, wrapping: false }),
-                                autoResizable: true,
-                                template: oControl,
-                                tooltip: field.SCRTEXT_L + " " + field.FIELD,
-                                sortProperty: field.FIELD,
-                                filterProperty: field.FIELD,
-                                autoResizable: true,
-                                // grouped: true
+                    for (let field of MainView.catalogPopLine) {
+                        let oControl = new sap.m.Text(
+                            {
+                                text: prefix ? "{" + prefix + ">" + field.FIELD + "}" : "{" + field.FIELD + "}", wrapping: false
                             });
 
-                            oColumn.setCreationTemplate(new sap.m.Input(
-                                {
-                                    value: prefix ? "{" + prefix + ">" + field.FIELD + "}" : "{" + field.FIELD + "}"
-                                }));
+                        let label = field.SCRTEXT_S || field.SCRTEXT_M || field.SCRTEXT_L || field.DESCR;
+                        let leng = parseInt(field.OUTPUTLEN) ? parseInt(field.OUTPUTLEN) + "rem" : "auto";
+                        let oColumn = new sap.ui.table.Column({
+                            width: "35%",
+                            minWidth: 48,
+                            label: new sap.m.Label({ text: label, wrapping: false }),
+                            autoResizable: true,
+                            template: oControl,
+                            tooltip: field.SCRTEXT_L + " " + field.FIELD,
+                            sortProperty: field.FIELD,
+                            filterProperty: field.FIELD,
+                            autoResizable: true,
+                            // grouped: true
+                        });
 
-                            MainView.tabLine.addColumn(oColumn);
-                        }
+                        oColumn.setCreationTemplate(new sap.m.Input(
+                            {
+                                value: prefix ? "{" + prefix + ">" + field.FIELD + "}" : "{" + field.FIELD + "}"
+                            }));
 
+                        MainView.tabLine.addColumn(oColumn);
+                    }
 
-                        if (MainView.getView)
-                            MainView.getView().addDependent(MainView.messageDialogLine);
-                    });
-            }
+                });
+            //  }
 
             MainView.messageDialogLine = new sap.m.Dialog({
                 title: tit,
@@ -259,6 +256,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                     text: "Ok",
                     press: function () {
                         MainView.messageDialogLine.close();
+                        MainView.messageDialogLine.destroy();
                     },
                 }),
             });

@@ -153,7 +153,8 @@ sap.ui.define(
                                         /**
                                          * função implementada no contexto
                                          */
-                                        lines[fld.FIELD] = fld.afterList(lines[fld.FIELD]);
+                                        //lines[fld.FIELD] = fld.afterList(lines[fld.FIELD]);
+                                        fld.afterList(lines);
                                     }
                                     return MainView.normalize(lines);
                                 }),
@@ -1024,6 +1025,7 @@ sap.ui.define(
                             type: sap.m.ButtonType.Back,
                             tooltip: "Voltar",
                             press: () => {
+                                MainView.stopExecute = true;
                                 MainView.View.removeBtEvents();
                                 MainView.mainContent.back();
                             },

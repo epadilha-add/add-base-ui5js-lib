@@ -91,14 +91,18 @@ sap.ui.define([
                     }
 
                     let ids = [];
+                    let ind = MainView[prefix]
+                        ? MainView[prefix].View.table.getBinding("rows").aIndices
+                        : MainView.View.table.getBinding("rows").aIndices
+
                     if (prefix) {
                         for (const i of lines) {
-                            ids.push(MainView[prefix].data[i].D0000 || MainView[prefix].data[i].id);
+                            ids.push(MainView[prefix].data[ind[i]].D0000 || MainView[prefix].data[i].id);
                         }
 
                     } else {
                         for (const i of lines) {
-                            ids.push(MainView.data[i].D0000 || MainView.data[i].id);
+                            ids.push(MainView.data[ind[i]].D0000 || MainView.data[i].id);
                         }
                     }
 

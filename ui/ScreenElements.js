@@ -8,6 +8,7 @@ sap.ui.define(
 
             constructor: function (that) {
                 MainView = that;
+                return this;
             },
 
             getStruc: function (param, valuesHelp, parameter, uri) {
