@@ -489,6 +489,8 @@ sap.ui.define(
                                     })
                                 );
 
+                                if (struc.defaultValue) res[1].setSelected(struc.defaultValue);
+
                                 break;
 
                             case "TP":

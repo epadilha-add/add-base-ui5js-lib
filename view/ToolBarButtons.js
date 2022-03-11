@@ -195,7 +195,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
             });
 
             await new ScreenElements(MainView)
-                .getStruc([{ field: "FIELD" }, { field: "VALUE" } /* , { field: "DATATYPE" }, { field: "SCRTEXT_S" }, { field: "REFCIND" } */], true, true)
+                .getStruc([{ field: "FIELD" }, { field: "VALUE" }, { field: "DESCR" }], true, true)
                 .then(data => {
                     if (!data) {
                         console.error("ERR_GET_STRUCT_FAILED");
@@ -267,8 +267,9 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
             for (const key of vl) {
                 let cat = fieldcat.find(c => c.FIELD === key);
                 if (cat) tab.push({
-                    FIELD: cat.SCRTEXT_L, VALUE:
-                        table.getModel(prefix ? MainView.IDAPP + prefix + "tab" : MainView.IDAPP + "tab").getData()[line][key]
+                    FIELD: cat.SCRTEXT_L,
+                    VALUE: table.getModel(prefix ? MainView.IDAPP + prefix + "tab" : MainView.IDAPP + "tab").getData()[line][key],
+                    DESCR: key
                 });
             }
 
