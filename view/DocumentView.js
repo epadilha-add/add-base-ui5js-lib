@@ -508,6 +508,9 @@ sap.ui.define([
                 case '.HTM':
                     blob = MainView.b64toBlob(file[0].FILBIN, 'text/html');
                     break;
+                case '.JPG':
+                    blob = MainView.b64toBlob(file[0].FILBIN, 'image/jpeg');
+                    break;
                 case '.PDF':
                     blob = MainView.b64toBlob(file[0].FILBIN, 'application/pdf');
                     break;

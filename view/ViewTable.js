@@ -396,10 +396,8 @@ sap.ui.define(
                 if (MainView.getView().getController().setTableTitle)
                     MainView.getView().getController()?.setTableTitle(MainView, ViewTable);
 
-                MainView.tableParts(MainView).toolBar().setToolBar(ViewTable.table);
-
                 ViewTable.table.setModel(new sap.ui.model.json.JSONModel(params.DATA), MainView.IDAPP + "tab");
-
+                MainView.tableParts(MainView).toolBar().setToolBar(ViewTable.table);
                 ViewTable.table.bindRows(MainView.IDAPP + "tab>/");
 
                 if (MainView.getView().getController().setRowSettingsTemplateTable)

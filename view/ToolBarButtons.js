@@ -88,7 +88,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
         },
 
         exportToExcel: function (prefix = "", table = MainView.View.table, fieldcat = MainView.View.fieldcat) {
-            var tStruc = MainView.View.fieldcat;
+            var tStruc = prefix ? MainView[prefix].View.fieldcat : MainView.View.fieldcat;
             var aColumns = [];
             if (tStruc instanceof Array) {
                 tStruc.sort(function (a, b) {
@@ -148,7 +148,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                 }),
                 models: table.getModel(MainView.IDAPP + prefix + "tab"),
                 rows: {
-                    path: + prefix + ">/",
+                    path: MainView.IDAPP + prefix + "tab>/",
                 },
                 columns: aColumns,
             });

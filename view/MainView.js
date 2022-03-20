@@ -292,7 +292,8 @@ sap.ui.define(
                 return await MainView.callService.postSync("add", params).then(async resp => {
                     MainView.getView().setBusy(false);
 
-                    if (MainView.afterCreating instanceof Function) resp = await MainView.afterCreating(resp, MainView);
+                    if (MainView.afterCreating instanceof Function)
+                        await MainView.afterCreating(resp, MainView);
 
                     if (!resp) throw "errorCreate";
 
@@ -711,7 +712,7 @@ sap.ui.define(
                                         tooltip: {
                                             parts: ["mainModel>ACTIVE", "mainModel>CHANAM", "mainModel>ERNAM"],
                                             formatter: (data, CHANAM, ERNAM) => {
-                                                return data ? (CHANAM ? "Modificado por: " + CHANAM || "" : "Modificado por: " + CHANAM || "") : "Criado por: " + ERNAM;
+                                                return data ? (CHANAM ? "Modificado por: " + CHANAM || "" : "Modificado por: " + CHANAM || "") : "";
                                             },
                                         },
                                         text: {
@@ -724,7 +725,7 @@ sap.ui.define(
                                                 pattern: "dd/MM/yyyy HH:mm:ss",
                                             },
                                             formatter: data => {
-                                                return data ? "em: " + data : "";
+                                                return ""; //data ? "em: " + data : "";
                                             },
                                         },
                                         icon: {
@@ -925,6 +926,7 @@ sap.ui.define(
                                 }
                                 if (vals && field.create && !vals[field.REFKIND || field.field.split(".")[0]]) {
                                     vals = null;
+                                    return;
                                     throw new TypeError("Err " + field.field + " empty");
                                 }
                             }
@@ -1579,7 +1581,8 @@ sap.ui.define(
                 }
 
                 function setNone(id) {
-                    sap.ui.getCore().byId(id).setValueState(sap.ui.core.ValueState.None);
+                    if (id)
+                        sap.ui.getCore().byId(id).setValueState(sap.ui.core.ValueState.None);
                 }
 
                 function setNoneAll() {

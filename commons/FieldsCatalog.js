@@ -42,21 +42,21 @@ sap.ui.define([], function (AddUtilities) {
                 case "QUAN":
                     return catalog.EDIT
                         ? new sap.m.Input({
-                              type: "sap.ui.model.type.Integer",
-                              value: "{" + mdl + catalog.FIELD + "}",
-                          })
+                            type: "sap.ui.model.type.Integer",
+                            value: "{" + mdl + catalog.FIELD + "}",
+                        })
                         : new sap.m.ObjectStatus({
-                              tooltip: catalog.SCRTEXT_L + " " + catalog.FIELD,
-                              active: catalog.HOTSP ? true : false,
-                              state: {
-                                  path: mdl + catalog.FIELD,
-                                  type: "sap.ui.model.type.Integer",
-                                  formatter: catalog.formatter || (val => (catalog.VKEYM ? "Information" : sap.ui.core.ValueState.None)),
-                              },
-                              text: "{" + mdl + catalog.FIELD + "}",
-                              ...link,
-                              ...catalog.propInclude,
-                          });
+                            tooltip: catalog.SCRTEXT_L + " " + catalog.FIELD,
+                            active: catalog.HOTSP ? true : false,
+                            state: {
+                                path: mdl + catalog.FIELD,
+                                type: "sap.ui.model.type.Integer",
+                                formatter: catalog.formatter || (val => (catalog.VKEYM ? "Information" : sap.ui.core.ValueState.None)),
+                            },
+                            text: "{" + mdl + catalog.FIELD + "}",
+                            ...link,
+                            ...catalog.propInclude,
+                        });
 
                 case "CHAR":
                     return new sap.m.ObjectStatus({
@@ -130,15 +130,14 @@ sap.ui.define([], function (AddUtilities) {
                         ...catalog.propInclude,
                     });
                 case "CURR":
-                    return new sap.m.Label({
-                        tooltip: catalog.SCRTEXT_L + " " + catalog.FIELD,
+                    return new sap.m.Text({
+                        //tooltip: catalog.SCRTEXT_L + " " + catalog.FIELD,
                         wrapping: false,
                         text: {
                             path: mdl + catalog.FIELD,
                             type: catalog.prop?.type || "sap.ui.model.type.Float",
-                            formatOptions: catalog.formatOptions || {
-                                maxIntegerDigits: 15,
-                                maxFractionDigits: 2,
+                            formatOptions: catalog?.prop?.formatOptions || {
+                                showMeasure: true
                             },
                         },
                         ...link,

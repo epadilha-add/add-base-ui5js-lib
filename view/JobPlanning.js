@@ -300,7 +300,7 @@ sap.ui.define([], function () {
 
                                 MainView.popUpPlan.dialogConfirmPlan.close();
 
-                                let evry = every.getValue() * 1000 * 60;
+                                let evry = every.getValue() * 1000;
 
                                 let lmit = parseInt(limit.getValue());
 

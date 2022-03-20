@@ -317,10 +317,10 @@ sap.ui.define(
                                                 value: {
                                                     path: modelName + ">/" + struc.FIELDNAME,
                                                     type: vType,
-                                                    formatOptions: {
-                                                        maxIntegerDigits: maxInt,
-                                                        maxFractionDigits: decimals,
-                                                    },
+                                                    /*      formatOptions: {
+                                                             maxIntegerDigits: maxInt,
+                                                             maxFractionDigits: decimals,
+                                                         }, */
                                                 },
                                                 ...struc.propInclude,
                                             })

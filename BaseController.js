@@ -246,14 +246,32 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
 
                 switch (field.REFTYPE) {
                     case "LB":
-                        selectScreen[field.REFKIND || field.field] = sap.ui.getCore().byId(field.idUi5).getSelectedKey();
-                        if (selectScreen[field.REFKIND || field.field].length === 0) selectScreen[field.REFKIND || field.field] = "";
+                        if (!field.keepName) {
+                            selectScreen[field.REFKIND || field.field] =
+                                sap.ui.getCore().byId(field.idUi5).getSelectedKey();
+                            if (selectScreen[field.REFKIND || field.field].length === 0)
+                                selectScreen[field.REFKIND || field.field] = "";
+                        } else {
+                            selectScreen[field.field] =
+                                sap.ui.getCore().byId(field.idUi5).getSelectedKey();
+                            if (selectScreen[field.field].length === 0)
+                                selectScreen[field.field] = "";
+                        }
                         break;
                     case "MC":
-                        selectScreen[field.REFKIND || field.field] = {
-                            $in: sap.ui.getCore().byId(field.idUi5).getSelectedKeys(),
-                        };
-                        if (selectScreen[field.REFKIND || field.field].$in.length === 0) selectScreen[field.REFKIND || field.field] = "";
+                        if (!field.keepName) {
+                            selectScreen[field.REFKIND || field.field] = {
+                                $in: sap.ui.getCore().byId(field.idUi5).getSelectedKeys() || [],
+                            };
+                            if (selectScreen[field.REFKIND || field.field].$in.length === 0)
+                                selectScreen[field.REFKIND || field.field] = "";
+                        } else {
+                            selectScreen[field.field] = {
+                                $in: sap.ui.getCore().byId(field.idUi5).getSelectedKeys() || [],
+                            };
+                            if (selectScreen[field.field].$in.length === 0)
+                                selectScreen[field.field] = "";
+                        }
                         break;
                     case "DR":
                         if (!sap.ui.getCore().byId(field.idUi5).getValue()) {
@@ -353,6 +371,12 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
             return await this.buildFn(name);
         },
 
+        async execFn(name) {
+            if (!this[name])
+                this[name] = await this.getFn(name);
+            await this[name](this);
+        },
+
         async buildFn(name) {
             return await this.callService
                 .postSync("add", {
@@ -363,11 +387,11 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
                     if (resp) {
                         if (typeof resp === "string") resp = JSON.parse(resp);
 
-                        if (resp.rows[0]?.ACTIVE) {
-                            var func = new Function("return " + (this.isBase64.test(resp.rows[0].SOURCE) ? window.atob(resp.rows[0].SOURCE) : resp.rows[0].SOURCE))();
+                        if (resp.rows.find(e => e.ACTIVE)) {
+                            var func = new Function("return " + (this.isBase64.test(resp.rows.find(e => e.ACTIVE).SOURCE) ? window.atob(resp.rows.find(e => e.ACTIVE).SOURCE) : resp.rows.find(e => e.ACTIVE).SOURCE))();
                             return func;
                         } else {
-                            if (resp.rows[0]?.ACTIVE === false) {
+                            if (resp.rows.find(e => !e.ACTIVE)) {
                                 return () => console.warn("EXIT_DISABLE", name);
                             } else {
                                 return () => console.warn("NOT_IMPLEMENTED", name);
@@ -478,6 +502,17 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
         populate: line => {
             if (!line) return;
 
+            if (line.PROCX) {
+                const procx = sap.ui
+                    .getCore()
+                    .getModel("TAXP0100")
+                    .getData()
+                    .find(s => (s.id === line.PROCX || s.PROCX === line.PROCX));
+                if (procx) {
+                    line.DPROCX = procx.DESCR;
+                    line.PROCX = procx.PROCX;
+                }
+            }
             if (line.STATU && !line.DSTATU) {
                 const st = sap.ui
                     .getCore()
@@ -498,7 +533,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
                     .getData()
                     .find(s => s.id === line.COMPANY);
                 if (crm) {
-                    line.NAME1 = crm.NAME1;
+                    line.DCOMPANY = crm.NAME1;
                 }
             }
 
@@ -510,22 +545,38 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
                     .find(s => (s.DOMIN === line.DOMIN) || (s.id === line.DOMIN));
                 if (domin) {
                     line.DDOMIN = domin.DESCR;
+                    line.SCHEM = domin.SCHEM;
+                }
+            }
+
+            if (line.ATIVI) {
+
+                if (line.ATIVI === 10) {
+                    line.ATIVI = 100; //TODO TMP
+                }
+                const ativi = sap.ui
+                    .getCore()
+                    .getModel("TAXP0102")
+                    .getData()
+                    .find(s => (s.P0100.id === line.PROCX || s.P0100.PROCX === line.PROCX) && (s.ATIVI === line.ATIVI));
+                if (ativi) {
+                    line.DATIVI = line.ATIVI + ":" + ativi.DESCR;
                 }
             }
             //return line;
         },
         populateCode: (line, field) => {
-            if (!line) return;
+            return;
 
             if (!field) {
                 if (line.COMPANY) {
-                    line.CCOMPANY = line.COMPANY;
                     const crm = sap.ui
                         .getCore()
                         .getModel("CRM0000")
                         .getData()
                         .find(s => s.id === line.COMPANY);
                     if (crm) {
+                        line.idCOMPANY = crm.id;
                         line.COMPANY = crm.NAME1;
                     }
                 }
@@ -538,6 +589,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
                         .getData()
                         .find(s => s.id === line.PROCX);
                     if (procx) {
+                        line.idPROCX = procx.id;
                         line.PROCX = procx.PROCX;
                     }
                 }
@@ -548,7 +600,8 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
                         .getData()
                         .find(s => s.id === line.DOMIN);
                     if (domin) {
-                        line.DDOMIN = domin.DESCR;
+                        line.idDOMIN = domin.id
+                        line.DOMIN = domin.DESCR;
                     }
                 }
                 return;
@@ -590,6 +643,18 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
         Model: sap.ui.model.json.JSONModel,
         Date: sap.ui.model.type.Date,
         Time: sap.ui.model.type.Time,
+
+        formatCurrency: (value) => {
+
+            var oFloatNumberFormat = sap.ui.core.format.NumberFormat.getFloatInstance({
+                maxFractionDigits: 2,
+                minFractionDigits: 2,
+                groupingEnabled: true
+            }, sap.ui.getCore().getConfiguration().getLocale());
+
+            return oFloatNumberFormat.format(value);
+
+        },
         isBase64: /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/,
     });
 });
