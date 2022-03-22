@@ -48,7 +48,8 @@ sap.ui.define([], function () {
                                 content: content,
                             };
 
-                            That._saveLocalVariants(obj, that)
+                            That._saveVariantsRemote(obj, that)
+                                //That._saveLocalVariants(obj, that)
                                 .then(persisted => {
                                     that.headerToolbar
                                         .getContent()
@@ -83,7 +84,7 @@ sap.ui.define([], function () {
             That = this;
 
             return new Promise((resolve, reject) => {
-                That._listLocalVariants(view, type, that)
+                That._listVariantsRemote(view, type, that)
                     .then(data => {
                         that.getView().setModel(new sap.ui.model.json.JSONModel(data), that.IDAPP + "variants");
 
@@ -115,9 +116,9 @@ sap.ui.define([], function () {
                                 press: function (e) {
                                     let idx = e.getSource().getId().split("-")[2];
 
-                                    let itens = that.getView().getModel(that.IDAPP + "variants").oData;
+                                    debugger; let itens = that.getView().getModel(that.IDAPP + "variants").oData;
 
-                                    That._deleteVariant(itens[idx].key, that)
+                                    That._deleteVariantRemote(itens[idx].key, that)
                                         .then(deleted => {
                                             if (deleted) {
                                                 const newitens = itens.filter((elem, i) => i !== parseInt(idx));
@@ -168,7 +169,7 @@ sap.ui.define([], function () {
         getLastUsedVariant: async function (view, type, that) {
             That = this;
             return new Promise((resolve, reject) => {
-                That._listLocalVariants(view, type, that)
+                That._listVariantsRemote(view, type, that)
                     .then(data => {
                         resolve(data[0]);
                     })
@@ -181,7 +182,7 @@ sap.ui.define([], function () {
 
         getLastUsedVariantMatch: function (view, type, match, that) {
             return new Promise((resolve, reject) => {
-                That._listLocalVariants(view, type, that)
+                That._listVariantsRemote(view, type, that)
                     .then(data => {
                         if (!match) {
                             resolve(data[0]);
@@ -201,7 +202,27 @@ sap.ui.define([], function () {
                     });
             });
         },
+        _saveVariantsRemote: function (data, that) {
+            return new Promise((resolve, reject) => {
 
+                that.callService.postSync("add", {
+                    actionName: "TAXPVAR.create", params: {
+                        TYPE: data.type,
+                        NAME: data.name,
+                        VIEW: data.view,
+                        CONTENT: (typeof data.content === 'string') ? data.content : JSON.stringify(data.content),
+                    }
+                }).then(() => {
+
+                    resolve(true);
+
+                }).catch((error) => {
+
+                    resolve(error);
+                })
+
+            });
+        },
         _saveLocalVariants: function (data, that) {
             return new Promise((resolve, reject) => {
 
@@ -233,7 +254,52 @@ sap.ui.define([], function () {
 
             });
         },
+        _listVariantsRemote: function (view, type, that) {
+            let That = this;
+            return new Promise(async (resolve, reject) => {
 
+                return await that.callService.postSync("add", {
+                    actionName: "TAXPVAR.find", params: {
+
+                        query: {
+                            TYPE: type,
+                            //NAME: name,
+                            VIEW: view,
+                        }
+
+                    }
+                }).then((data) => {
+
+                    if (typeof data === 'string')
+                        data = JSON.parse(data);
+
+                    if (data && data.length) {
+                        let sorted = data.slice().sort(function (a, b) {
+                            return b.CREDAT - a.CREDAT;
+                        });
+                        resolve(sorted.map(s => {
+                            return {
+                                key: s.id,
+                                content: (typeof s.CONTENT === 'string') ? JSON.parse(s.CONTENT) : s.CONTENT,
+                                view: s.VIEW,
+                                name: s.NAME
+                            }
+                        }));
+                    } else {
+                        /**
+                         * caso não encontre a variante, tentar buscar localmente
+                         * para que o usuário não perca as variantes que já 
+                         * criou
+                         */
+                        return resolve(this._listLocalVariants(view, type, that));
+                    }
+
+                }).catch((error) => {
+
+                    reject(error);
+                })
+            })
+        },
         _listLocalVariants: function (view, type, that) {
             let That = this;
             return new Promise((resolve, reject) => {
@@ -282,6 +348,22 @@ sap.ui.define([], function () {
                     console.log(e);
                     reject(e.target.error);
                 };
+            });
+        },
+        _deleteVariantRemote: function (idx, that) {
+            return new Promise((resolve, reject) => {
+                that.callService.postSync("add", {
+                    actionName: "TAXPVAR.remove", params: {
+                        id: idx
+                    }
+                }).then(() => {
+
+                    resolve(true);
+
+                }).catch((error) => {
+
+                    reject(error);
+                })
             });
         },
         _deleteVariant: function (idx, that) {

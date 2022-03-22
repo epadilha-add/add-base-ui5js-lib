@@ -534,7 +534,6 @@ sap.ui.define(
                                 }
                             }
 
-
                             for (const field of ViewTable.fieldcat.filter(f => f.VISIBLE)) {
                                 /*
                                  * aqui faz a leitura para que configurações do servidor sejam
@@ -840,6 +839,7 @@ sap.ui.define(
                     sortProperty: field.FIELD,
                     filterProperty: field.FIELD,
                     autoResizable: true,
+                    hAlign: (field.DATATYPE === 'CURR') ? 'End' : 'Center'
                     //grouped: true
                 });
 

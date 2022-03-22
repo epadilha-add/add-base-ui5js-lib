@@ -42,7 +42,9 @@ sap.ui.define([
             that.addMainContent = this.addMainContent;
             that.upContent = this.upContent;
             this.user = that.user;
-
+            window.tax = {
+                addMainContent: this.addMainContent
+            }
             This = this;
             That = that;
 
@@ -88,8 +90,20 @@ sap.ui.define([
                                 that.setSideNavigation = false;
                                 This.component = app;
                             } else {
-                                This.component =
-                                    This.config.getData().navigation[0].key;
+
+                                if (window.location.hash) {
+                                    try {
+                                        This.component =
+                                            This.config.getData().navigation.find(n => n.href === window.location.hash).key;
+                                    } catch (error) {
+                                        This.component =
+                                            This.config.getData().navigation[0].key;
+                                    }
+
+                                } else {
+                                    This.component =
+                                        This.config.getData().navigation[0].key;
+                                }
                             }
 
                         } catch {

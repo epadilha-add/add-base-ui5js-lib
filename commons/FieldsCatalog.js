@@ -130,16 +130,20 @@ sap.ui.define([], function (AddUtilities) {
                         ...catalog.propInclude,
                     });
                 case "CURR":
-                    return new sap.m.Text({
+                    return new sap.m.ObjectNumber({
                         //tooltip: catalog.SCRTEXT_L + " " + catalog.FIELD,
-                        wrapping: false,
-                        text: {
-                            path: mdl + catalog.FIELD,
-                            type: catalog.prop?.type || "sap.ui.model.type.Float",
+                        //wrapping: false,
+                        number: {
+                            parts: [{ path: mdl + catalog.FIELD }, {
+                                path: mdl + "CurrencyCode"
+                            }],
+                            type: catalog.prop?.type || "sap.ui.model.type.Currency",
                             formatOptions: catalog?.prop?.formatOptions || {
                                 showMeasure: true
                             },
+                            unit: "{" + mdl + "CurrencyCode}"
                         },
+                        textAlign: sap.ui.core.TextAlign.End,
                         ...link,
                         ...catalog.propInclude,
                     });

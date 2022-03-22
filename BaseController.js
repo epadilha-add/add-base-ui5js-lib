@@ -502,6 +502,9 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
         populate: line => {
             if (!line) return;
 
+            if (!line.CurrencyCode)
+                line.CurrencyCode = 'BRL'; //TODO - prever esse dado nas configurações do processo
+
             if (line.PROCX) {
                 const procx = sap.ui
                     .getCore()

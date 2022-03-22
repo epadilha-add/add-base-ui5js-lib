@@ -279,6 +279,9 @@ sap.ui.define(
 
                                 res.push(new sap.m.ComboBox(prop));
 
+                                if (struc.defaultValue)
+                                    res[1].setSelectedKey(struc.defaultValue);
+
                                 break;
 
                             case "TA":
@@ -454,7 +457,8 @@ sap.ui.define(
                                         },
                                     })
                                 );
-
+                                if (struc.defaultValue)
+                                    res[1].setSelectedKeys(struc.defaultValue);
                                 break;
 
                             case "DR":
@@ -479,6 +483,14 @@ sap.ui.define(
                                     })
                                 );
 
+                                if (struc.defaultValue) {
+                                    res[1].setFrom(
+                                        struc.defaultValue[0]
+                                    );
+                                    res[1].setTo(
+                                        struc.defaultValue[1]
+                                    );
+                                }
                                 break;
 
                             case "CB":
