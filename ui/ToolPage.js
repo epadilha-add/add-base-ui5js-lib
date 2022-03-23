@@ -95,9 +95,14 @@ sap.ui.define([
                                     try {
                                         This.component =
                                             This.config.getData().navigation.find(n => n.href === window.location.hash).key;
-                                    } catch (error) {
-                                        This.component =
-                                            This.config.getData().navigation[0].key;
+                                    } catch {
+                                        try {
+                                            This.component =
+                                                This.config.getData().fixedNavigation.find(n => n.href === window.location.hash).key;
+                                        } catch {
+                                            This.component =
+                                                This.config.getData().navigation[0].key;
+                                        }
                                     }
 
                                 } else {

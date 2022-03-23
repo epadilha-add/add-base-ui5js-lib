@@ -116,7 +116,7 @@ sap.ui.define([], function () {
                                 press: function (e) {
                                     let idx = e.getSource().getId().split("-")[2];
 
-                                    debugger; let itens = that.getView().getModel(that.IDAPP + "variants").oData;
+                                    let itens = that.getView().getModel(that.IDAPP + "variants").oData;
 
                                     That._deleteVariantRemote(itens[idx].key, that)
                                         .then(deleted => {

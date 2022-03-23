@@ -668,7 +668,13 @@ sap.ui.define(
                                             icon: {
                                                 parts: ["mainModel>" + field.field],
                                                 formatter: data => {
-                                                    return data ? MainView.ICON_ACTIVE : "";
+                                                    if (data === true) {
+                                                        return MainView.ICON_ACTIVE;
+                                                    } else if (data === false) {
+                                                        return "";
+                                                    } else {
+                                                        return data;
+                                                    }
                                                 },
                                             },
                                         }).addStyleClass("labelColumnsTable")
