@@ -111,7 +111,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                                 content: {
                                     parts: [fld],
                                     formatter: function (value) {
-                                        return "	" + value;
+                                        return value ? "	" + value : "";
                                     },
                                 },
                             };
@@ -123,10 +123,10 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                                 content: {
                                     parts: [fld],
                                     formatter: function (value) {
-                                        if (value) {
+                                        if (value && value.length === 8) {
                                             return String(value).substring(0, 4) + "-" + String(value).substring(4, 6) + "-" + String(value).substring(6, 8);
                                         }
-                                        return value;
+                                        return value ? value : "";
                                     },
                                 },
                             };
@@ -134,7 +134,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                         default:
                             vStruc.name = vLabel;
                             vStruc.template = {
-                                content: fld,
+                                content: value
                             };
                     }
                     aColumns.push(vStruc);
@@ -148,7 +148,7 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
                 }),
                 models: table.getModel(MainView.IDAPP + prefix + "tab"),
                 rows: {
-                    path: MainView.IDAPP + prefix + "tab>/",
+                    path: '/',
                 },
                 columns: aColumns,
             });
@@ -267,9 +267,9 @@ sap.ui.define(["../commons/Helpers", "sap/ui/core/util/Export", "sap/ui/core/uti
             for (const key of vl) {
                 let cat = fieldcat.find(c => c.FIELD === key);
                 if (cat) tab.push({
-                    FIELD: cat.SCRTEXT_L,
+                    FIELD: key,
                     VALUE: table.getModel(prefix ? MainView.IDAPP + prefix + "tab" : MainView.IDAPP + "tab").getData()[line][key],
-                    DESCR: key
+                    DESCR: cat.SCRTEXT_L
                 });
             }
 

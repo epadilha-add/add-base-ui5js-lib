@@ -459,6 +459,9 @@ sap.ui.define(
                                 );
                                 if (struc.defaultValue)
                                     res[1].setSelectedKeys(struc.defaultValue);
+
+                                if (struc.FOREIGNKEY)
+                                    res[1].fireSelectionFinish();
                                 break;
 
                             case "DR":

@@ -174,7 +174,8 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
              * stop components
              */
             for (const f of fields) {
-                sap.ui.getCore().byId(f.idUi5).setBusy(true);
+                if (f.idUi5)
+                    sap.ui.getCore().byId(f.idUi5).setBusy(true);
             }
             /**
              * get id if necessary
@@ -244,66 +245,67 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
              */
             for (const field of MainView.fieldcat) {
 
-                switch (field.REFTYPE) {
-                    case "LB":
-                        if (!field.keepName) {
-                            selectScreen[field.REFKIND || field.field] =
-                                sap.ui.getCore().byId(field.idUi5).getSelectedKey();
-                            if (selectScreen[field.REFKIND || field.field].length === 0)
-                                selectScreen[field.REFKIND || field.field] = "";
-                        } else {
-                            selectScreen[field.field] =
-                                sap.ui.getCore().byId(field.idUi5).getSelectedKey();
-                            if (selectScreen[field.field].length === 0)
+                if (field.idUi5)
+                    switch (field.REFTYPE) {
+                        case "LB":
+                            if (!field.keepName) {
+                                selectScreen[field.REFKIND || field.field] =
+                                    sap.ui.getCore().byId(field.idUi5).getSelectedKey();
+                                if (selectScreen[field.REFKIND || field.field].length === 0)
+                                    selectScreen[field.REFKIND || field.field] = "";
+                            } else {
+                                selectScreen[field.field] =
+                                    sap.ui.getCore().byId(field.idUi5).getSelectedKey();
+                                if (selectScreen[field.field].length === 0)
+                                    selectScreen[field.field] = "";
+                            }
+                            break;
+                        case "MC":
+                            if (!field.keepName) {
+                                selectScreen[field.REFKIND || field.field] = {
+                                    $in: sap.ui.getCore().byId(field.idUi5).getSelectedKeys() || [],
+                                };
+                                if (selectScreen[field.REFKIND || field.field].$in.length === 0)
+                                    selectScreen[field.REFKIND || field.field] = "";
+                            } else {
+                                selectScreen[field.field] = {
+                                    $in: sap.ui.getCore().byId(field.idUi5).getSelectedKeys() || [],
+                                };
+                                if (selectScreen[field.field].$in.length === 0)
+                                    selectScreen[field.field] = "";
+                            }
+                            break;
+                        case "DR":
+                            if (!sap.ui.getCore().byId(field.idUi5).getValue()) {
                                 selectScreen[field.field] = "";
-                        }
-                        break;
-                    case "MC":
-                        if (!field.keepName) {
-                            selectScreen[field.REFKIND || field.field] = {
-                                $in: sap.ui.getCore().byId(field.idUi5).getSelectedKeys() || [],
-                            };
-                            if (selectScreen[field.REFKIND || field.field].$in.length === 0)
-                                selectScreen[field.REFKIND || field.field] = "";
-                        } else {
+                                continue;
+                            }
+
+                            let from = sap.ui.core.format.DateFormat.getDateInstance({
+                                pattern: "yyyyMMdd",
+                            }).format(sap.ui.getCore().byId(field.idUi5).getFrom());
+
+                            let to = sap.ui.core.format.DateFormat.getDateInstance({
+                                pattern: "yyyyMMdd",
+                            }).format(sap.ui.getCore().byId(field.idUi5).getTo());
+
                             selectScreen[field.field] = {
-                                $in: sap.ui.getCore().byId(field.idUi5).getSelectedKeys() || [],
+                                $gte: parseInt(from),
+                                $lte: parseInt(to),
                             };
-                            if (selectScreen[field.field].$in.length === 0)
-                                selectScreen[field.field] = "";
-                        }
-                        break;
-                    case "DR":
-                        if (!sap.ui.getCore().byId(field.idUi5).getValue()) {
-                            selectScreen[field.field] = "";
-                            continue;
-                        }
 
-                        let from = sap.ui.core.format.DateFormat.getDateInstance({
-                            pattern: "YYYYMMdd",
-                        }).format(sap.ui.getCore().byId(field.idUi5).getFrom());
+                            break;
+                        case "CB":
+                            selectScreen[field.REFKIND || field.field] = sap.ui.getCore().byId(field.idUi5).getProperty("selected");
+                            break;
+                        default:
+                            selectScreen[field.field] = sap.ui.getCore().byId(field.idUi5).getValue();
 
-                        let to = sap.ui.core.format.DateFormat.getDateInstance({
-                            pattern: "YYYYMMdd",
-                        }).format(sap.ui.getCore().byId(field.idUi5).getTo());
-
-                        selectScreen[field.field] = {
-                            $gte: parseInt(from),
-                            $lte: parseInt(to),
-                        };
-
-                        break;
-                    case "CB":
-                        selectScreen[field.REFKIND || field.field] = sap.ui.getCore().byId(field.idUi5).getProperty("selected");
-                        break;
-                    default:
-                        selectScreen[field.field] = sap.ui.getCore().byId(field.idUi5).getValue();
-
-                        if (field.DATATYPE === "QUAN")
-                            //até termos uma melhor definição
-                            selectScreen[field.field] = parseInt(selectScreen[field.field]);
-                        break;
-                }
+                            if (field.DATATYPE === "QUAN")
+                                //até termos uma melhor definição
+                                selectScreen[field.field] = parseInt(selectScreen[field.field]);
+                            break;
+                    }
             }
             return selectScreen;
         },
@@ -514,18 +516,31 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
                 if (procx) {
                     line.DPROCX = procx.DESCR;
                     line.PROCX = procx.PROCX;
+                    line.idPROCX = procx.id;
                 }
             }
             if (line.STATU && !line.DSTATU) {
-                const st = sap.ui
+                const stp = sap.ui
                     .getCore()
-                    .getModel("TAXP0104")
+                    .getModel("TAXP0112")
                     .getData()
-                    .find(s => s.STATU === line.STATU);
-                if (st) {
-                    line.DSTATU = st.DESCR;
-                    line.TPMSG = st.TPMSG;
-                    line.ICONS = st.ICON;
+                    .find(s => s.STATU === line.STATU && s.PROCP === line.idPROCX);
+                if (stp) {
+                    line.DSTATU = stp.DESCR;
+                    line.TPMSG = stp.TPMSG;
+                    line.ICONS = stp.ICON;
+                } else {
+
+                    const st = sap.ui
+                        .getCore()
+                        .getModel("TAXP0104")
+                        .getData()
+                        .find(s => s.STATU === line.STATU);
+                    if (st) {
+                        line.DSTATU = st.DESCR;
+                        line.TPMSG = st.TPMSG;
+                        line.ICONS = st.ICON;
+                    }
                 }
             }
 

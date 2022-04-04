@@ -1698,7 +1698,7 @@ sap.ui.define(
                      * ref: add.base.ui5js.lib.BaseController
                      * ref: refreshForeignKeyDependency
                      */
-                    if (!field.FOREIGNKEY || MainView.mode !== "selectScreen") return;
+                    if (!field.FOREIGNKEY && MainView.mode !== "selectScreen") return;
                     let fc = fieldcat.find(c => c.field === field.FOREIGNKEY);
                     switch (fc?.REFTYPE) {
                         case "MC":
