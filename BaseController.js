@@ -517,6 +517,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
                     line.DPROCX = procx.DESCR;
                     line.PROCX = procx.PROCX;
                     line.idPROCX = procx.id;
+                    line.PROCM = procx.PROCM || procx.PROCX;
                 }
             }
             if (line.STATU && !line.DSTATU) {

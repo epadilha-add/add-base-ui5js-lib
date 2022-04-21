@@ -161,11 +161,10 @@ sap.ui.define([
                         actionName: "TAXDH.list",
                         params: {
                             pageSize: pageSize,
-                            query: { D0000: { $in: d0000.map(d => d.id) } },
+                            query: { D0000: d0000[0].id },
                         },
                     })
                     .then((resp) => {
-
 
                         if (typeof resp === "string") resp = JSON.parse(resp);
 
@@ -386,21 +385,13 @@ sap.ui.define([
                     MainView.getView().addDependent(table);
                 });
 
-
             table.setModel(new MainView.Model(rows));
 
             table.bindRows("/");
 
-            /*             table.setToolbar(
-                            new sap.m.Toolbar({
-            
-                            })
-                        ) */
             this.avatar = new sap.m.Avatar({
                 src: 'sap-icon://pdf-attachment',
                 displaySize: sap.m.AvatarSize.XS,
-                //backgroundColor: sap.m.AvatarColor.Accent1,
-                //tooltip: MainView.IDAPP,
             });
 
             let navButton = !rows[0].INDEC
