@@ -235,8 +235,9 @@ sap.ui.define(
                     }
 
                     if (lines[key] instanceof Object && lines[key].id) {
-                        for (const k in lines[key]) {
-                            lines[key + "." + k] = lines[key][k];
+                        for (let k in lines[key]) {
+                            let fld = k.replace('_', '');
+                            lines[key + "." + fld] = lines[key][k];
                         }
                         lines[key] = lines[key].id;
 
