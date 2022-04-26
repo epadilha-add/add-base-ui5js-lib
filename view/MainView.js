@@ -442,9 +442,8 @@ sap.ui.define(
 
                         MainView.getView().setBusy(false);
 
-                        if (!resp) return false;
-
-                        MainView.changeMainModel(resp);
+                        if (resp)
+                            MainView.changeMainModel(resp);
 
                         MainView.message("successUpdate");
 
