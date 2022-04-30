@@ -149,7 +149,7 @@ sap.ui.define(
                                     element.FIELDNAME = field.field || element.FIELD;
                                     element.EDIT = MainView.edit;
                                     element.EDIT = field.key ? false : true;
-
+                                    element.key = field.key;
                                     /**
                                      * caso seja um campo com '.' ref type é sempre input
                                      */
@@ -241,17 +241,17 @@ sap.ui.define(
 
                 switch (struc.EDIT) {
                     case false:
-                        res.push(
-                            new sap.m.Text({
-                                //id: Id,
-                                text: struc.REFTYPE !== "LB" ? "{" + that.IDAPP + "PARAM>/" + struc.FIELDNAME + "}" : "{" + that.IDAPP + "PARAM>/" + struc.FIELDNAME + "}",
-                                width: "100%",
-                                tooltip: struc.tooltip ? struc.tooltip : "",
-                                wrapping: false,
-                            })
-                        );
+                    /*            res.push(
+                                   new sap.m.Text({
+                                       //id: Id,
+                                       text: struc.REFTYPE !== "LB" ? "{" + that.IDAPP + "PARAM>/" + struc.FIELDNAME + "}" : "{" + modelName + "PARAM>/" + 'DESCR' + "}",
+                                       width: "100%",
+                                       tooltip: struc.tooltip ? struc.tooltip : "",
+                                       wrapping: false,
+                                   })
+                               ); 
 
-                        break;
+                    break;*/
                     default:
                         //struc.prop => completo { substitui completamente as propriedades }
                         //struc.propInclude => incluir { apenas inclui nóvas propriedades }
@@ -270,6 +270,7 @@ sap.ui.define(
                                         selectedKey: "{" + that.IDAPP + "PARAM>/" + struc.FIELDNAME.split(".")[0] + "}",
                                         change: struc.change || function () { },
                                         selectionChange: struc.selectionChange || function () { },
+                                        editable: (struc.key === undefined) ? true : struc.key ? false : true,
                                         items: {
                                             path: modelName + "PARAM>/",
                                             template: oItemTemplate,
@@ -317,6 +318,7 @@ sap.ui.define(
                                             new sap.m.Input({
                                                 tooltip: struc.tooltip ? struc.tooltip : "",
                                                 // wrapping: false, -> incompatível
+                                                editable: (struc.key === undefined) ? true : struc.key ? false : true,
                                                 value: {
                                                     path: modelName + ">/" + struc.FIELDNAME,
                                                     type: vType,
@@ -343,6 +345,7 @@ sap.ui.define(
                                                 change: struc.submit ? struc.submit : function () { },
                                                 enabled: true, //(struc.EDIT) ? true : false,
                                                 //   submit: vSubmit,
+                                                editable: (struc.key === undefined) ? true : struc.key ? false : true,
                                                 value: {
                                                     path: modelName + ">/" + struc.FIELDNAME,
                                                 },
@@ -369,6 +372,7 @@ sap.ui.define(
                                             res.push(
                                                 new sap.m.MaskInput({
                                                     mask: mask,
+                                                    editable: (struc.key === undefined) ? true : struc.key ? false : true,
                                                     rules: [roles],
                                                     ...struc.propInclude,
                                                 }).bindProperty("value", modelName + ">/" + struc.FIELDNAME)
@@ -376,6 +380,7 @@ sap.ui.define(
                                         } else {
                                             res.push(
                                                 new sap.m.Input({
+                                                    editable: (struc.key === undefined) ? true : struc.key ? false : true,
                                                     ...struc.propInclude,
                                                 }).bindProperty("value", modelName + ">/" + struc.FIELDNAME)
                                             );
@@ -423,6 +428,7 @@ sap.ui.define(
                                         tooltip: tooltip,
                                         valueHelpRequest: sh,
                                         showValueHelp: showVH,
+                                        editable: (struc.key === undefined) ? true : struc.key ? false : true,
                                         tokenUpdate: function (oEvent) {
                                             that.screen.elements.__proto__.onTokenUpdate(oEvent, that);
                                         },
@@ -446,6 +452,7 @@ sap.ui.define(
                                         tooltip: tooltip,
                                         selectionChange: struc.selectionChange || function () { },
                                         selectionFinish: struc.selectionFinish || function () { },
+                                        editable: (struc.key === undefined) ? true : struc.key ? false : true,
                                         ...struc.propInclude,
                                         items: {
                                             path: modelName + "PARAM>/", // + struc.FIELDNAME,//  struc.SECTION.substring(5, 10),
@@ -480,6 +487,7 @@ sap.ui.define(
                                         // id: struc.FIELDNAME,
                                         change: chnd ? chnd : function () { },
                                         required: struc.OBLIGTORY,
+                                        editable: (struc.key === undefined) ? true : struc.key ? false : true,
                                         dateValue: "{" + that.IDAPP + "FILTERS>/" + struc.FIELDNAME + "/LOW}",
                                         secondDateValue: "{" + that.IDAPP + "FILTERS>/" + struc.FIELDNAME + "/HIGH}",
                                         ...struc.propInclude,
@@ -499,6 +507,7 @@ sap.ui.define(
                             case "CB":
                                 res.push(
                                     new sap.m.CheckBox({
+                                        editable: (struc.key === undefined) ? true : struc.key ? false : true,
                                         ...struc.propInclude,
                                         selected: "{" + modelName + ">/" + struc.FIELDNAME + "}",
                                     })
@@ -516,6 +525,7 @@ sap.ui.define(
                                         displayFormat: "hh:mm:ss",
                                         valueFormat: "hhmmss",
                                         enabled: true,
+                                        editable: (struc.key === undefined) ? true : struc.key ? false : true,
                                         required: struc.OBLIGTORY,
                                         value: {
                                             path: "FILTERS>/" + struc.FIELDNAME,
@@ -533,6 +543,7 @@ sap.ui.define(
                                         valueFormat: "yyyyMMdd",
                                         change: struc.submit ? struc.submit : function () { },
                                         enabled: true, //(struc.EDIT) ? true : false,
+                                        editable: (struc.key === undefined) ? true : struc.key ? false : true,
                                         //   submit: vSubmit,
                                         value: {
                                             path: modelName + ">/" + struc.FIELDNAME,

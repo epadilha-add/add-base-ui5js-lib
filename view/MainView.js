@@ -93,6 +93,7 @@ sap.ui.define(
                     params: {
                         pageSize: MainView.pageSize ? MainView.pageSize : 100,
                         query: { ...MainView.query },
+                        ...MainView.params
                     },
                     ...MainView.callParams,
                 };
@@ -135,12 +136,13 @@ sap.ui.define(
 
                 return MainView.callService
                     .postSync("add", params)
-                    .then(resp => {
+                    .then(async resp => {
                         MainView.getView().setBusy(false);
 
                         if (resp && typeof resp === "string") rows = JSON.parse(resp);
 
-                        if (MainView.afterList) rows = MainView.afterList(rows);
+                        if (MainView.afterList)
+                            await MainView.afterList(rows);
 
                         if (rows.rows) rows = rows.rows;
 
@@ -1033,7 +1035,8 @@ sap.ui.define(
                             tooltip: "Voltar",
                             press: () => {
                                 MainView.stopExecute = true;
-                                MainView.View.removeBtEvents();
+                                if (MainView.View && MainView.View.removeBtEvents)
+                                    MainView.View.removeBtEvents();
                                 MainView.mainContent.back();
                             },
                         }).addStyleClass("sapUiSmallMarginEnd");
@@ -1313,7 +1316,7 @@ sap.ui.define(
                                     //-> criar componente com base no idd
                                     MainView.sectionsItems.items[key.index || 0].getSubSections()[0].addBlock(
                                         MainView.Screen.create({
-                                            name: key.idapp,
+                                            name: key.idapp + MainView.sectionsItems.items.length,
                                             key: key.idapp,
                                             idapp: MainView.IDAPP,
                                         })

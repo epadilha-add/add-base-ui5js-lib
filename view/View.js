@@ -137,7 +137,7 @@ sap.ui.define([
                 params.ACTIVE = true;
 
             if (MainView.upButton || MainView.upButton === undefined)
-                this.upButton = new sap.m.Button( {
+                this.upButton = new sap.m.Button({
                     icon: 'sap-icon://slim-arrow-up', tooltip: '{i18n>openWindow}', visible: true, press: (oEvent) => {
 
                         let urlParams = new URLSearchParams(window.location.search);
