@@ -858,19 +858,28 @@ sap.ui.define(
 
                 var inputs = [];
                 let params = {};
+                let newCollection = {}
 
                 for (const fk of MainView.context) {
                     if (!fk.FOREIGNKEY) continue;
-
                     params[fk.FOREIGNKEYNAME || fk.FOREIGNKEY] = { $in: [MainView.foreignKeys[0][fk.FOREIGNKEY]] };
                 }
+
+                if (MainView.newCollection) {
+                    newCollection.actionName = MainView.newCollection;
+                }
+
 
                 for (const key of MainView.context) {
                     if (!key.create) continue;
 
                     if (MainView.foreignKeys && MainView.foreignKeys.find(f => f[key.field.split(".")[0]])) continue;
 
-                    let screenField = await new ScreenElements(MainView).getElementScreenByName([key], MainView, { params });
+                    if (newCollection && key?.VALUES?.length) {
+                        key.VALUES = [];
+                    }
+
+                    let screenField = await new ScreenElements(MainView).getElementScreenByName([key], MainView, { ...newCollection, ...params });
 
                     if (!screenField || screenField.length === 0) continue;
 

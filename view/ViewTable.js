@@ -79,6 +79,11 @@ sap.ui.define(
             },
 
             getParamsExecute() {
+
+                MainView.selectScreenFilters = MainView.getSelectScreenFilters(MainView);
+                for (const key in MainView.selectScreenFilters) {
+                    if (!MainView.selectScreenFilters[key] || MainView.selectScreenFilters[key] === null) delete MainView.selectScreenFilters[key];
+                }
                 let filters = { ...MainView.selectScreenFilters };
                 delete filters.MAXROWS;
 
@@ -107,10 +112,6 @@ sap.ui.define(
                 MainView.selectScreen.setBusy(true);
 
                 MainView.headerToolbar.setBlocked(true);
-
-                for (const key in MainView.selectScreenFilters) {
-                    if (!MainView.selectScreenFilters[key] || MainView.selectScreenFilters[key] === null) delete MainView.selectScreenFilters[key];
-                }
 
                 let params = externalQuery || MainView.getParamsExecute();
 

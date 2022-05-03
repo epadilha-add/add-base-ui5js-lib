@@ -210,7 +210,7 @@ sap.ui.define([], function () {
                         TYPE: data.type,
                         NAME: data.name,
                         VIEW: data.view,
-                        CONTENT: (typeof data.content === 'string') ? data.content : JSON.stringify(data.content),
+                        CONTENT: data.content,//(typeof data.content === 'string') ? data.content : JSON.stringify(data.content),
                     }
                 }).then(() => {
 

@@ -75,10 +75,14 @@ sap.ui.define(
 
                             response.find(element => {
                                 if (fld === element.FIELD) {
-                                    if (!parameter || !parameter?.params || !parameter?.params[element.FIELD]) element.VALUES = field?.VALUES;
+                                    if (!parameter || !parameter?.params || !parameter?.params[element.FIELD]) {
+                                        if (field?.VALUES?.length)
+                                            element.VALUES = field?.VALUES;
+                                    }
 
                                     if (element.VALUES) {
                                         var oModel = new JSONModel(element.VALUES.filter(e => e.ACTIVE || e.ACTIVE === undefined));
+                                        oModel.setSizeLimit(500);
                                         modelName = MainView.IDAPP + element.FIELD;
                                         Screen.getView().setModel(oModel, modelName + "PARAM");
                                     } else {
