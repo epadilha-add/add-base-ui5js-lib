@@ -210,7 +210,7 @@ sap.ui.define([], function () {
                         TYPE: data.type,
                         NAME: data.name,
                         VIEW: data.view,
-                        CONTENT: data.content,//(typeof data.content === 'string') ? data.content : JSON.stringify(data.content),
+                        CONTENT: { var: data.content } //(typeof data.content === 'string') ? data.content : JSON.stringify(data.content),
                     }
                 }).then(() => {
 
@@ -263,8 +263,8 @@ sap.ui.define([], function () {
 
                         query: {
                             TYPE: type,
-                            //NAME: name,
                             VIEW: view,
+                            DELETED: false
                         }
 
                     }
@@ -274,13 +274,16 @@ sap.ui.define([], function () {
                         data = JSON.parse(data);
 
                     if (data && data.length) {
+
                         let sorted = data.slice().sort(function (a, b) {
-                            return b.CREDAT - a.CREDAT;
+                            return parseInt(b.CREDAT) - parseInt(a.CREDAT);
                         });
+
                         resolve(sorted.map(s => {
+                            let v = (typeof s.CONTENT === 'string') ? JSON.parse(s.CONTENT) : s.CONTENT;
                             return {
                                 key: s.id,
-                                content: (typeof s.CONTENT === 'string') ? JSON.parse(s.CONTENT) : s.CONTENT,
+                                content: v.var || v,
                                 view: s.VIEW,
                                 name: s.NAME
                             }
@@ -535,7 +538,7 @@ sap.ui.define([], function () {
                         endButton: new sap.m.Button({
                             text: "Ok",
                             press: function () {
-                                debugger;
+
                                 var struct = that.getView().getModel().oData; //that.getView().getModel("filterstruct").oData;
 
                                 var strucClone = [...struct];
