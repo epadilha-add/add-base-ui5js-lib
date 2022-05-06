@@ -155,33 +155,43 @@ sap.ui.define([
 
             let buttons = [];
 
+            if (MainView.bt_activeButton === undefined || MainView.bt_activeButton)
+                MainView.bt_activeButton = this.activeButton;
+
+
+            if (MainView.bt_delete === undefined || MainView.bt_delete)
+                MainView.bt_delete = new sap.m.Button({
+                    icon: "sap-icon://delete",
+                    text: "{i18n>delete}",
+                    type: sap.m.ButtonType.Transparent,//type: "Reject",
+                    press: () => {
+
+                        View.delete();
+                        return;
+
+                        this.delete(this.getId());
+                    }
+                })
+
+            if (MainView.bt_save === undefined || MainView.bt_save)
+                MainView.bt_save = new sap.m.Button({
+                    icon: "sap-icon://save",
+                    type: sap.m.ButtonType.Transparent,
+                    text: "{i18n>save}",
+                    press: async (oEvent) => {
+
+                        View.save();
+                        return;
+
+                        await this.save(params);
+                    }
+                })
+
             if (MainView.edit === true || MainView.edit === undefined) {
                 buttons = [
-                    new sap.m.Button({
-                        icon: "sap-icon://delete",
-                        text: "{i18n>delete}",
-                        type: sap.m.ButtonType.Transparent,//type: "Reject",
-                        press: () => {
-
-                            View.delete();
-                            return;
-
-                            this.delete(this.getId());
-                        }
-                    }),
-                    this.activeButton,
-                    new sap.m.Button({
-                        icon: "sap-icon://save",
-                        type: sap.m.ButtonType.Transparent,
-                        text: "{i18n>save}",
-                        press: async (oEvent) => {
-
-                            View.save();
-                            return;
-
-                            await this.save(params);
-                        }
-                    })
+                    MainView.bt_delete,
+                    MainView.bt_activeButton,
+                    MainView.bt_save
 
                 ];
             }
