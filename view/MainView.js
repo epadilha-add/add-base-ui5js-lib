@@ -343,15 +343,20 @@ sap.ui.define(
                         type: sap.m.ButtonType.Negative,
                         icon: "sap-icon://delete",
                         press: async function () {
+
                             if (inpConf.getValue() != values[MainView.titleField]) return;
 
                             diagDelete.close();
 
                             const params = {
-                                method: "DELETE",
-                                fullPath: "/api/" + MainView.collection + "/" + values.ID,
+                                method: "POST",
+                                //fullPath: "/api/" + MainView.collection + "/" + values.ID,
                                 actionName: MainView.collection + ".remove",
-                                ...MainView.callParams,
+                                params: {
+                                    id: values.ID,
+                                    ...MainView.callParams,
+                                }
+
                             };
 
                             MainView.logInfo(params);
