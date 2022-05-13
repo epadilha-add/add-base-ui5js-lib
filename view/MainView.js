@@ -14,6 +14,8 @@ sap.ui.define(
                 sap.ui.core.BusyIndicator.hide();
 
                 MainView = Object.assign(this, that);
+
+                that.MainView = MainView;
                 /**
                  * inicialização do contexto
                  */
@@ -142,7 +144,7 @@ sap.ui.define(
                         if (resp && typeof resp === "string") rows = JSON.parse(resp);
 
                         if (MainView.afterList)
-                            await MainView.afterList(rows);
+                            await MainView.afterList(rows, MainView);
 
                         if (rows.rows) rows = rows.rows;
 
@@ -277,6 +279,8 @@ sap.ui.define(
                     if (key.value) vals[key.field.REFKIND || key.field.split(".")[0]] = key.value;
                 }
 
+                vals.ACTIVE = MainView.defaultACTIVE || true;
+
                 const params = {
                     method: "POST",
                     actionName: MainView.collection + ".create",
@@ -291,11 +295,13 @@ sap.ui.define(
                     if (params.params === false) return false;
                 }
 
+
+
                 return await MainView.callService.postSync("add", params).then(async resp => {
                     MainView.getView().setBusy(false);
 
-                    if (MainView.afterCreating instanceof Function)
-                        await MainView.afterCreating(resp, MainView);
+                    /*    if (MainView.afterCreating instanceof Function)
+                           await MainView.afterCreating(resp, MainView); */
 
                     if (!resp) throw "errorCreate";
 
@@ -880,7 +886,7 @@ sap.ui.define(
 
                     if (MainView.foreignKeys && MainView.foreignKeys.find(f => f[key.field.split(".")[0]])) continue;
 
-                    if (newCollection && key?.VALUES?.length) {
+                    if (MainView.newCollection && key?.VALUES?.length) {
                         key.VALUES = [];
                     }
 
@@ -945,31 +951,54 @@ sap.ui.define(
                                 if (field.create) {
                                     keys[field.REFKIND || field.field.split(".")[0]] = vals[field.REFKIND || field.field.split(".")[0]];
                                 }
-                                if (vals && field.create && !vals[field.REFKIND || field.field.split(".")[0]]) {
+                                if (vals && field.create && !vals[field.REFKIND || field.field.split(".")[0]] && field.obligatory) {
                                     vals = null;
                                     return;
                                     throw new TypeError("Err " + field.field + " empty");
                                 }
                             }
 
-                            //duplicidades
+                            //duplicidades                      
+
                             if (MainView.checkDuplicateBeforeCreate === undefined || MainView.checkDuplicateBeforeCreate === true) {
-                                for (const l of MainView.listResult) {
-                                    let match = {};
-                                    for (const key in keys) {
-                                        match[key] = l[key];
+                                let dup = false;
+
+                                for (let lr of MainView.listResult) {
+                                    dup = false;
+                                    for (let field of MainView.context.filter(f => f.key === true && f.create === true)) {
+
+                                        let valA = typeof vals[field.REFKIND || field.field.split(".")[0]] !== 'string'
+                                            ? JSON.stringify(vals[field.REFKIND || field.field.split(".")[0]])
+                                            : vals[field.REFKIND || field.field.split(".")[0]]
+
+                                        let valB = typeof lr[field.REFKIND || field.field.split(".")[0]] !== 'string'
+                                            ? JSON.stringify(lr[field.REFKIND || field.field.split(".")[0]])
+                                            : lr[field.REFKIND || field.field.split(".")[0]]
+
+                                        if (valA === valB)
+                                            dup = true;
+
+
+                                        if (dup)
+                                            break;
                                     }
-                                    if (JSON.stringify(match) === JSON.stringify(keys)) {
-                                        vals = null;
+
+                                    if (dup)
                                         break;
-                                    }
+
                                 }
+                                if (dup)
+                                    vals = null;
+
                                 if (!vals) {
                                     MainView.message("alreadyData");
                                     oEvent.getSource().setEnabled(true);
                                     return;
                                 }
                             }
+
+
+
 
                             //--> valida se requisitos mínimos foram preenchidos
                             if (!vals) {
@@ -980,6 +1009,7 @@ sap.ui.define(
                             dialog.close();
 
                             try {
+
 
                                 vals = await MainView.create(vals);
                                 /**
@@ -994,9 +1024,17 @@ sap.ui.define(
                                  */
                                 if (!vals.id) throw "errorCreate";
                                 /**
-                                 * todos os registros são criados desativados por padrão
+                                 * todos os registros são criados ativados por padrão
+                                */
+                                vals.ACTIVE = MainView.defaultACTIVE || true;
+
+                                /**
+                                 * default values
                                  */
-                                vals.ACTIVE = MainView.defaultACTIVE || false;
+                                for (const field of MainView.context) {
+                                    if (field.defaultValue)
+                                        vals[field.REFKIND || field.field.split(".")[0]] = field.defaultValue;
+                                }
 
                                 MainView.pressToNav(vals);
                                 MainView.navToView(vals);
@@ -1008,7 +1046,8 @@ sap.ui.define(
 
                             MainView.table.getModel("mainModel").getData().results.unshift(vals);
 
-                            if (MainView.afterCreating instanceof Function) MainView.afterCreating(vals, MainView);
+                            if (MainView.afterCreating instanceof Function)
+                                await MainView.afterCreating(vals, MainView);
 
                             MainView.table.getModel("mainModel").refresh();
                         },
@@ -1216,6 +1255,9 @@ sap.ui.define(
                         for (const key of MainView.sectionsItems.foreignKeys) {
                             //-> obtem model para conferência.
                             var components = sap.ui.getCore().getModel("foreignKey" + MainView.rootComponent);
+
+                            let vl = values[key.foreignKeyField];
+
                             /**
                              * somente parametros do app
                              */
@@ -1227,16 +1269,19 @@ sap.ui.define(
                                 //-> caso exista, verificar se o app já está sendo utilizado
 
                                 selectedLine = [components.getData().find(l => l.idapp === key.idapp && l.parent === key.parent)];
-                                //selectedLine = [components.getData().find(l => l.idapp == MainView.IDAPP && l.parent === MainView.IDAPP)];
+                                //selectedLine = [components.getData().find(l => l.idapp == MainView.IDAPP && l.parent === MainView.IDAPP)                                
 
                                 if (!selectedLine || selectedLine.length === 0 || !selectedLine[0]) {
                                     //==> se não estiver, incluílo.
                                     if (key.foreignKey instanceof Array) {
                                         for (let item of key.foreignKey) {
-                                            vals[item] = values[key.foreignKeyField] || values[item] || values.id;
+                                            vl = values[key.foreignKeyField] || values[item];
+                                            vals[item] = vl === undefined ? values.id : vl;
+                                            //vals[item] = values[key.foreignKeyField] || values[item] || values.id;
                                         }
                                     } else {
-                                        vals[key.foreignKey] = values[key.foreignKeyField] || values[key.foreignKey] || values.id;
+                                        vals[key.foreignKey] = vl === undefined ? values.id : vl;
+                                        //vals[key.foreignKey] = values[key.foreignKeyField] || values[key.foreignKey] || values.id;
                                     }
 
                                     vals.index = components.oData.length;
@@ -1250,10 +1295,13 @@ sap.ui.define(
 
                                     if (key.foreignKey instanceof Array) {
                                         for (let item of key.foreignKey) {
-                                            selectedLine[key.index][item] = values[key.foreignKeyField] || values[item] || values.id;
+                                            vl = values[key.foreignKeyField] || values[item];
+                                            selectedLine[key.index][item] = vl === undefined ? values.id : vl;
+                                            //selectedLine[key.index][item] = values[key.foreignKeyField] || values[item] || values.id;
                                         }
                                     } else {
-                                        selectedLine[key.index][key.foreignKey] = values[key.foreignKeyField] || values[key.foreignKey] || values.id;
+                                        selectedLine[key.index][key.foreignKey] = vl === undefined ? values.id : vl;
+                                        //selectedLine[key.index][key.foreignKey] = values[key.foreignKeyField] || values[key.foreignKey] || values.id;
                                     }
 
                                     components.oData = components.getData().map(item => {
@@ -1268,10 +1316,12 @@ sap.ui.define(
                             } else if (key.foreignKey !== null) {
                                 if (key.foreignKey instanceof Array) {
                                     for (const item of key.foreignKey) {
-                                        vals[item] = values[key.foreignKeyField] || values[item] || values.id;
+                                        vals[item] = vl === undefined ? values.id : vl;
+                                        //vals[item] = values[key.foreignKeyField] || values[item] || values.id;
                                     }
                                 } else {
-                                    vals[key.foreignKey] = vals[key.foreignKeyField] || values.id;
+                                    vals[key.foreignKey] = vl === undefined ? values.id : vl;
+                                    //vals[key.foreignKey] = vals[key.foreignKeyField] || values.id;
                                 }
 
                                 keys.push(vals);
@@ -1534,7 +1584,7 @@ sap.ui.define(
                         if (MainView.context.find(c => c.foreignKey === true))
                             /*-> BUG mesmo prevendo chave estrangeira, não foi encontrado
                             * o filtro..analisar
-
+            
                             * somente para casos especiais como tax.cust.process.activities.reversal
                             * onde o mesmo não foi instanciado como componente, mas sim como
                             * MainView.sectionsHeader
@@ -1720,7 +1770,18 @@ sap.ui.define(
                         case "MC":
                             if (fc && !fc.selectionFinish)
                                 fc.selectionFinish = oEvent => {
+
+
                                     that.refreshForeignKeyDependency(oEvent, that);
+                                    /*          debugger;
+                                    TODO// prever evento em todos os objetos, mas aqui não 
+                                    é o melhor lugar..avaliar ScreenElements.js
+                                             let obj = oEvent.getSource();
+                                             for (const key of obj.getSelectedKeys() || []) {
+                                                 MainView.execFn("D0400" + key + fc.FIELD);
+                                             } */
+
+
                                 };
                             break;
                         case "LB":

@@ -245,17 +245,19 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
              */
             for (const field of MainView.fieldcat) {
 
-                if (field.idUi5)
+                let fld = sap.ui.getCore().byId(field.idUi5 || field.idUi5New);
+
+                if (fld)
                     switch (field.REFTYPE) {
                         case "LB":
                             if (!field.keepName) {
                                 selectScreen[field.REFKIND || field.field] =
-                                    sap.ui.getCore().byId(field.idUi5).getSelectedKey();
+                                    fld.getSelectedKey();
                                 if (selectScreen[field.REFKIND || field.field].length === 0)
                                     selectScreen[field.REFKIND || field.field] = "";
                             } else {
                                 selectScreen[field.field] =
-                                    sap.ui.getCore().byId(field.idUi5).getSelectedKey();
+                                    fld.getSelectedKey();
                                 if (selectScreen[field.field].length === 0)
                                     selectScreen[field.field] = "";
                             }
@@ -263,31 +265,31 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
                         case "MC":
                             if (!field.keepName) {
                                 selectScreen[field.REFKIND || field.field] = {
-                                    $in: sap.ui.getCore().byId(field.idUi5).getSelectedKeys() || [],
+                                    $in: fld.getSelectedKeys() || [],
                                 };
                                 if (selectScreen[field.REFKIND || field.field].$in.length === 0)
                                     selectScreen[field.REFKIND || field.field] = "";
                             } else {
                                 selectScreen[field.field] = {
-                                    $in: sap.ui.getCore().byId(field.idUi5).getSelectedKeys() || [],
+                                    $in: fld.getSelectedKeys() || [],
                                 };
                                 if (selectScreen[field.field].$in.length === 0)
                                     selectScreen[field.field] = "";
                             }
                             break;
                         case "DR":
-                            if (!sap.ui.getCore().byId(field.idUi5).getValue()) {
+                            if (!fld.getValue()) {
                                 selectScreen[field.field] = "";
                                 continue;
                             }
 
                             let from = sap.ui.core.format.DateFormat.getDateInstance({
                                 pattern: "yyyyMMdd",
-                            }).format(sap.ui.getCore().byId(field.idUi5).getFrom());
+                            }).format(fld.getFrom());
 
                             let to = sap.ui.core.format.DateFormat.getDateInstance({
                                 pattern: "yyyyMMdd",
-                            }).format(sap.ui.getCore().byId(field.idUi5).getTo());
+                            }).format(fld.getTo());
 
                             selectScreen[field.field] = {
                                 $gte: parseInt(from),
@@ -296,10 +298,13 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
 
                             break;
                         case "CB":
-                            selectScreen[field.REFKIND || field.field] = sap.ui.getCore().byId(field.idUi5).getProperty("selected");
+                            selectScreen[field.REFKIND || field.field] = fld.getProperty("selected");
+                            break;
+                        case "RB":
+                            selectScreen[fld.getSelectedButton().getTooltip()] = true;
                             break;
                         default:
-                            selectScreen[field.field] = sap.ui.getCore().byId(field.idUi5).getValue();
+                            selectScreen[field.field] = fld.getValue();
 
                             if (field.DATATYPE === "QUAN")
                                 //até termos uma melhor definição

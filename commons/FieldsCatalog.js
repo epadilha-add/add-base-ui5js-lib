@@ -43,6 +43,7 @@ sap.ui.define([], function (AddUtilities) {
                     return catalog.EDIT
                         ? new sap.m.Input({
                             type: "sap.ui.model.type.Integer",
+                            maxLength: catalog.LENG || 0,
                             value: "{" + mdl + catalog.FIELD + "}",
                         })
                         : new sap.m.ObjectStatus({
@@ -51,6 +52,7 @@ sap.ui.define([], function (AddUtilities) {
                             state: {
                                 path: mdl + catalog.FIELD,
                                 type: "sap.ui.model.type.Integer",
+                                maxLength: catalog.LENG || 0,
                                 formatter: catalog.formatter || (val => (catalog.VKEYM ? "Information" : sap.ui.core.ValueState.None)),
                             },
                             text: "{" + mdl + catalog.FIELD + "}",
@@ -66,6 +68,7 @@ sap.ui.define([], function (AddUtilities) {
                         state: {
                             path: mdl + catalog.FIELD,
                             type: "sap.ui.model.type.String",
+                            maxLength: catalog.LENG || 0,
                             formatter: catalog.formatter || (val => (catalog.VKEYM ? "Information" : sap.ui.core.ValueState.None)),
                         },
                         text: "{" + mdl + catalog.FIELD + "}",
