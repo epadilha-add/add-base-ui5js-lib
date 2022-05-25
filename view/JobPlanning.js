@@ -14,6 +14,7 @@ sap.ui.define([], function () {
                     separator ? new sap.m.ToolbarSeparator() : null,
                     new sap.m.Button({
                         tooltip: "{i18n>plan}",
+                        text: "{i18n>plan}"
                     })
                         .setIcon("sap-icon://date-time")
                         .setType("Transparent")
