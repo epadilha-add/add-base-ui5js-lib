@@ -23,6 +23,7 @@ sap.ui.define([
     let This = {};
     var MainView;
     let pageSize = 50;
+
     return Object.extend("add.ui.View.DocumentView", {
 
         constructor: function (that, icon, topRight, lowerLeft, factory, title, prefix) {
@@ -40,7 +41,7 @@ sap.ui.define([
                 showHeader: false,
                 showSubHeader: true,
                 showNavButton: false,
-                // icon: ,
+
                 subHeader: new sap.m.Bar({
                     contentLeft: [new sap.m.Button({
                         type: sap.m.ButtonType.Back,
