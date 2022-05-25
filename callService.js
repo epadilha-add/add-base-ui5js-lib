@@ -27,8 +27,8 @@ sap.ui.define([], function () {
 
             return await fetch(src, param || p, 50).then((response) => {
 
-                if (response && response.status === 402) throw response;
-                return response.text();
+
+                return response.ok ? response.text() : response.status;
             }).then((data) => {
 
                 let resp = {}
@@ -41,9 +41,13 @@ sap.ui.define([], function () {
                 if (resp && resp.uuid)
                     throw resp;
 
+                if (resp.code && (resp.code < 200 || resp.code > 299)) throw data
+
                 return data;
 
             }).catch((err) => {
+
+                sap.ui.core.BusyIndicator.hide();
 
                 if (err.status)
                     sap.m.MessageBox.show(err.url,
@@ -102,6 +106,11 @@ sap.ui.define([], function () {
         _getParams: function (data, method, param) {
 
             var header = {};
+
+            Object.assign(data, {
+                m: sap.ui.getCore().getModel("userInfo").getData().currentMandt,
+                a: Object.keys(window["sap-ui-config"]["resourceroots"])[0]
+            })
 
             header = {
                 "Content-Type": "application/json",

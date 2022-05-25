@@ -20,49 +20,73 @@ sap.ui.define([
                 * 
                  *************************************************************************/
                 let s = null;
-                let lSc = null;
+                let lSc = null; 
 
-                s = Screens.find((e) => {
-                    if (e.name == screen.key) return s;
-                });
+                s = Screens.find(e => e.name === screen.key);
 
-                if (!s) {
+                if (true) {
 
                     try {
 
                         let component = sap.ui.getCore().getModel("AppConfig").getData().components.find((c => {
-                            if (c.key == screen.key || c.name == screen.name) return c;
+                            if (c.key == screen.key || c.name == screen.name || c.name === screen || c.key === screen) return c;
                         }))
-
+                        //debugger;
                         if (component) {
-                            lSc = new sap.ui.core.ComponentContainer(
-                                {
-                                    id: component.name,
-                                    name: component.name,
-                                    //manifestFirst: true,
-                                    manifest: true,//component.path + '/manifest.json',
-                                    autoPrefixId: true,
-                                    async: component.async || screen.async || true,
-                                    url: component.path
-                                })
+
+
+                            var oComp = sap.ui.getCore().createComponent({
+                                name: component.name,
+                                id: screen.idapp + '-' + component.name,
+                                autoPrefixId: false,
+                                propagateModel: false,
+                                url: component.path || '../components/' + component.name + '/webapp'
+                            });
+
+                            lSc = new sap.ui.core.ComponentContainer({
+                                async: component.async || screen.async || true,
+                                propagateModel: false,
+                                component: oComp
+                            });
+
+                            /*   lSc = new sap.ui.core.ComponentContainer(
+                                  {
+                                      id: That.IDAPP + '-' + component.name,
+                                      name: component.name,
+                                      //manifestFirst: true,
+                                      manifest: true,//component.path + '/manifest.json',
+                                      autoPrefixId: true,
+                                      async: component.async || screen.async || true,
+                                      url: component.path || '../components/' + component.name + '/webapp',
+                                      componentCreated: (oCom) => {
+                                          debugger;
+
+                                      }
+                                      //settings: { tooltip: That.IDAPP }
+                                  }) */
+                            // })
 
                         } else {
                             lSc = this._defaultPage(screen.key + ":" + screen.name);
                         }
 
-                        s = { screen: lSc, name: screen.key };
-
-                        Screens.push(s);
+                        // if (!lSc.getManifest()) throw new TypeError();
 
                     } catch (err) {
-                        let m = 'Erro Method .Constructor() or Not Implemented ' + screen.key + " " + err.toString();
-                        lSc = this._defaultPage(m);
+                        let m = screen.name + ' Not Implemented - ADD-APPM ';
+                        lSc = this._defaultPage(m, screen);
 
                     }
 
                 } else {
-                    lSc = this._defaultPage(screen.key + ":" + screen.name);
+                    return s.screen;//this._defaultPage(screen.key + ":" + screen.name);
                 }
+
+                Object.assign(lSc, That);
+
+                s = { screen: lSc, name: screen.key };
+
+                Screens.push(s);
 
                 return s.screen;
 
@@ -82,17 +106,41 @@ sap.ui.define([
                     this.Log.error(m);
                 }
             },
-            _defaultPage(desc) {
+            _defaultPage(desc, screen) {
 
                 sap.ui.core.BusyIndicator.hide();
+                let msg = {};
+                switch (screen.name || screen.key) {
+                    case 'infosys':
 
-                return new sap.m.MessagePage(
-                    {
-                        text: "Não disponível",
-                        enableFormattedText: true,
-                        description: desc || "Welcome DEV",
-                        icon: "sap-icon://message-error"
-                    })
+                        msg = new sap.ui.core.HTML({
+                            preferDOM: true,
+                            sanitizeContent: false,
+                            content: "<iframe height='100%' width='100%' src='/status'></iframe>"
+                        })
+
+                        return msg;
+                        break;
+
+                    default:
+                        msg = new sap.m.MessagePage(
+                            {
+                                showHeader: false,
+                                text: "Aplicação não disponível",
+                                enableFormattedText: true,
+                                description: desc || "Welcome DEV",
+                                icon: "sap-icon://message-error"
+                            })
+                        break;
+                }
+
+
+                try {
+                    That.getView().addContent(msg);
+                } catch {
+
+                }
+                return msg;
             }
         });
     });

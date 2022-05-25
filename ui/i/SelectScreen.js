@@ -82,7 +82,7 @@ sap.ui.define(
                         try {
                             content.push(new sap.m.Button(
                                 {
-                                    icon: "sap-icon://process",
+                                    icon: "sap-icon://variants",
                                     text: "{i18n>execute}",
                                     press: this.that.execute
                                 }));

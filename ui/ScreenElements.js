@@ -1,41 +1,43 @@
-
-sap.ui.define([
-    "sap/ui/base/Object",
-    "sap/base/Log",
-    "sap/ui/model/json/JSONModel",
-    "../commons/AddModels",
-    "../callService"],
-    function (Object, Log, JSONModel, AddModels, callService) {
-        'use strict';
-
+sap.ui.define(
+    ["sap/ui/base/Object", "sap/base/Log", "sap/ui/model/json/JSONModel", "../commons/AddModels", "../callService", "sap/ui/richtexteditor/RichTextEditor", "sap/ui/core/Fragment"],
+    function (Object, Log, JSONModel, AddModels, callService, RichTextEditor, Fragment) {
+        "use strict";
+        let MainView = {};
         return Object.extend("ScreenElements", {
-
             that: null,
 
             constructor: function (that) {
-                this.that = that;
-
+                MainView = that;
+                return this;
             },
 
-            getStruc: function (param, valuesHelp) {
+            getStruc: function (param, valuesHelp, parameter, uri) {
+                if (MainView.fieldcat && !parameter) return new Promise(p => p(MainView.fieldcat));
 
                 let listFields = [];
 
                 if (param.length > 0) {
+                    for (const element of param) {
+                        let fields = element.field ? element.field.split(".") : element.split(".");
 
-                    param.forEach(element => {
-                        listFields.push({ "CAMPO": element.field.split('.')[0] || element });
-                    });
+                        if (fields[0]) listFields.push({ CAMPO: fields[0] });
 
+                        if (fields[1]) listFields.push({ CAMPO: fields[1] });
+                    }
                 } else {
-                    listFields.push({ "CAMPO": param.field.split('.')[0] || param });
+                    let fields = param.field ? param.field.split(".") : param.split(".");
+
+                    if (fields[0]) listFields.push({ CAMPO: fields[0] });
+
+                    if (fields[1]) listFields.push({ CAMPO: fields[1] });
                 }
 
                 let req = {
-                    COLLECTION: 'P0600',
-                    PROJECTION: ['CAMPO', 'P600A'],
-                    FILTER: { "$or": listFields },
-                    VH: valuesHelp //values help
+                    COLLECTION: "P0600",
+                    PROJECTION: ["CAMPO", "P600A"],
+                    FILTER: { $or: listFields },
+                    VH: valuesHelp, //values help
+                    ...parameter,
                 };
 
                 let hostM;
@@ -50,213 +52,181 @@ sap.ui.define([
                     Log.info(hostM, "ScreenELements on ApplicationServer");
                     hostM = window.location.origin;
                 }
-                return callService.postSync('add/ui', req, null, null, null, null, hostM);
-
+                return callService.postSync(uri || "add/ui", req, null, null, null, null, hostM);
             },
-            getElementScreenByName: async function (param, Screen) {
-
+            getElementScreenByName: async function (param, Screen, parameter) {
                 let STRUC = [];
                 let valueHelp = true;
 
                 //  Screen.body.setBusy(true);
 
-                return await this.getStruc(param, valueHelp).then((response) => {
+                return await this.getStruc(param, valueHelp, parameter || true).then(response => {
+                    if (typeof response === "string") response = JSON.parse(response);
 
-                    response = JSON.parse(response);
                     let screenElements = [];
                     let modelName = null;
                     try {
+                        param.forEach(field => {
+                            //==>keep sequence
+                            let fld = field.field.split(".");
 
-                        param.forEach((field) => { //==>keep sequence
+                            if (field.foreignKey) fld = fld[0];
+                            else fld = fld[1] ? fld[1] : fld[0];
 
-                            return response.find((element) => {
-
-                                if (field.field.split('.')[0] == element.CAMPO) {
-
-                                    //sobrepor configurações 
-                                    for (const key in field.prop) {
-                                        if (element.P600A[key] || element.P600A[key] === "")
-                                            element.P600A[key] = field.prop[key]
+                            response.find(element => {
+                                if (fld === element.FIELD) {
+                                    if (!parameter || !parameter?.params || !parameter?.params[element.FIELD]) {
+                                        if (field?.VALUES?.length)
+                                            element.VALUES = field?.VALUES;
                                     }
 
-                                    if (field.prop && field.prop.VALUES) {
-                                        element.VALUES = field.prop.VALUES;
-                                    }
-
-                                    if (element.VALUES) {
-                                        var oModel = new JSONModel(element.VALUES);
-                                        modelName = this.that.IDAPP + element.CAMPO;
+                                    if (element.VALUES && element.REFTYPE) {
+                                        var oModel = new JSONModel(element.VALUES.filter(e => e.ACTIVE || e.ACTIVE === undefined));
+                                        oModel.setSizeLimit(500);
+                                        modelName = MainView.IDAPP + element.FIELD;
                                         Screen.getView().setModel(oModel, modelName + "PARAM");
                                     } else {
-                                        modelName = this.that.IDAPP + "PARAM";
+                                        modelName = MainView.IDAPP + "PARAM";
                                     }
 
                                     if (field.modelPath) {
                                         modelName = field.modelPath;
+                                    } else if (!modelName) {
+                                        modelName = "/";
                                     }
 
-                                    /* else {
-                                        modelName = '/';
-                                    } */
+                                    element.FIELDNAME = element.FIELD;
 
-                                    if (field.prop && !field.prop.obligatory) {
-                                        if (!field.prop)
-                                            field.prop = {};
-                                        field.prop.obligatory = false;
+                                    if (field.propInclude)
+                                        element.propInclude = field.propInclude;
+
+                                    if (field.REFTYPE !== undefined)
+                                        element.REFTYPE = field.REFTYPE;
+
+                                    //if (field.create && !field.foreignKey && field.key === true) element.REFTYPE = ""; //input
+
+                                    STRUC.push(element);
+                                    try {
+                                        screenElements = this.createElementbyType(element, MainView, modelName, 1);
+                                    } catch (error) {
+                                        throw field.field;
                                     }
-
-                                    element.P600A.OBLIGTORY = (field.prop && field.prop.obligatory) ? field.prop.obligatory : false;
-
-                                    element.P600A.FIELDNAME = element.CAMPO;
-                                    //element.P600A.edit = (Screen.that.edit);
-
-                                    STRUC.push(element.P600A);
-
-                                    screenElements = this.createElementbyType(
-                                        element.P600A,
-                                        this.that,
-                                        modelName)
                                 }
-
-                            })
-
-                        })
-
+                            });
+                        });
                     } catch (error) {
-                        Log.info("ERROR:-->" + JSON.stringify(error), 'ScreenElements');
+                        Log.error("error", "ScreenElements", error);
                     }
 
                     return screenElements;
-
                 });
-
-
-
             },
             set: async function (param, Screen) {
-
-                Screen.Page.setBusy(true);
-
-                let STRUC = [];
                 let valueHelp = true;
                 let modelName = null;
 
-                //  Screen.body.setBusy(true);
+                param = param.filter(fld => (fld.showUi === undefined || fld.showUi === true) && (fld.foreignKey === undefined || fld.foreignKey === false));
 
-                await this.getStruc(param, valueHelp).then((response) => {
-
-                    response = JSON.parse(response);
+                return this.getStruc(param, valueHelp).then(response => {
+                    if (typeof response === "string") response = JSON.parse(response);
 
                     try {
+                        param.forEach(field => {
+                            //==>keep sequence
 
-                        param.forEach((field) => { //==>keep sequence
+                            let fld = field.field.split(".");
+                            fld = fld[1] ? fld[1] : fld[0];
+                            response.find(element => {
+                                if (fld === element.FIELD) {
+                                    element = { ...element, ...field };
 
-                            response.find((element) => {
-
-                                if (field.field.split('.')[0] == element.CAMPO) {
-
-                                    //sobrepor configurações 
-                                    for (const key in field.prop) {
-                                        if (element.P600A[key] || element.P600A[key] === "")
-                                            element.P600A[key] = field.prop[key]
-                                    }
-
-                                    if (field.prop && field.prop.VALUES) {
-                                        element.VALUES = field.prop.VALUES;
-                                    }
-
-                                    if (element.VALUES) {
-                                        var oModel = new JSONModel(element.VALUES);
-                                        modelName = this.that.IDAPP + element.CAMPO;
+                                    if ((element.VALUES || field.RFFLD) && field.REFTYPE) {
+                                        var oModel = new JSONModel(element.VALUES || []);
+                                        oModel.setSizeLimit(500);
+                                        modelName = MainView.IDAPP + field.field || element.FIELD;
                                         Screen.setModel(oModel, modelName + "PARAM");
-
                                     } else {
-                                        modelName = this.that.IDAPP + "PARAM";
+                                        modelName = MainView.IDAPP + "PARAM";
                                     }
 
                                     if (field.modelPath) {
                                         modelName = field.modelPath;
                                     }
-                                    if (field.prop && !field.prop.obligatory) {
-                                        if (!field.prop)
-                                            field.prop = {};
-                                        field.prop.obligatory = false;
+
+                                    element.FIELDNAME = field.field || element.FIELD;
+                                    element.EDIT = MainView.edit;
+                                    element.EDIT = field.key ? false : true;
+                                    element.key = field.key;
+                                    /**
+                                     * caso seja um campo com '.' ref type é sempre input
+                                     */
+                                    if (field.field.split(".")[1]) {
+                                        element.REFTYPE = "";
+                                        element.EDIT = false;
                                     }
 
-                                    element.P600A.OBLIGTORY = (field.prop && field.prop.obligatory) ? field.prop.obligatory : false;
-                                    element.P600A.FIELDNAME = element.CAMPO;
-                                    element.P600A.EDIT = Screen.that.edit;
-                                    element.P600A.EDIT = (field.prop && field.prop.key) ? false : true;
-
-                                    STRUC.push(element.P600A);
-
-                                    this.createElementbyType(
-                                        element.P600A,
-                                        this.that,
-                                        modelName).forEach((obj) => {
-                                            Screen.addContent(obj);
+                                    //STRUC.push(element);
+                                    try {
+                                        this.createElementbyType(element, MainView, modelName, 2, Screen).forEach(obj => {
+                                            if (obj) {
+                                                switch (element.REFTYPE) {
+                                                    case "RT":
+                                                    case "CE":
+                                                        Screen.addOtherContent(obj, field.section || field.subSection);
+                                                        break;
+                                                    default:
+                                                        Screen.addContent(obj, field.section || field.subSection);
+                                                        break;
+                                                }
+                                            }
                                         });
-
-                                    Log.info(element.CAMPO, 'ScreenElements');
-
-                                    //field.field = this.that.IDAPP + field.field;
+                                    } catch (error) {
+                                        throw field.field;
+                                    }
                                 }
-
-                            })
-
-                        })
-
+                            });
+                        });
                     } catch (error) {
-
-                        // Screen.setBusy(false);
-
-                        Log.info("ERROR:-->" + JSON.stringify(error), 'ScreenElements');
+                        Log.error("error", "ScreenElements", error);
                     }
-
-                    //Grava estrutura para tela de seleção
-                    //this.that.setModel(STRUC, "PARAM");
-                    // Screen.body.setBusy(false);
-
                 });
-
-                Screen.Page.setBusy(false);
-
             },
-            createElementbyType: function (struc, that, modelName) {
-                'user strict';
-
-                // return [new sap.m.Input()];
+            createElementbyType: function (struc, that, modelName, caller, Screen) {
+                "user strict";
 
                 var chnd;
-                var tooltip;
-                var placeholder;
                 var res = [];
 
-                //struc.FIELDNAME = that.IDAPP + struc.FIELDNAME;
+                let txt = struc.SCRTEXT_S || struc.SCRTEXT_M || struc.SCRTEXT_L || struc.DESCR || struc.FIELDNAME;
+                let tooltip = struc.FIELDNAME + " " + struc.SCRTEXT_L || struc.SCRTEXT_M || struc.SCRTEXT_S || struc.FIELDNAME;
+                let placeholder = struc.SCRTEXT_S || struc.SCRTEXT_M || struc.SCRTEXT_L || struc.FIELDNAME;
 
                 let oLabel = new sap.m.Label({
-                    text: (struc.FIELDNAME == "FNSH" || struc.FIELDNAME == "STOP") ?
-                        '{i18n>' + struc.FIELDNAME + '_text}' : (struc.SCRTEXT_M) ?
-                            struc.SCRTEXT_M : (struc.SCRTEXT_L) ? struc.SCRTEXT_L : struc.SCRTEXT_S,
+                    text: txt,
                     labelFor: struc.FIELDNAME,
-                    visible: ((struc.VISIBLE === 'X') ? true : true),
-                    tooltip: struc.FIELDNAME
+                    visible: struc.VISIBLE === "X" ? true : true,
+                    tooltip: tooltip,
                 });
 
                 res.push(oLabel);
-
-                tooltip = (struc.SCRTEXT_S) ? struc.SCRTEXT_S + ':' + struc.FIELDNAME : struc.SCRTEXT_M + ':' + struc.FIELDNAME;
-                placeholder = (struc.SCRTEXT_S) ? struc.SCRTEXT_S : struc.SCRTEXT_M;
 
                 var decimals = 0;
                 var maxInt = 0;
                 var vType = null;
 
-                switch (struc.DATATYPE) {
+                if (struc.customField) {
+                    /**
+                     * aqui podemos implementar um tipo no controller
+                     **/
+                    let fld = struc.customField(struc, that, modelName, caller, Screen);
 
+                    return fld instanceof Array ? fld : [];
+                }
+
+                switch (struc.DATATYPE) {
                     case "CURR":
                     case "DEC":
-                        if (struc.FIELDNAME.split(that.IDAPP).pop().substring(0, 2) == 'AL') {
+                        if (struc.FIELDNAME.split(that.IDAPP).pop().substring(0, 2) == "AL") {
                             decimals = 6;
                             maxInt = 9;
                         } else {
@@ -264,277 +234,429 @@ sap.ui.define([
                             maxInt = 15;
                         }
                         break;
-
+                    case "QUAN":
+                        vType = "sap.ui.model.type.Integer";
+                        decimals = 0;
+                        maxInt = 0;
+                        break;
                     default:
-                        vType = 'sap.ui.model.type.String';
+                        vType = "sap.ui.model.type.String";
                         decimals = 0;
                         maxInt = 10;
                         break;
                 }
 
-                switch (struc.EDIT) {
-                    case false:
+                //  switch (struc.key) {
+                //     case true:
 
-                        res.push(new sap.m.Text({
+                if (caller === 2 && struc.key)
+                    res.push(
+                        new sap.m.Text({
                             //id: Id,
-                            text: '{' + modelName + '>/' + struc.FIELDNAME + '}',
-                            width: '100%',
-                            tooltip: (struc.tooltip) ? struc.tooltip : "",
+                            text: "{" + that.IDAPP + "PARAM>/" + struc.FIELDNAME + "}",
+                            width: "100%",
+                            tooltip: struc.tooltip ? struc.tooltip : "",
                             wrapping: false,
-                        }))
-                        /*            
-                                   res.push(new sap.m.Label({
-                                       tooltip: (struc.tooltip) ? struc.tooltip : "",
-                                       wrapping: false,
-                                       text: {
-                                           path: modelName + '>/' + struc.FIELDNAME,
-                                           //type: vType,
-                                           formatOptions: {
-                                               maxIntegerDigits: maxInt,
-                                               maxFractionDigits: decimals
-                                           }
-                                       }
-                                   })) */
-
-                        break;
-                    default:
+                        })
+                    );
+                else
+                    //    break;
+                    //  default:
+                    //struc.prop => completo { substitui completamente as propriedades }
+                    //struc.propInclude => incluir { apenas inclui nóvas propriedades }
+                    switch (struc.REFTYPE) {
+                        case "RB":
 
 
-                        switch (struc.REFTYPE) {
+                            if (!MainView[struc.RadioButtonGroup]) {
+                                res[0] = null;
+                                res[1] = null;
+                                MainView[struc.RadioButtonGroup] =
+                                    new sap.m.RadioButtonGroup({ buttons: [new sap.m.RadioButton({ text: txt, tooltip: struc.FIELDNAME })] });
+                                return res || [];
+                            } else if (struc.last) {
+                                res[0].setText(struc.labelText)
+                                //res.push(new sap.m.RadioButtonGroup({ buttons: [new sap.m.RadioButton({ text: txt })] }));
+                                MainView[struc.RadioButtonGroup].addButton(new sap.m.RadioButton({ text: txt, tooltip: struc.FIELDNAME }));
+                                res.push(MainView[struc.RadioButtonGroup]);
+                            } else {
+                                res[0] = null;
+                                res[1] = null;
+                                MainView[struc.RadioButtonGroup].addButton(new sap.m.RadioButton({ text: txt, tooltip: struc.FIELDNAME }));
+                                return res || [];
+                            }
 
-                            case 'LB':
-                                struc.LBID = struc.LBID || 'id';
-                                struc.LBDESCR = struc.LBDESCR || 'DESCR';
-                                var oItemTemplate = new sap.ui.core.ListItem({
-                                    key: '{' + modelName + 'PARAM>' + struc.LBID + '}',
-                                    text: '{' + modelName + 'PARAM>' + struc.LBDESCR + '}',
-                                });
+                            break;
+                        case "LB":
+                            struc.LBID = struc.LBID || "id";
+                            struc.LBDESCR = struc.LBDESCR || "DESCR";
+                            var oItemTemplate = new sap.ui.core.ListItem({
+                                key: "{" + modelName + "PARAM>" + struc.LBID + "}",
+                                text: "{" + modelName + "PARAM>" + struc.LBDESCR + "}",
+                            });
 
-                                res.push(new sap.m.ComboBox({
-                                    selectedKey: '{' + that.IDAPP + 'PARAM>/' + struc.FIELDNAME + '}',
+                            let prop = struc.prop
+                                ? struc.prop
+                                : {
+                                    selectedKey: "{" + that.IDAPP + "PARAM>/" + struc.FIELDNAME.split(".")[0] + "}",
+                                    change: struc.change || function () { },
+                                    selectionChange: struc.selectionChange || function () { },
+                                    // editable: (struc.key === undefined) ? true : struc.key ? false : true,
                                     items: {
-                                        path: modelName + 'PARAM>/',
-                                        template: oItemTemplate
-                                    }
-                                }));
+                                        path: modelName + "PARAM>/",
+                                        template: oItemTemplate,
+                                    },
+                                    ...struc.propInclude,
+                                };
 
-                                break;
+                            res.push(new sap.m.ComboBox(prop));
 
-                            case 'TA':
+                            if (struc.defaultValue)
+                                res[1].setSelectedKey(struc.defaultValue);
 
-                                res.push(new sap.m.TextArea({ rows: 10 }).bindProperty("value", modelName + '>/' + struc.FIELDNAME));
+                            break;
 
-                                break;
+                        case "TA":
+                            res.push(new sap.m.TextArea({ rows: 10 }).bindProperty("value", modelName + ">/" + struc.FIELDNAME));
 
-                            case '':
+                            break;
 
-                                switch (struc.DATATYPE) {
-                                    case "CURR":
-                                    case "DEC":
-                                    //  case "NUMC":
-                                    case "QUAN":
-
-
-
-                                        res.push(new sap.m.Input({
-                                            id: Id,
-                                            tooltip: (struc.tooltip) ? struc.tooltip : "",
+                        case "RT":
+                            res.push(
+                                new RichTextEditor({
+                                    width: "100%",
+                                    height: "400px",
+                                    showGroupClipboard: true,
+                                    showGroupStructure: true,
+                                    showGroupFont: true,
+                                    showGroupInsert: true,
+                                    showGroupLink: true,
+                                    showGroupUndo: true,
+                                    value: "{" + modelName + ">/" + struc.FIELDNAME + "}",
+                                    tooltip: struc.tooltip ? struc.tooltip : "",
+                                    ...struc.propInclude,
+                                })
+                            );
+                            break;
+                        case "SI":
+                        case "":
+                            switch (struc.DATATYPE) {
+                                case "CURR":
+                                case "DEC":
+                                //  case "NUMC":
+                                case "QUAN":
+                                    res.push(
+                                        new sap.m.Input({
+                                            tooltip: struc.tooltip ? struc.tooltip : "",
                                             // wrapping: false, -> incompatível
+                                            editable: (struc.key === undefined) ? true : struc.key ? false : true,
+                                            maxLength: struc.LENG ? parseInt(struc.LENG) : 0,
                                             value: {
-                                                path: modelName + '>/' + struc.FIELDNAME,
+                                                path: modelName + ">/" + struc.FIELDNAME,
                                                 type: vType,
-                                                formatOptions: {
-                                                    maxIntegerDigits: maxInt,
-                                                    maxFractionDigits: decimals
-                                                }
-                                            }
-                                        }));
+                                                /*      formatOptions: {
+                                                         maxIntegerDigits: maxInt,
+                                                         maxFractionDigits: decimals,
+                                                     }, */
+                                            },
+                                            ...struc.propInclude,
+                                        })
+                                    );
 
-                                        break;
+                                    if (struc.defaultValue) res[1].setValue(struc.defaultValue);
 
-                                    case "DATS":
+                                    break;
 
-                                        res.push(new sap.m.DatePicker({
+                                case "DATS":
+                                    res.push(
+                                        new sap.m.DatePicker({
                                             //id: Id,
-                                            tooltip: (struc.tooltip) ? struc.tooltip : "",
+                                            tooltip: struc.tooltip ? struc.tooltip : "",
                                             displayFormat: "dd-MM-yyyy",
                                             valueFormat: "yyyyMMdd",
-                                            change: (struc.submit) ? struc.submit : function () { },
+                                            change: struc.submit ? struc.submit : function () { },
                                             enabled: true, //(struc.EDIT) ? true : false,
                                             //   submit: vSubmit,
+                                            editable: (struc.key === undefined) ? true : struc.key ? false : true,
                                             value: {
-                                                path: modelName + '>/' + struc.FIELDNAME
-                                            }
-                                        }));
+                                                path: modelName + ">/" + struc.FIELDNAME,
+                                            },
+                                            ...struc.propInclude,
+                                        })
+                                    );
 
-                                        break;
+                                    break;
 
-                                    default:
-                                        res.push(new sap.m.Input().bindProperty("value", modelName + '>/' + struc.FIELDNAME));
-                                        break;
+                                default:
+                                    if (struc.MASK) {
+                                        let params = JSON.parse(struc.MASK);
+                                        let mask = params.mask;
+                                        delete params.mask;
 
-                                }
+                                        let roles = new sap.m.MaskInputRule({
+                                            ...(params || {
+                                                maskFormatSymbol: "C",
+                                                regex: "[A-Z0-9]",
+                                            }),
+                                            ...struc.propInclude,
+                                        });
 
-                                break;
+                                        res.push(
+                                            new sap.m.MaskInput({
+                                                mask: mask,
+                                                editable: (struc.key === undefined) ? true : struc.key ? false : true,
+                                                rules: [roles],
+                                                ...struc.propInclude,
+                                            }).bindProperty("value", modelName + ">/" + struc.FIELDNAME)
+                                        );
+                                    } else {
+                                        res.push(
+                                            new sap.m.Input({
+                                                maxLength: struc.LENG ? parseInt(struc.LENG) : 0,
+                                                editable: (struc.key === undefined) ? true : struc.key ? false : true,
+                                                ...struc.propInclude,
+                                            }).bindProperty("value", modelName + ">/" + struc.FIELDNAME)
+                                        );
+                                    }
+                                    break;
+                            }
 
-                            case 'MI':
+                            break;
 
-                                try {
-                                    chnd = eval('that.onValueHelpRequested' + struc.FIELDNAME);
-                                } catch { }
+                        case "MI":
+                            try {
+                                chnd = eval("that.onValueHelpRequested" + struc.FIELDNAME);
+                            } catch { }
 
-                                var oTokenTemplate = new sap.m.Token({
-                                    key: '{' + that.IDAPP + 'FILTERS>key}',
-                                    text: '{' + that.IDAPP + 'FILTERS>text}',
-                                });
+                            var oTokenTemplate = new sap.m.Token({
+                                key: "{" + that.IDAPP + "FILTERS>key}",
+                                text: "{" + that.IDAPP + "FILTERS>text}",
+                            });
 
-                                let sh = function () { };
-                                let showVH = false;
-                                let fld = struc.FIELDNAME;
+                            let sh = function () { };
+                            let showVH = false;
+                            let fld = struc.FIELDNAME;
 
-                                if (struc.RFTAB && struc.RFTAB.length > 0 && struc.RFFLD.length > 0) {
-                                    showVH = true;
-                                    that._idBusy = cIdBuzy;
-                                    sh = (struc.sh) ? struc.sh : function (oEvent) {
+                            if (struc.RFTAB && struc.RFTAB.length > 0 && struc.RFFLD.length > 0) {
+                                showVH = true;
+                                that._idBusy = cIdBuzy;
+                                sh = struc.sh
+                                    ? struc.sh
+                                    : function (oEvent) {
                                         that.ProcessMonitor.sh(oEvent, fld, that, null, value);
-                                    }
-                                    try {
-                                        if (!that.getModel(that.IDAPP + 'FILTERS').getModel().oData[struc.FIELDNAME])
-                                            that.getModel(that.IDAPP + 'FILTERS').getModel().oData[struc.FIELDNAME] = [];
-                                    } catch {
+                                    };
+                                try {
+                                    if (!that.getModel(that.IDAPP + "FILTERS").getModel().oData[struc.FIELDNAME]) that.getModel(that.IDAPP + "FILTERS").getModel().oData[struc.FIELDNAME] = [];
+                                } catch { }
+                            }
 
-                                    }
-
-                                }
-
-                                res.push(new sap.m.MultiInput({
+                            res.push(
+                                new sap.m.MultiInput({
                                     //id: struc.FIELDNAME,
-                                    submit: function (oEvent) { that.screen.elements.__proto__.onSubmit(oEvent, that) },
+                                    submit: function (oEvent) {
+                                        that.screen.elements.__proto__.onSubmit(oEvent, that);
+                                    },
                                     required: struc.OBLIGTORY,
                                     placeholder: placeholder,
                                     tooltip: tooltip,
                                     valueHelpRequest: sh,
                                     showValueHelp: showVH,
-                                    tokenUpdate: function (oEvent) { that.screen.elements.__proto__.onTokenUpdate(oEvent, that) },
-                                    placeholder: placeholder
-                                }).bindAggregation('tokens', that.IDAPP + 'FILTERS>/' + struc.FIELDNAME, oTokenTemplate));
+                                    editable: (struc.key === undefined) ? true : struc.key ? false : true,
+                                    tokenUpdate: function (oEvent) {
+                                        that.screen.elements.__proto__.onTokenUpdate(oEvent, that);
+                                    },
+                                    placeholder: placeholder,
+                                    ...struc.propInclude,
+                                }).bindAggregation("tokens", that.IDAPP + "FILTERS>/" + struc.FIELDNAME, oTokenTemplate)
+                            );
 
-                                break;
+                            break;
 
-                            case 'MC':
+                        case "MC":
+                            var oItemTemplate = new sap.ui.core.Item({
+                                key: "{" + modelName + "PARAM>" + "id" + "}",
+                                //text: '{' + modelName + 'PARAM>' + struc.RFFLD + '}:{' + modelName + 'PARAM>DESCR}',
+                                text: "{" + modelName + "PARAM>DESCR}",
+                            });
 
-                                var oItemTemplate = new sap.ui.core.Item({
-                                    key: '{' + modelName + 'PARAM>' + struc.RFFLD + '}',
-                                    text: '{' + modelName + 'PARAM>' + struc.RFFLD + '}:{' + modelName + 'PARAM>DESCR}',
-                                });
-
-                                try {
-                                    chnd = eval('that.handleSelectionChange' + struc.FIELDNAME);
-                                } catch { }
-
-                                res.push(new sap.m.MultiComboBox({
-                                    //id: struc.FIELDNAME,
-
+                            res.push(
+                                new sap.m.MultiComboBox({
                                     required: struc.OBLIGTORY,
                                     placeholder: placeholder,
                                     tooltip: tooltip,
-                                    selectionChange: function (oEvent) { that.screen.elements.__proto__.onSubmitMC(oEvent, that, (chnd) ? chnd : function (oEvent) { }) },
+                                    selectionChange: struc.selectionChange || function () { },
+                                    selectionFinish: struc.selectionFinish || function () { },
+                                    editable: (struc.key === undefined) ? true : struc.key ? false : true,
+                                    ...struc.propInclude,
                                     items: {
-                                        path: modelName + 'PARAM>/',// + struc.FIELDNAME,//  struc.SECTION.substring(5, 10),
-                                        sorter: '{' + struc.FIELDNAME + '}',
-                                        template: oItemTemplate
+                                        path: modelName + "PARAM>/", // + struc.FIELDNAME,//  struc.SECTION.substring(5, 10),
+                                        sorter: "{" + struc.FIELDNAME + "}",
+                                        template: oItemTemplate,
                                     },
                                     selectedKeys: {
-                                        path: that.IDAPP + 'FILTERS>/' + struc.FIELDNAME
-                                    }
-                                }));
+                                        path: that.IDAPP + "FILTERS>/" + struc.FIELDNAME,
+                                    },
+                                })
+                            );
+                            if (struc.defaultValue)
+                                res[1].setSelectedKeys(struc.defaultValue);
 
-                                break;
+                            if (struc.FOREIGNKEY || struc?.propInclude?.selectionFinish)
+                                res[1].fireSelectionFinish();
+                            break;
 
-                            case 'DR':
-                                try {
-                                    chnd = eval('that.handleChange' + struc.FIELDNAME);
-                                } catch { }
+                        case "DR":
+                            try {
+                                chnd = eval("that.handleChange" + struc.FIELDNAME);
+                            } catch { }
 
-                                //let fldDate = 'ADDDATE' + struc.FIELDNAME;
-                                let fldDate = struc.FIELDNAME;
+                            //let fldDate = 'ADDDATE' + struc.FIELDNAME;
+                            let fldDate = struc.FIELDNAME;
 
-                                try {
-                                    if (!that.getModel('FILTERS').oData[fldDate])
-                                        that.getModel('FILTERS').oData[fldDate] = {};
-                                } catch {
-
-                                }
-                                res.push(new sap.m.DateRangeSelection({
+                            try {
+                                if (!that.getModel("FILTERS").oData[fldDate]) that.getModel("FILTERS").oData[fldDate] = {};
+                            } catch { }
+                            res.push(
+                                new sap.m.DateRangeSelection({
                                     // id: struc.FIELDNAME,
-                                    change: (chnd) ? chnd : function () { },
+                                    change: chnd ? chnd : function () { },
                                     required: struc.OBLIGTORY,
-                                    dateValue: '{' + that.IDAPP + 'FILTERS>/' + struc.FIELDNAME + '/LOW}',
-                                    secondDateValue: '{' + that.IDAPP + 'FILTERS>/' + struc.FIELDNAME + '/HIGH}'
-                                }));
+                                    editable: (struc.key === undefined) ? true : struc.key ? false : true,
+                                    dateValue: "{" + that.IDAPP + "FILTERS>/" + struc.FIELDNAME + "/LOW}",
+                                    secondDateValue: "{" + that.IDAPP + "FILTERS>/" + struc.FIELDNAME + "/HIGH}",
+                                    ...struc.propInclude,
+                                })
+                            );
 
-                                break;
+                            if (struc.defaultValue) {
+                                res[1].setFrom(
+                                    struc.defaultValue[0]
+                                );
+                                res[1].setTo(
+                                    struc.defaultValue[1]
+                                );
+                            }
+                            break;
 
-                            case 'CB':
+                        case "CB":
+                            res.push(
+                                new sap.m.CheckBox({
+                                    editable: (struc.key === undefined) ? true : struc.key ? false : true,
+                                    ...struc.propInclude,
+                                    selected: "{" + modelName + ">/" + struc.FIELDNAME + "}",
+                                })
+                            );
 
-                                res.push(new sap.m.CheckBox({
-                                    //id: struc.FIELDNAME, 
-                                    selected: '{' + that.IDAPP + 'FILTERS>/' + struc.FIELDNAME + '}'
-                                }));
+                            if (struc.defaultValue) res[1].setSelected(struc.defaultValue);
 
-                                break;
+                            break;
 
-                            case 'TP':
-
-                                res.push(new sap.m.TimePicker({
+                        case "TP":
+                            res.push(
+                                new sap.m.TimePicker({
                                     //id: struc.FIELDNAME,
                                     tooltip: tooltip,
-                                    displayFormat: 'hh:mm:ss',
-                                    valueFormat: 'hhmmss',
+                                    displayFormat: "hh:mm:ss",
+                                    valueFormat: "hhmmss",
                                     enabled: true,
+                                    editable: (struc.key === undefined) ? true : struc.key ? false : true,
                                     required: struc.OBLIGTORY,
                                     value: {
-                                        path: 'FILTERS>/' + struc.FIELDNAME
-                                    }
-                                }));
+                                        path: "FILTERS>/" + struc.FIELDNAME,
+                                    },
+                                })
+                            );
 
-                                break;
+                            break;
+                        case "DP":
+                            res.push(
+                                new sap.m.DatePicker({
+                                    //id: Id,
+                                    tooltip: struc.tooltip ? struc.tooltip : "",
+                                    displayFormat: "dd-MM-yyyy",
+                                    valueFormat: "yyyyMMdd",
+                                    change: struc.submit ? struc.submit : function () { },
+                                    enabled: true, //(struc.EDIT) ? true : false,
+                                    editable: (struc.key === undefined) ? true : struc.key ? false : true,
+                                    //   submit: vSubmit,
+                                    value: {
+                                        path: modelName + ">/" + struc.FIELDNAME,
+                                    },
+                                })
+                            );
 
-                            default:
+                            break;
+                        case "CE":
+                            if (!MainView.codeeditor) return [];
 
-                                Log.info(struc.FIELDNAME, "type (MI,MC,TP,..) no defined");
-                                return;
+                            let tabs = {};
 
-                        }
+                            MainView.ceP = new sap.ui.codeeditor.CodeEditor({
+                                height: "600px",
+                                type: "javascript",
+                                colorTheme: "chrome",
+                            }).bindProperty("value", modelName + ">/SOURCE");
 
-                        break;
-                }
+                            let fcat = MainView.fieldcat.find(f => f.field === struc.FIELDNAME);
+                            if (fcat) caller === 1 ? (fcat.idUi5New = MainView.ceP.getId()) : (fcat.idUi5 = MainView.ceP.getId());
 
+                            MainView.View.addOtherContent(MainView.ceP);
 
-                res[0].setLabelFor(res[1].getId().toString());
+                            return [];
+
+                            break;
+                        default:
+                            Log.info(struc.FIELDNAME, "type (MI,MC,TP,..) no defined");
+                            return [];
+                    }
+
+                // break;
+                // }
 
                 res[1].REFTYPE = struc.REFTYPE;
 
-                return res;
+                if (res[0]) {
+                    res[0].setLabelFor(res[1].getId().toString());
 
+                    if (struc.CINFO) {
+                        res[0].ondblclick = function (oEvent) {
+                            if (!this["rp" + res[0].getId()])
+                                this["rp" + res[0].getId()] = new sap.m.ResponsivePopover("ResponsivePopover" + res[0].getId(), {
+                                    contentWidth: "40%",
+                                    contentHeight: "40%",
+                                    showHeader: false,
+                                    content: new sap.ui.core.HTML({
+                                        preferDOM: true,
+                                        sanitizeContent: false,
+                                        content: "<div>" + struc.CINFO + "</div>",
+                                    }),
+                                });
+
+                            this["rp" + res[0].getId()].openBy(res[0]);
+                        };
+                    }
+                }
+
+                /**
+                 * aqui necessário ter o ID para possíveis valicações
+                 */
+                let fcat = MainView.fieldcat.find(f => f.field === struc.FIELDNAME);
+                if (fcat) caller === 1 ? (fcat.idUi5New = res[1].getId()) : (fcat.idUi5 = res[1].getId());
+
+                return res;
             },
             onSubmitMC: function (oEvent, that, fnChange) {
-
-                if (oEvent.oSource.mProperties.selectedKeys.length > 0)
-                    sap.ui.getCore().byId(oEvent.mParameters.id).setValueState(sap.ui.core.ValueState.None);
+                if (oEvent.oSource.mProperties.selectedKeys.length > 0) sap.ui.getCore().byId(oEvent.mParameters.id).setValueState(sap.ui.core.ValueState.None);
 
                 fnChange(oEvent, that);
             },
 
-
             onSubmit: function (oEvent) {
-
                 var oValue = oEvent.getParameter("value");
                 var path = oEvent.getSource().mAggregations.tokenizer.mBindingInfos.tokens.path;
-                var oModel = AddModels.model("FILTERS").getModel()
+                var oModel = AddModels.model("FILTERS").getModel();
 
-                if (!oModel.getProperty(path))
-                    oModel.setProperty(path, []);
+                if (!oModel.getProperty(path)) oModel.setProperty(path, []);
 
                 var oModelObject = oModel.getProperty(path);
 
@@ -559,36 +681,28 @@ sap.ui.define([
                 var sType = oEvent.getParameter("type");
                 if (sType === "removed") {
                     var path = oEvent.getSource().mAggregations.tokenizer.mBindingInfos.tokens.path;
-                    var oModel = AddModels.model("FILTERS").getModel()
-                    if (!oModel.getProperty(path))
-                        oModel.setProperty(path, []);
+                    var oModel = AddModels.model("FILTERS").getModel();
+                    if (!oModel.getProperty(path)) oModel.setProperty(path, []);
                     var oModelObject = oModel.getProperty(path);
                     var sKey = oEvent.getParameter("removedTokens")[0].getProperty("key");
                     const index = oModelObject.findIndex(x => x.key == sKey);
-                    if (index > -1)
-                        oModelObject.splice(index, 1);
+                    if (index > -1) oModelObject.splice(index, 1);
                 }
             },
             obligatoryFieldsValidation(screen) {
-
                 let check;
                 let fld;
                 let focus;
-                let fields = screen.models.model('FILTERS').getModel();
+                let fields = screen.models.model("FILTERS").getModel();
 
                 check = true;
 
                 screen.fields.forEach((f, i) => {
-
                     try {
-
-
-                        fld = sap.ui.getCore().byId(f.field)
+                        fld = sap.ui.getCore().byId(f.field);
                         fld.setValueState(sap.ui.core.ValueState.None);
 
                         if (f.prop.obligatory === true) {
-
-
                             if (!fields.oData[f.field] || fields.oData[f.field].length === 0) {
                                 check = false;
                                 fld.setValueState(sap.ui.core.ValueState.Error);
@@ -601,15 +715,14 @@ sap.ui.define([
                             }
                         }
                     } catch {
-                        Log.info("ScreenElements/obligatoryFieldsValidation", f.field)
+                        Log.info("ScreenElements/obligatoryFieldsValidation", f.field);
                     }
-                })
+                });
 
-                if (focus != undefined)
-                    sap.ui.getCore().byId(screen.fields[focus].field).focus();
+                if (focus != undefined) sap.ui.getCore().byId(screen.fields[focus].field).focus();
 
                 return check;
-            }
-
+            },
         });
-    });
+    }
+);
