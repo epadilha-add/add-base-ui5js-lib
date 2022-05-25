@@ -70,7 +70,7 @@ sap.ui.define(
                 if (MainView.history === true || MainView.history === undefined) {
                     MainView.appendComponent([
                         {
-                            foreignKey: "KEY",
+                            foreignKey: ["KEY"],
                             idapp: componentHistory,
                             title: "{i18n>history}",
                             index: 0,
