@@ -162,7 +162,7 @@ sap.ui.define([
                         actionName: "TAXDH.list",
                         params: {
                             pageSize: pageSize,
-                            query: { D0000: d0000[0].id },
+                            query: { id: d0000[0].id },
                         },
                     })
                     .then((resp) => {
@@ -177,7 +177,7 @@ sap.ui.define([
 
             if (dh) {
                 d0000.map(d00 => {
-                    const h = dh.find(dh => dh.D0000 === d00.id);
+                    const h = dh.find(dh => dh.id === d00.id);
                     d00 = { ...h, ...d00 }
                 })
             }

@@ -13,6 +13,9 @@ sap.ui.define(
             constructor: function (that) {
                 sap.ui.core.BusyIndicator.hide();
 
+                /**
+                 * unir atributos do controller com a instancia MainView (this)
+                 */
                 MainView = Object.assign(this, that);
 
                 that.MainView = MainView;
@@ -269,14 +272,28 @@ sap.ui.define(
                     }
                 }
 
+                let countKeys = MainView.context.filter(c => c.key).length;
+
                 for (const key of MainView.context) {
-                    if (key.create || key.foreignKey === true) vals[key.field.REFKIND || key.field.split(".")[0]] = data[key.field.split(".")[0]];
+                    if (key.create || key.foreignKey === true)
+                        vals[key.field.REFKIND || key.field.split(".")[0]] = data[key.field.split(".")[0]];
 
                     /**
                      * para o caso de existir valores padrões enviado do construtor
                      * REF: add.tax.cust.variants.variants.controller.MainView
                      */
-                    if (key.value) vals[key.field.REFKIND || key.field.split(".")[0]] = key.value;
+                    if (key.value)
+                        vals[key.field.REFKIND || key.field.split(".")[0]] = key.value;
+
+                    if (key.key && countKeys === 1)
+                        /**
+                         * key - 
+                         */
+                        /*      vals.id = vals.id
+                                 ? vals.id + '-' + String(vals[key.field.REFKIND || key.field.split(".")[0]])
+                                 : String(vals[key.field.REFKIND || key.field.split(".")[0]]); */
+                        vals.id = String(vals[key.field.REFKIND || key.field.split(".")[0]]);
+
                 }
 
                 vals.ACTIVE = MainView.defaultACTIVE || true;
@@ -665,7 +682,7 @@ sap.ui.define(
 
                             let txt = field.SCRTEXT_S || field.SCRTEXT_M || field.SCRTEXT_L || field.DESCR || field.FIELDNAME;
                             let col = new sap.m.Text({ tooltip: field.SCRTEXT_L + " : " + field.field, text: txt }).addStyleClass("labelColumnsTable");
-                            if (!field.columnObject) {
+                            if (!field.selectable) {
                                 if (!field.ISICON && field.DATATYPE !== "BOOL") {
                                     cells.push(
                                         new sap.m.Text({
@@ -693,7 +710,17 @@ sap.ui.define(
                                     );
                                 }
                             } else {
-                                cells.push(field.columnObject.addStyleClass("labelColumnsTable"));
+                                cells.push(new sap.m.RadioButton({
+                                    groupName: "SELLI",
+                                    tooltip: "{mainModel>id}",
+                                    width: "50px",
+                                    select: function (oEvent) {
+                                        const id = {
+                                            id: oEvent.getSource().getTooltip_Text(),
+                                        };
+                                        sap.ui.getCore().setModel(new sap.ui.model.json.JSONModel(id), "SELECTED_LINE");
+                                    },
+                                }).addStyleClass("labelColumnsTable"));
                             }
 
                             //armazena id para mudar o texto posterior
@@ -864,7 +891,8 @@ sap.ui.define(
                     return MainView.tilePanel || new sap.m.ScrollContainer({ height: "80%", vertical: true, focusable: true, content: MainView.tilePanel });
                 }
             },
-            new: async function (oEvent) {
+            async getCreateFields() {
+
                 MainView.getView().setBusy(true);
 
                 var inputs = [];
@@ -879,7 +907,6 @@ sap.ui.define(
                 if (MainView.newCollection) {
                     newCollection.actionName = MainView.newCollection;
                 }
-
 
                 for (const key of MainView.context) {
                     if (!key.create) continue;
@@ -898,6 +925,14 @@ sap.ui.define(
 
                     inputs = inputs.concat(screenField);
                 }
+
+                MainView.getView().setBusy(false);
+
+                return inputs;
+            },
+            new: async function (oEvent) {
+
+                let inputs = await MainView.getCreateFields();
 
                 dialog = new sap.m.Dialog({
                     stretch: sap.ui.Device.system.phone,
@@ -960,42 +995,42 @@ sap.ui.define(
 
                             //duplicidades                      
 
-                            if (MainView.checkDuplicateBeforeCreate === undefined || MainView.checkDuplicateBeforeCreate === true) {
-                                let dup = false;
-
-                                for (let lr of MainView.listResult) {
-                                    dup = false;
-                                    for (let field of MainView.context.filter(f => f.key === true && f.create === true)) {
-
-                                        let valA = typeof vals[field.REFKIND || field.field.split(".")[0]] !== 'string'
-                                            ? JSON.stringify(vals[field.REFKIND || field.field.split(".")[0]])
-                                            : vals[field.REFKIND || field.field.split(".")[0]]
-
-                                        let valB = typeof lr[field.REFKIND || field.field.split(".")[0]] !== 'string'
-                                            ? JSON.stringify(lr[field.REFKIND || field.field.split(".")[0]])
-                                            : lr[field.REFKIND || field.field.split(".")[0]]
-
-                                        if (valA === valB)
-                                            dup = true;
-
-
-                                        if (dup)
-                                            break;
-                                    }
-
-                                    if (dup)
-                                        break;
-
-                                }
-                                if (dup)
-                                    vals = null;
-
-                                if (!vals) {
-                                    MainView.message("alreadyData");
-                                    oEvent.getSource().setEnabled(true);
-                                    return;
-                                }
-                            }
+                            /*                             if (MainView.checkDuplicateBeforeCreate === undefined || MainView.checkDuplicateBeforeCreate === true) {
+                                                            let dup = false;
+                            
+                                                            for (let lr of MainView.listResult) {
+                                                                dup = false;
+                                                                for (let field of MainView.context.filter(f => f.key === true && f.create === true)) {
+                            
+                                                                    let valA = typeof vals[field.REFKIND || field.field.split(".")[0]] !== 'string'
+                                                                        ? JSON.stringify(vals[field.REFKIND || field.field.split(".")[0]])
+                                                                        : vals[field.REFKIND || field.field.split(".")[0]]
+                            
+                                                                    let valB = typeof lr[field.REFKIND || field.field.split(".")[0]] !== 'string'
+                                                                        ? JSON.stringify(lr[field.REFKIND || field.field.split(".")[0]])
+                                                                        : lr[field.REFKIND || field.field.split(".")[0]]
+                            
+                                                                    if (valA === valB)
+                                                                        dup = true;
+                            
+                            
+                                                                    if (dup)
+                                                                        break;
+                                                                }
+                            
+                                                                if (dup)
+                                                                    break;
+                            
+                                                            }
+                                                            if (dup)
+                                                                vals = null;
+                            
+                                                            if (!vals) {
+                                                                MainView.message("alreadyData");
+                                                                oEvent.getSource().setEnabled(true);
+                                                                return;
+                                                            }
+                                                        } */
 
 
 
@@ -1196,9 +1231,139 @@ sap.ui.define(
                             MainView.btNew,
                         ];
 
+                        if (MainView.copyButton) {
+
+                            /**
+                             * radio button para selecionar a linha
+                             * o model SELECTED_LINE será setado com o id da linha selecionada
+                             * user sap.ui.getCore().getModel("SELECTED_LINE")
+                             * as funções beforeCopyConfirm e afterCopyConfirm
+                             * Podem ser implementadas no controller
+                             */
+
+                            MainView.copyButton =
+                                new sap.m.Button({
+                                    icon: "sap-icon://copy",
+                                    press: async (oEvent) => {
+                                        await MainView.getFn("ADD_POPUP_TO_CONFIRM").then(async (popup) => {
+                                            let id = sap.ui.getCore().getModel("SELECTED_LINE");
+                                            let selectedId = MainView.listResult.find((l) => l.id === id?.getData()?.id);
+                                            if (!selectedId) return;
+
+                                            popup(
+                                                {
+                                                    valueToConfirm: "OK",
+                                                    title: "{i18n>copyFunction}",
+                                                    state: sap.ui.core.ValueState.Information,
+                                                    icon: "sap-icon://copy",
+                                                    labelInput: new sap.m.Label({
+                                                        text: "Cópia de: " + selectedId.DESCR || selectedId.NAME || selectedId.id,
+                                                    }),
+                                                    iconBeginButton: "sap-icon://copy",
+                                                    textBeginButton: "{i18n>toCopy}",
+                                                    typeBeginButton: sap.m.ButtonType.Accept,
+                                                    inpConf: await MainView.getCreateFields(),
+                                                    doubleCheck: false,
+                                                    callBackConfirm: async (fields) => {
+
+                                                        for (const field of fields.filter(f => f.field)) {
+
+                                                            if (field.REFTYPE === "LB") {
+                                                                selectedId[field.field.split(".")[0]] = field.getSelectedKey();
+                                                            } else if (field.REFTYPE === "MC") {
+                                                                selectedId[field.field.split(".")[0]] = field.getSelectedKeys();
+                                                            } else {
+                                                                selectedId[field.field.split(".")[0]] = field.getValue();
+                                                            }
+                                                        }
+
+                                                        /**
+                                                         * Antes de copiar
+                                                         */
+                                                        if (MainView.getView().getController().beforeCopyConfirm)
+                                                            await MainView.getView().getController()
+                                                                .beforeCopyConfirm(fields.filter(f => f.field), MainView, selectedId);
+
+                                                        /**
+                                                         * Copiar
+                                                         */
+                                                        if (MainView.getView().getController().beforeCopyConfirm)
+                                                            await MainView.getView().getController()
+                                                                .copyConfirm(fields.filter(f => f.field), MainView, selectedId);
+                                                        else
+                                                            await copyConfirm(fields, MainView, selectedId);
+
+                                                        /**
+                                                         * Após copiar
+                                                         */
+                                                        if (MainView.getView().getController().afterCopyConfirm)
+                                                            await MainView.getView().getController()
+                                                                .beforeCopyConfirm(fields.filter(f => f.field), MainView, selectedId);
+                                                    },
+                                                },
+                                                MainView
+                                            );
+                                        });
+                                    },
+                                })
+
+                        }
+
                         if (MainView.getView().getController().moreButtonsMainView) {
                             // outros botões podem ser ineridos a partir do controller  retornar Array
                             MainView.toolBarContent = MainView.getView().getController().moreButtonsMainView(MainView.toolBarContent, MainView);
+                        } else {
+                            // caso contrário, alguns botões standard
+                            MainView.toolBarContent = moreButtonsMainView(MainView.toolBarContent, MainView);
+                        }
+
+                        async function copyConfirm(fields, MainView, selectedId) {
+
+                            let vals = [selectedId];
+
+                            delete vals[0].id;
+
+                            //vals.NEXIT = newName.getValue();
+
+                            let toCompleteSave = {
+                                ...vals[0],
+                            };
+
+                            vals = await MainView.create(vals[0]);
+                            /**
+                             * verificar se houve exit custom bloqueando a creação
+                             */
+                            if (vals == false) {
+                                MainView.getView().setBusy(false);
+                                return;
+                            }
+                            /**
+                             * verificar se houve a criação foi realizada com sucesso
+                             */
+                            if (!vals.id) return;
+
+                            toCompleteSave.ID = vals.id;
+                            toCompleteSave.id = vals.id;
+                            toCompleteSave.ACTIVE = false;
+
+                            MainView.getView().setModel(new MainView.Model(toCompleteSave), MainView.IDAPP + "PARAM");
+
+                            const backIfSave = false;
+                            const checkObligatoryFields = false;
+                            const messageIfSave = "successObjectCopy";
+
+                            MainView.save(backIfSave, checkObligatoryFields, messageIfSave).then(() => {
+                                MainView.pressToNav(toCompleteSave);
+                                MainView.navToView(toCompleteSave);
+                            });
+
+                        }
+
+                        function moreButtonsMainView(standardButtons, MainView) {
+                            return [
+                                MainView.copyButton,
+                                ...standardButtons,
+                            ];
                         }
                     }
                 }
@@ -1673,6 +1838,21 @@ sap.ui.define(
                 }
             },
             initContext: function (that) {
+
+                if (that.selectable) {
+                    /**
+                     * vamos construir um seletor de linha tipo radio para apenas identificar a selinha selecionada
+                     * a linha selecionada será utilizada me vários botões custom que será implementado em
+                     * moreButtonsMainView e moreButtonsView
+                     */
+                    that.context.unshift({
+                        showUi: false,
+                        create: false,
+                        visible: true,
+                        field: "SELLI",
+                        selectable: true
+                    });
+                }
                 /**
                  * catálogo de campos
                  */

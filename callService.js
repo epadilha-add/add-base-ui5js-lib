@@ -28,7 +28,7 @@ sap.ui.define([], function () {
             return await fetch(src, param || p, 50).then((response) => {
 
 
-                return response.ok ? response.text() : response.status;
+                return response.ok ? response.text() : response.text() || response.status;
             }).then((data) => {
 
                 let resp = {}
@@ -40,6 +40,8 @@ sap.ui.define([], function () {
 
                 if (resp && resp.uuid)
                     throw resp;
+
+                if (resp.code && (resp.code === 403)) throw data
 
                 if (resp.code && (resp.code < 200 || resp.code > 299)) throw data
 
