@@ -111,7 +111,8 @@ sap.ui.define([], function () {
 
             Object.assign(data, {
                 m: sap.ui.getCore().getModel("userInfo").getData().currentMandt,
-                a: Object.keys(window["sap-ui-config"]["resourceroots"])[0]
+                a: Object.keys(window["sap-ui-config"]["resourceroots"])[0],
+                foreground: true
             })
 
             header = {
