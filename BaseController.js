@@ -26,7 +26,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
              *
              ***********************************************/
             let oMe = new JSONModel();
-            oMe.loadData("me", null, false);
+            oMe.loadData("me", { app: this.IDAPP }, false);
 
             if (oMe.getData().uuid) {
                 sap.ui.getCore().setModel(
