@@ -172,10 +172,10 @@ sap.ui.define(
                                                 switch (element.REFTYPE) {
                                                     case "RT":
                                                     case "CE":
-                                                        Screen.addOtherContent(obj, field.section || field.subSection);
+                                                        Screen.addOtherContent(obj, field.section || field.subSection, field);
                                                         break;
                                                     default:
-                                                        Screen.addContent(obj, field.section || field.subSection);
+                                                        Screen.addContent(obj, field.section || field.subSection, field);
                                                         break;
                                                 }
                                             }

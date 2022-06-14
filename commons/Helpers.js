@@ -51,10 +51,20 @@ sap.ui.define([], function () {
                             That._saveVariantsRemote(obj, that)
                                 //That._saveLocalVariants(obj, that)
                                 .then(persisted => {
-                                    that.headerToolbar
-                                        .getContent()
-                                        .find(b => b.mProperties.icon && b.getProperty("icon") === "sap-icon://customize")
-                                        .setVisible(true);
+
+                                    if (that.headerToolbar?.getContent) {
+                                        that.headerToolbar
+                                            .getContent()
+                                            .find(b => b.mProperties.icon && b.getProperty("icon") === "sap-icon://customize")
+                                            .setVisible(true);
+
+                                    } else {
+
+                                        let bt = that.headerToolbar.getItems().find(b => b.mProperties.icon && b.getProperty("icon") === "sap-icon://customize")
+
+                                        if (bt)
+                                            bt.setVisible(true);
+                                    }
 
                                     resolve(persisted);
                                 })

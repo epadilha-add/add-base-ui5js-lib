@@ -26,7 +26,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
              *
              ***********************************************/
             let oMe = new JSONModel();
-            oMe.loadData("me", null, false);
+            oMe.loadData("me", { app: this.IDAPP }, false);
 
             if (oMe.getData().uuid) {
                 sap.ui.getCore().setModel(
@@ -182,27 +182,19 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
              */
             This._setAppId();
 
+            /**
+             * permitir troca do ID 
+             */
+            let FKFIELD = true;
+
             let params = { params: {} };
             /**
              * parameters prepare
              */
-            params.params = this.getSelectScreenFilters(This);
 
-            /* for (const field of This.fieldcat) {
-                switch (field.REFTYPE) {
-                    case "LB":
-                        params.params[field.REFKIND || field.field] = sap.ui.getCore().byId(field.idUi5).getSelectedKey();
-                        break;
-                    case "MC":
-                        params.params[field.REFKIND || field.field] = {
-                            $in: sap.ui.getCore().byId(field.idUi5).getSelectedKeys(),
-                        };
-                        break;
-                    default:
-                        params.params[field.REFKIND || field.field] = sap.ui.getCore().byId(field.idUi5).getValue();
-                        break;
-                 }
-            }*/
+
+            params.params = this.getSelectScreenFilters(This, FKFIELD);
+
             /**
              * get new values with foreignKey
              */
@@ -238,7 +230,7 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
                     console.error(err);
                 });
         },
-        getSelectScreenFilters: function (MainView) {
+        getSelectScreenFilters: function (MainView, FKFIELD) {
             let selectScreen = {};
             /**
              * parameters prepare - screenSelect
@@ -275,6 +267,17 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
                                 };
                                 if (selectScreen[field.field].$in.length === 0)
                                     selectScreen[field.field] = "";
+                            }
+
+                            if (field.FKFIELD && selectScreen[field.REFKIND || field.field] && FKFIELD) {
+                                //substitui o id pelo código de maior relevancia
+
+                                selectScreen[field.REFKIND || field.field].$in =
+                                    selectScreen[field.REFKIND || field.field].$in.map(v => {
+                                        v = window?.add?.tax[field.REFKIND || field.field][v] || v;
+                                        return v;
+                                    })
+
                             }
                             break;
                         case "DR":
