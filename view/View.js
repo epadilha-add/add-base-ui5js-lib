@@ -96,7 +96,7 @@ sap.ui.define([
                                             width: "100%",
                                             content: [
                                                 new sap.m.Label({
-                                                    text: "{i18n>write} '" + values[MainView.titleField] + "' {i18n>toConfirm}"
+                                                    text: "{i18n>write} '" + (values[MainView.titleField] || MainView.IDAPP) + "' {i18n>toConfirm}"
                                                 }),
                                                 inpConf]
                                         })]
