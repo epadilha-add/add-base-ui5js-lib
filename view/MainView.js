@@ -338,7 +338,7 @@ sap.ui.define(
                     .getData();
 
                 const diagDelete = new sap.m.Dialog({
-                    contentWidth: "50%",
+                    contentWidth: "60%",
                     stretch: sap.ui.Device.system.phone,
                     title: "{i18n>deleteConfirm}",
                     type: "Message",
@@ -352,7 +352,7 @@ sap.ui.define(
                                     width: "100%",
                                     content: [
                                         new sap.m.Label({
-                                            text: "{i18n>write} '" + values[MainView.titleField] + "' {i18n>toConfirm}",
+                                            text: "{i18n>write} '" + (values[MainView.titleField] || values.ID) + "' {i18n>toConfirm}",
                                         }),
                                         inpConf,
                                     ],
@@ -367,7 +367,7 @@ sap.ui.define(
                         icon: "sap-icon://delete",
                         press: async function () {
 
-                            if (inpConf.getValue() != values[MainView.titleField]) return;
+                            if (inpConf.getValue() != (values[MainView.titleField] || values.ID)) return;
 
                             diagDelete.close();
 
@@ -744,7 +744,7 @@ sap.ui.define(
                             if (oLabelText === 'Sel') return;
 
                             var oIndex = oEvent.currentTarget.cellIndex - 1; //Get the column Index
-                            var oKeys = MainView.context.map(c => c.field); //Get Hold of Model Keys to filter the value
+                            var oKeys = MainView.context.filter(f => f.visible).map(c => c.field); //Get Hold of Model Keys to filter the value
                             MainView.table.getModel("mainModel").setProperty("/bindingValue", oKeys[oIndex]); //Save the key value to property
                             popUp.openBy(oTarget);
                         });
@@ -1083,9 +1083,9 @@ sap.ui.define(
                     beginButton: new sap.m.Button({
                         text: "Salvar",
                         press: async function (oEvent) {
-                            let id = null;
 
-                            oEvent.getSource().setEnabled(false);
+                            let bt = oEvent.getSource();
+                            bt.setEnabled(false);
 
                             let vals = {};
                             let keys = {};
@@ -1116,8 +1116,8 @@ sap.ui.define(
                                 }
                                 if (vals && field.create && !vals[field.REFKIND || field.field.split(".")[0]] && field.obligatory) {
                                     vals = null;
+                                    bt.setEnabled(true);
                                     return;
-                                    throw new TypeError("Err " + field.field + " empty");
                                 }
                             }
 
@@ -1165,7 +1165,7 @@ sap.ui.define(
 
                             //--> valida se requisitos mínimos foram preenchidos
                             if (!vals) {
-                                oEvent.getSource().setEnabled(true);
+                                bt.setEnabled(true);
                                 return;
                             }
 
@@ -1203,6 +1203,7 @@ sap.ui.define(
                                 MainView.navToView(vals);
                             } catch (error) {
                                 MainView.getView().setBusy(false);
+                                bt.setEnabled(true);
                                 throw new TypeError(error);
                                 return;
                             }
@@ -1825,108 +1826,6 @@ sap.ui.define(
                 MainView.setMainModel(data);
 
                 return true;
-            },
-            sortTable() {
-                var vsd1 = new sap.m.ViewSettingsDialog("vsd1", {
-                    confirm: function (oEvent) {
-                        var p = oEvent.getParameters(),
-                            oSorter,
-                            oGrouper,
-                            aFilters,
-                            oCallback,
-                            aTableSorters = [],
-                            aTableFilters = [],
-                            i = 0;
-
-                        // 1) fetch and adjust grouper (set group order)
-                        if (p.groupItem) {
-                            oGrouper = p.groupItem.getCustomData()[0].getValue();
-                            if (oGrouper) {
-                                oGrouper.bDescending = p.groupDescending;
-                                aTableSorters.push(oGrouper);
-                            }
-                        }
-
-                        // 2) fetch and adjust sorter (set sort order)
-                        if (p.sortItem) {
-                            oSorter = p.sortItem.getCustomData()[0].getValue();
-                            if (oSorter) {
-                                oSorter.bDescending = p.sortDescending;
-                                aTableSorters.push(oSorter);
-                            }
-                        }
-
-                        // 3) filtering (either preset filters or standard/custom filters)
-                        if (p.presetFilterItem) {
-                            aFilters = p.presetFilterItem.getCustomData()[0].getValue();
-                            if (aFilters) {
-                                // the filter could be an array of filters or a single filter so we transform it to an array
-                                if (!Array.isArray(aFilters)) {
-                                    aFilters = [aFilters];
-                                }
-                                aTableFilters = aTableFilters.concat(aFilters);
-                            }
-                        } else {
-                            // standard/custom filters
-                            for (; i < p.filterItems.length; i++) {
-                                if (p.filterItems[i] instanceof sap.m.ViewSettingsCustomItem) {
-                                    // custom control filter
-                                    oCallback = p.filterItems[i].getCustomData()[0].getValue();
-                                    aFilters = oCallback.apply(this, [p.filterItems[i].getCustomControl()]);
-                                    if (aFilters) {
-                                        // the filter could be an array of filters or a single filter so we transform it to an array
-                                        if (!Array.isArray(aFilters)) {
-                                            aFilters = [aFilters];
-                                        }
-                                        aTableFilters = aTableFilters.concat(aFilters);
-                                    }
-                                } else if (p.filterItems[i] instanceof sap.m.ViewSettingsItem) {
-                                    // standard filter
-                                    aFilters = p.filterItems[i].getCustomData()[0].getValue();
-                                    if (aFilters) {
-                                        // the filter could be an array of filters or a single filter so we transform it to an array
-                                        if (!Array.isArray(aFilters)) {
-                                            aFilters = [aFilters];
-                                        }
-                                        aTableFilters = aTableFilters.concat(aFilters);
-                                    }
-                                }
-                            }
-                        }
-
-                        vsd2.addFilterItem(
-                            new sap.m.ViewSettingsFilterItem({
-                                key: "myValueFilter",
-                                text: "Value",
-                                items: [
-                                    new sap.m.ViewSettingsItem({
-                                        key: "value1",
-                                        text: "< 10 EUR",
-                                    }),
-                                    new sap.m.ViewSettingsItem({
-                                        key: "value2",
-                                        text: "10 - 30 EUR",
-                                    }),
-                                    new sap.m.ViewSettingsItem({
-                                        key: "value3",
-                                        text: "30 - 50 EUR",
-                                    }),
-                                    new sap.m.ViewSettingsItem({
-                                        key: "value4",
-                                        text: "50 - 70 EUR",
-                                    }),
-                                    new sap.m.ViewSettingsItem({
-                                        key: "value5",
-                                        text: "> 70 EUR",
-                                    }),
-                                ],
-                            })
-                        );
-
-                        // apply sorters & filters to the MainView.table binding
-                        MainView.table.getBinding("items").sort(aTableSorters);
-                    },
-                });
             },
             foreignKeysCheck(page) {
                 let foreignKeys = sap.ui.getCore().getModel("foreignKey" + MainView.rootComponent);

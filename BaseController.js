@@ -3,7 +3,6 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
 
     return Controller.extend("add.base.ui5js.lib.BaseController", {
         callService: callService,
-
         loadingConnfig: async function (idapp, that) {
             /***********************************************
              *
