@@ -60,11 +60,13 @@ sap.ui.define([], function () {
                         });
 
                 if (err.uuid) {
+                    if(!err?.error?.data?.NOSHOW)
                     window.open(window.location.origin + "/add/notification/" + err.uuid, '_blank');
                 }
                 if (err.toString() === 'TypeError: Failed to fetch') {
                     window.open(window.location.origin + "/logout", '_blank');
                 }
+                throw err;
 
             });
         },

@@ -401,7 +401,10 @@ sap.ui.define(
                                 })
                                 .catch(err => {
                                     MainView.getView().setBusy(false);
-                                    MainView.message("errorDelete");
+                                    if (err?.error?.type === "ERR_HAS_ONLY_VIEW")
+                                        MainView.message(err?.error?.type);
+                                    else
+                                        MainView.message("errorDelete");
                                     return false;
                                 });
 
@@ -472,8 +475,11 @@ sap.ui.define(
 
                         MainView.getView().setBusy(false);
 
-                        if (resp)
+                        if (resp) {
                             MainView.changeMainModel(resp);
+                        } else {
+                            throw "errorUpdate";
+                        }
 
                         MainView.message("successUpdate");
 
@@ -482,7 +488,10 @@ sap.ui.define(
                         return true;
                     })
                     .catch(err => {
-                        MainView.message("errorUpdate");
+                        if (err?.error?.type === "ERR_HAS_ONLY_VIEW")
+                            MainView.message(err?.error?.type);
+                        else
+                            MainView.message("errorUpdate");
                         return false;
                     });
             },
