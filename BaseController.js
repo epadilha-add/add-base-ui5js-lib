@@ -219,12 +219,14 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
                         /**
                          * release dependecies
                          */
-                        sap.ui.getCore().byId(f.idUi5).setBusy(false);
+                        if (f.idUi5)
+                            sap.ui.getCore().byId(f.idUi5).setBusy(false);
                     }
                 })
                 .catch(err => {
                     for (const f of fields) {
-                        sap.ui.getCore().byId(f.idUi5).setBusy(false);
+                        if (f.idUi5)
+                            sap.ui.getCore().byId(f.idUi5).setBusy(false);
                     }
                     console.error(err);
                 });

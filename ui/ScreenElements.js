@@ -81,6 +81,9 @@ sap.ui.define(
                                     }
 
                                     if (element.VALUES && element.REFTYPE) {
+
+                                        MainView.logInfo(element.VALUES,element.FIELD +":VALUES");
+
                                         var oModel = new JSONModel(element.VALUES.filter(e => e.ACTIVE || e.ACTIVE === undefined));
                                         oModel.setSizeLimit(500);
                                         modelName = MainView.IDAPP + element.FIELD;
@@ -141,6 +144,7 @@ sap.ui.define(
                                     element = { ...element, ...field };
 
                                     if ((element.VALUES || field.RFFLD) && field.REFTYPE) {
+                                        MainView.logInfo(element.VALUES,element.FIELD +":VALUES");
                                         var oModel = new JSONModel(element.VALUES || []);
                                         oModel.setSizeLimit(500);
                                         modelName = MainView.IDAPP + field.field || element.FIELD;

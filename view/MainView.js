@@ -197,7 +197,7 @@ sap.ui.define(
                     }
                 }
             },
-            logInfo(params) {
+            logInfo(params, logName) {
                 console.profile();
                 console.profileEnd();
                 if (console.clear) {
@@ -205,9 +205,9 @@ sap.ui.define(
                 }
                 if (console.profiles?.length === 0) return;
 
-                console.table({ COLLECTION: MainView.collection });
-                console.log("PARAMETERS:");
-                console.table(params.params);
+                console.table({ COLLECTION: logName || MainView.collection });
+                console.log(logName || "PARAMETERS:");
+                console.table(params?.params || params || []);
             },
             setMainModel: function (data) {
                 MainView.listResult = data.results;
@@ -272,7 +272,7 @@ sap.ui.define(
                     }
                 }
 
-                let countKeys = MainView.context.filter(c => c.key).length;
+                let countKeys = MainView.context.filter(c => c.key) || [];
 
                 for (const key of MainView.context) {
                     if (key.create || key.foreignKey === true)
@@ -285,7 +285,8 @@ sap.ui.define(
                     if (key.value)
                         vals[key.field.REFKIND || key.field.split(".")[0]] = key.value;
 
-                    if (key.key && countKeys === 1)
+                    if (key.key && countKeys.length === 1000)//==moentaneamente null - necessario reavaliar em cenários
+                        // onde o customizing é compartilhado
                         /**
                          * key - 
                          */
@@ -312,7 +313,26 @@ sap.ui.define(
                     if (params.params === false) return false;
                 }
 
+                //duplicidades
+                if (MainView.checkDuplicateBeforeCreate === undefined || MainView.checkDuplicateBeforeCreate === true) {
 
+                    let totalKeys = 0;
+                    for (const l of MainView.listResult) {
+                        let match = {};
+                        totalKeys = 0;
+                        for (const key of countKeys) {
+                            match[key.field] = l[key.field];
+
+                            if (JSON.stringify(match) === JSON.stringify({ [key.field]: vals[key.field] })) {
+                                totalKeys++;
+                            }
+                            if (countKeys.length === totalKeys) {
+                                MainView.message("alreadyData");
+                                return false
+                            }
+                        }
+                    }
+                }
 
                 return await MainView.callService.postSync("add", params).then(async resp => {
                     MainView.getView().setBusy(false);
@@ -1130,48 +1150,6 @@ sap.ui.define(
                                 }
                             }
 
-                            //duplicidades                      
-
-                            /*                             if (MainView.checkDuplicateBeforeCreate === undefined || MainView.checkDuplicateBeforeCreate === true) {
-                                                            let dup = false;
-                            
-                                                            for (let lr of MainView.listResult) {
-                                                                dup = false;
-                                                                for (let field of MainView.context.filter(f => f.key === true && f.create === true)) {
-                            
-                                                                    let valA = typeof vals[field.REFKIND || field.field.split(".")[0]] !== 'string'
-                                                                        ? JSON.stringify(vals[field.REFKIND || field.field.split(".")[0]])
-                                                                        : vals[field.REFKIND || field.field.split(".")[0]]
-                            
-                                                                    let valB = typeof lr[field.REFKIND || field.field.split(".")[0]] !== 'string'
-                                                                        ? JSON.stringify(lr[field.REFKIND || field.field.split(".")[0]])
-                                                                        : lr[field.REFKIND || field.field.split(".")[0]]
-                            
-                                                                    if (valA === valB)
-                                                                        dup = true;
-                            
-                            
-                                                                    if (dup)
-                                                                        break;
-                                                                }
-                            
-                                                                if (dup)
-                                                                    break;
-                            
-                                                            }
-                                                            if (dup)
-                                                                vals = null;
-                            
-                                                            if (!vals) {
-                                                                MainView.message("alreadyData");
-                                                                oEvent.getSource().setEnabled(true);
-                                                                return;
-                                                            }
-                                                        } */
-
-
-
-
                             //--> valida se requisitos mínimos foram preenchidos
                             if (!vals) {
                                 bt.setEnabled(true);
@@ -1388,7 +1366,7 @@ sap.ui.define(
 
                                             let inpConf = args.inpConf || new sap.m.Input();
 
-                                            inpConf = new sap.ui.layout.form.SimpleForm({
+                                            let Conf = new sap.ui.layout.form.SimpleForm({
                                                 width: "100%",
                                                 editable: true,
                                                 layout: "ResponsiveGridLayout",
@@ -1416,7 +1394,7 @@ sap.ui.define(
                                                                     args.labelInput || new sap.m.Label({
                                                                         text: "DIGITAR 'OK' PARA CONFIRMAR"
                                                                     }),
-                                                                    inpConf]
+                                                                    Conf]
                                                             })]
                                                     })],
 
