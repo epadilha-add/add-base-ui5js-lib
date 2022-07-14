@@ -297,7 +297,7 @@ sap.ui.define(
 
                 }
 
-                vals.ACTIVE = MainView.defaultACTIVE || true;
+                vals.ACTIVE = MainView.defaultACTIVE === false ? false : true;
 
                 const params = {
                     method: "POST",
@@ -460,7 +460,7 @@ sap.ui.define(
                     vlas[field.REFKIND || field.field] = field.beforeSaving ? field.beforeSaving(values[field.field]) : values[field.field];
                 }
 
-                vlas.id = values.ID;
+                vlas.id = values.STR__ID || values.ID || values.id;
                 /**
                  * transferindo valores default
                  */
@@ -538,10 +538,12 @@ sap.ui.define(
                     MainView.View = new add.ui5js.ui.View(View, () => MainView.mainContent.back());
                     MainView.mainContent.addPage(MainView.View.Page);
                 } else {
+                    let subTitle = View[MainView.subtitle] ? " / " + View[MainView.subtitle] : MainView.subtitle ? " / " + MainView.subtitle : "";
+
                     MainView.obligatoryCheck().setNoneAll();
                     MainView.View.setId(View.id);
                     MainView.View.setBtEvents(View.id);
-                    MainView.View.title.setText(View[MainView.titleField]);
+                    MainView.View.title.setText(View[MainView.titleField] + subTitle);
                     MainView.View.avatar.setSrc(View.LOGO || View.ICON || View.that.icon || View.imageURI);
                     if (MainView.getView().getController().afterSelectLine) if (!MainView.getView().getController().afterSelectLine(View, MainView, MainView.View)) return;
                 }
@@ -669,14 +671,14 @@ sap.ui.define(
                         //mode: sap.m.ListMode.MultiSelect,
                         //backgroundDesign: sap.m.BackgroundDesign.Transparent,
                         //sticky: new sap.m.Sticky.ColumnHeaders,
-                        popinLayout: MainView.popinLayout || "GridSmall",
-                        inset: MainView.inset || false,
-                        autoPopinMode: MainView.autoPopinMode || true,
-                        contextualWidth: "Auto",
-                        growing: MainView.growing || true,
+                        //popinLayout: MainView.popinLayout || "GridSmall",
+                        //inset: MainView.inset || false,
+                        //autoPopinMode: MainView.autoPopinMode || true,
+                        //contextualWidth: "Auto",
+                        //growing: MainView.growing || true,
                         growingThreshold: MainView.growingThreshold || 8,
                         busy: true,
-                        fixedLayout: MainView.fixedLayout || "Strict",
+                        //fixedLayout: MainView.fixedLayout || "Strict",
                         busyIndicatorDelay: 20,
                         busyIndicatorSize: sap.ui.core.BusyIndicatorSize.Medium,
 
@@ -980,6 +982,7 @@ sap.ui.define(
                                 cells: cells,
                             }),
                         });
+                        MainView.table.setFixedLayout(false);
                         container.addContent(MainView.table);
                         container.setBusy(false);
                     });
@@ -1176,7 +1179,7 @@ sap.ui.define(
                                 /**
                                  * todos os registros são criados ativados por padrão
                                 */
-                                vals.ACTIVE = MainView.defaultACTIVE || true;
+                                vals.ACTIVE = MainView.defaultACTIVE === false ? false : true;
 
                                 /**
                                  * default values
@@ -1277,7 +1280,7 @@ sap.ui.define(
                     sections = [
                         new sap.uxap.ObjectPageSection({
                             showTitle: false,
-                            title: "{i18n>title}",
+                            title: MainView.titleFirstSection || "{i18n>title}",
                             tooltip: MainView.IDAPP,
                             subSections: new sap.uxap.ObjectPageSubSection({
                                 blocks: MainView.getContent(),
@@ -1293,7 +1296,11 @@ sap.ui.define(
                         sections = sections.concat(MainView.sectionsHeader);
                     }
 
+                    // default tab  
+                    //this.byId("objectPageLayout").setSelectedSection(this.byId("sectionId"))
+
                     return new sap.uxap.ObjectPageLayout({
+                        //selectedSection
                         useIconTabBar: MainView.useIconTabBar ? false : true,
                         navigate: oEvent => {
                             if (MainView.onNavigateSection) if (!MainView.onNavigateSection(oEvent, MainView)) return;

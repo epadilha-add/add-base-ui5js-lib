@@ -240,8 +240,9 @@ sap.ui.define([
                 View.sections = View.sections.concat(MainView.sectionsItems.items);
             }
 
+            let subTitle = params[MainView.subtitle] ? " / " + params[MainView.subtitle] : MainView.subtitle ? " / " + MainView.subtitle : "";
             this.title = new sap.m.Label({
-                text: "{i18n>title} / " + params[MainView.titleField] || MainView.titleField || null
+                text: params[MainView.titleField] + subTitle
             });
 
             this.avatar = new sap.m.Avatar({
