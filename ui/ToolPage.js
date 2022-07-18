@@ -30,7 +30,7 @@ sap.ui.define([
         onNavBack: function (oEvent) {
             this.getParent().back();
         },
-        constructor: function (that) {
+        constructor: function (that, started) {
 
             this.IDAPP = that.IDAPP;
             this.callService = that.callService;
@@ -50,7 +50,7 @@ sap.ui.define([
 
             this.config = sap.ui.getCore().getModel("AppConfig");
 
-            if (!this.config || !this.config.getData()) {
+            if ((!this.config || !this.config.getData()) && !started) {
                 /**
                  * caso controller não tenha carregado as configurações
                  */

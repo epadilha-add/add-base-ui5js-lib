@@ -321,9 +321,9 @@ sap.ui.define(
                         let match = {};
                         totalKeys = 0;
                         for (const key of countKeys) {
-                            match[key.field] = l[key.field];
+                            match[key.field.split('.')[0]] = l[key.field.split('.')[0]];
 
-                            if (JSON.stringify(match) === JSON.stringify({ [key.field]: vals[key.field] })) {
+                            if (JSON.stringify(match) === JSON.stringify({ [key.field.split('.')[0]]: vals[key.field.split('.')[0]] })) {
                                 totalKeys++;
                             }
                             if (countKeys.length === totalKeys) {

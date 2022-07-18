@@ -81,6 +81,9 @@ sap.ui.define(["sap/ui/core/mvc/Controller", "sap/ui/model/json/JSONModel", "./c
                  *
                  ***********************************************/
                 this.selectMandt(oMe.getData().mandts);
+
+                return false;
+
             } else {
                 /***********************************************
                  *
